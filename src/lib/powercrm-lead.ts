@@ -14,13 +14,13 @@ export interface PowerCrmSubmitResponse {
 /**
  * Envia o Lead diretamente para o Power CRM usando o formulário público
  * e o código de consultor CITmax (vrXbXyyq).
- * Não necessita de token/senha e espelha automaticamente no CRM 21 Go!
  */
 export async function sendLeadToPowerCrm(
   payload: LeadSubmissionPayload
 ): Promise<PowerCrmSubmitResponse> {
   const cleanPhone = payload.whatsapp.replace(/\D/g, '')
   const cleanPlate = (payload.placa || payload.vehicle.placa || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+  const cleanCpf = (payload.cpf || '').replace(/\D/g, '')
   const isMoto = payload.vehicle.categoria?.toUpperCase().includes('MOTO') || false
 
   const body = {
@@ -29,13 +29,15 @@ export async function sendLeadToPowerCrm(
     clientName: payload.nome,
     clientPhone: cleanPhone,
     clientEmail: payload.email || '',
+    clientCpf: cleanCpf,
+    clientCity: payload.cidade || 'Rio de Janeiro',
     vehiclePlate: cleanPlate,
     vehicleType: isMoto ? '2' : '1',
     vehicleBranch: payload.vehicle.marca,
     vehicleModel: payload.vehicle.modelo,
     vehicleYear: String(payload.vehicle.ano),
-    vehicleIsWork: false,
-    observation: `Plano escolhido no site: ${payload.planoEscolhidoNome} | Mensalidade: R$ ${payload.mensalidadeFinal.toFixed(2)} | Ativação: R$ ${payload.ativacao.toFixed(2)} | FIPE: R$ ${payload.vehicle.fipeValue}`,
+    vehicleIsWork: payload.veiculoTrabalho || false,
+    observation: `Plano: ${payload.planoEscolhidoNome} | Mensalidade: R$ ${payload.mensalidadeFinal.toFixed(2)} | Ativação: R$ ${payload.ativacao.toFixed(2)} | FIPE: R$ ${payload.vehicle.fipeValue} | CPF: ${payload.cpf || 'Não informado'} | Cidade: ${payload.cidade || 'RJ'} | Trabalho: ${payload.veiculoTrabalho ? 'SIM' : 'NÃO'}`,
   }
 
   try {

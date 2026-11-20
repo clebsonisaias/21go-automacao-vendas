@@ -16,7 +16,6 @@ export interface PlanPricing {
   name: string
   monthly: number
   popular?: boolean
-  // Calculados
   ativacao: number
   mensalidadeComPontualidade: number // 5% off
   mensalidadeComAdesivo: number // 10% ou 15% off + pontualidade
@@ -43,8 +42,12 @@ export interface QuoteCalculationResult {
 
 export interface LeadSubmissionPayload {
   nome: string
+  cpf?: string
   whatsapp: string
   email?: string
+  cidade?: string
+  estado?: string
+  veiculoTrabalho?: boolean
   placa?: string
   planoEscolhidoId: string
   planoEscolhidoNome: string

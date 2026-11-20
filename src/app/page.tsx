@@ -1,11 +1,11 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Shield,
   Car,
   Check,
-  Phone,
   ArrowRight,
   X,
   AlertTriangle,
@@ -16,21 +16,17 @@ import {
   Search,
   MessageCircle,
   Wrench,
-  Key,
-  HelpCircle,
   ChevronDown,
-  FileCheck,
   Zap,
   Users,
-  Award,
-  ThumbsUp,
   CreditCard,
-  MapPin,
-  ExternalLink,
+  Camera,
 } from 'lucide-react'
-import { VehicleInfo, PlanPricing, QuoteCalculationResult } from '@/lib/types'
+import { PlanPricing, QuoteCalculationResult } from '@/lib/types'
 
 export default function HomePage() {
+  const router = useRouter()
+
   // Estados de busca
   const [placa, setPlaca] = useState('')
   const [isSearchingPlate, setIsSearchingPlate] = useState(false)
@@ -54,14 +50,19 @@ export default function HomePage() {
   const [comAdesivo, setComAdesivo] = useState(true)
   const [comPontualidade, setComPontualidade] = useState(true)
 
-  // Modal de Contratação
+  // Modal de Cadastro
   const [selectedPlan, setSelectedPlan] = useState<PlanPricing | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [nome, setNome] = useState('')
+  const [cpf, setCpf] = useState('')
   const [whatsapp, setWhatsapp] = useState('')
   const [email, setEmail] = useState('')
+  const [cidade, setCidade] = useState('Rio de Janeiro')
+  const [veiculoTrabalho, setVeiculoTrabalho] = useState(false)
   const [isSubmittingLead, setIsSubmittingLead] = useState(false)
-  const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [submitSuccessData, setSubmitSuccessData] = useState<{
+    vistoriaUrl: string
+  } | null>(null)
 
   // FAQ Accordion
   const [openFaq, setOpenFaq] = useState<number | null>(null)
@@ -100,6 +101,30 @@ export default function HomePage() {
       setPlaca(raw)
       setPlateError('')
     }
+  }
+
+  // Formata CPF
+  const handleCpfChange = (val: string) => {
+    const raw = val.replace(/\D/g, '')
+    let formatted = raw
+    if (raw.length > 3) formatted = `${raw.slice(0, 3)}.${raw.slice(3)}`
+    if (raw.length > 6) formatted = `${raw.slice(0, 3)}.${raw.slice(3, 6)}.${raw.slice(6)}`
+    if (raw.length > 9)
+      formatted = `${raw.slice(0, 3)}.${raw.slice(3, 6)}.${raw.slice(6, 9)}-${raw.slice(9, 11)}`
+    setCpf(formatted)
+  }
+
+  // Formata telefone
+  const handlePhoneChange = (val: string) => {
+    const numbers = val.replace(/\D/g, '')
+    let formatted = numbers
+    if (numbers.length > 2) {
+      formatted = `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`
+    }
+    if (numbers.length > 7) {
+      formatted = `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`
+    }
+    setWhatsapp(formatted)
   }
 
   // Busca por Placa
@@ -143,7 +168,6 @@ export default function HomePage() {
       const calcData = await calcRes.json()
       if (calcData.success) {
         setQuoteResult(calcData)
-        // Rola suavemente até os planos
         setTimeout(() => {
           document.getElementById('planos-section')?.scrollIntoView({ behavior: 'smooth' })
         }, 150)
@@ -206,20 +230,7 @@ export default function HomePage() {
     }
   }
 
-  // Formata telefone
-  const handlePhoneChange = (val: string) => {
-    const numbers = val.replace(/\D/g, '')
-    let formatted = numbers
-    if (numbers.length > 2) {
-      formatted = `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`
-    }
-    if (numbers.length > 7) {
-      formatted = `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`
-    }
-    setWhatsapp(formatted)
-  }
-
-  // Envio de Lead
+  // Envio de Cadastro Completo (Sem WhatsApp, direto pro CRM)
   const handleSubmitLead = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedPlan || !quoteResult) return
@@ -245,8 +256,11 @@ export default function HomePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nome,
+          cpf,
           whatsapp,
           email,
+          cidade,
+          veiculoTrabalho,
           placa: placa || quoteResult.vehicle.placa,
           planoEscolhidoId: selectedPlan.id,
           planoEscolhidoNome: selectedPlan.name,
@@ -260,14 +274,15 @@ export default function HomePage() {
       })
 
       const data = await res.json()
-      if (data.success && data.whatsappUrl) {
-        setSubmitSuccess(true)
-        setTimeout(() => {
-          window.location.href = data.whatsappUrl
-        }, 1200)
+      if (data.success) {
+        setSubmitSuccessData({
+          vistoriaUrl: data.vistoriaUrl || '/vistoria',
+        })
+      } else {
+        alert(data.error || 'Erro ao processar cadastro.')
       }
     } catch {
-      alert('Erro ao enviar dados. Tente novamente ou nos chame diretamente no WhatsApp.')
+      alert('Erro de conexão ao enviar cadastro. Tente novamente.')
     } finally {
       setIsSubmittingLead(false)
     }
@@ -280,7 +295,7 @@ export default function HomePage() {
     },
     {
       q: 'Quanto tempo leva para meu veículo ficar protegido?',
-      a: 'Após a aprovação da vistoria (feita 100% online por fotos no celular) e a confirmação da taxa de ativação, a proteção entra em vigor no mesmo dia!',
+      a: 'Após o envio e aprovação da vistoria digital (feita 100% online por fotos no celular), a proteção entra em vigor de forma imediata!',
     },
     {
       q: 'O que é o desconto do adesivo 21Go?',
@@ -324,14 +339,11 @@ export default function HomePage() {
           </nav>
 
           <a
-            href="https://wa.me/5521999999999"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl transition shadow-md shadow-emerald-600/20 active:scale-95"
+            href="#cotacao"
+            className="inline-flex items-center gap-2 text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white px-4 py-2.5 rounded-xl transition shadow-md shadow-brand-600/20 active:scale-95"
           >
-            <MessageCircle className="w-4 h-4" />
-            <span className="hidden sm:inline">WhatsApp do Consultor</span>
-            <span className="sm:hidden">Consultor</span>
+            <span>Simular Agora</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </a>
         </div>
       </header>
@@ -339,14 +351,13 @@ export default function HomePage() {
       {/* Hero Section */}
       <main className="flex-1">
         <section id="cotacao" className="relative pt-12 pb-20 px-4 overflow-hidden">
-          {/* Efeitos de Fundo */}
           <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-brand-500/10 rounded-full blur-[120px] pointer-events-none" />
           <div className="absolute top-1/2 right-10 w-[400px] h-[300px] bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
 
           <div className="max-w-4xl mx-auto text-center relative z-10">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800/90 border border-slate-700/80 text-xs font-semibold text-brand-400 mb-6 shadow-inner">
               <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              Preços Oficiais em Tempo Real • Sem Fidelidade Abusiva
+              Preços Oficiais em Tempo Real • Vistoria 100% Digital
             </div>
 
             <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white mb-5 leading-[1.15]">
@@ -698,7 +709,7 @@ export default function HomePage() {
                           : 'bg-slate-800 hover:bg-slate-700 text-white'
                       }`}
                     >
-                      <span>Quero Este Plano</span>
+                      <span>Contratar Este Plano</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -880,51 +891,58 @@ export default function HomePage() {
         </section>
       </main>
 
-      {/* Floating WhatsApp Button */}
-      <a
-        href="https://wa.me/5521999999999?text=Ol%C3%A1%2C%20gostaria%20de%20fazer%20uma%20cota%C3%A7%C3%A3o%20da%2021Go"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Falar com consultor no WhatsApp"
-        className="fixed bottom-6 right-6 z-40 bg-emerald-500 hover:bg-emerald-400 text-white p-4 rounded-full shadow-2xl shadow-emerald-500/40 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 group"
-      >
-        <MessageCircle className="w-7 h-7" />
-        <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs transition-all duration-300 ease-in-out text-xs font-bold px-0 group-hover:px-2">
-          Falar no WhatsApp
-        </span>
-      </a>
-
-      {/* Modal de Fechamento / Cadastro do Lead */}
+      {/* Modal de Cadastro Completo (Direto para o CRM + Vistoria) */}
       {isModalOpen && selectedPlan && quoteResult && (
         <div
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
         >
-          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative">
+          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <button
               type="button"
-              onClick={() => setIsModalOpen(false)}
+              onClick={() => {
+                setIsModalOpen(false)
+                setSubmitSuccessData(null)
+              }}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-xl bg-slate-800"
             >
               <X className="w-5 h-5" />
             </button>
 
-            {submitSuccess ? (
-              <div className="text-center py-8 space-y-4">
+            {submitSuccessData ? (
+              <div className="text-center py-6 space-y-4">
                 <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <h3 className="text-2xl font-black text-white">Cotação Concluída!</h3>
-                <p className="text-xs text-slate-300 max-w-xs mx-auto">
-                  Redirecionando você para o WhatsApp do nosso consultor com a proposta pronta...
+                <h3 className="text-2xl font-black text-white">Cadastro Pré-Aprovado!</h3>
+                <p className="text-xs sm:text-sm text-slate-300 max-w-sm mx-auto leading-relaxed">
+                  Seus dados já foram registrados no nosso sistema. Para concluir a ativação da sua
+                  proteção, basta realizar a <strong>Vistoria Digital</strong> das fotos do veículo
+                  e documentos.
                 </p>
+
+                <div className="pt-4 space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => router.push(submitSuccessData.vistoriaUrl)}
+                    className="w-full bg-gradient-to-r from-brand-600 to-amber-500 hover:from-brand-500 hover:to-amber-400 text-white font-black py-4 rounded-xl transition flex items-center justify-center gap-2 shadow-xl shadow-brand-500/25 text-base active:scale-95"
+                  >
+                    <Camera className="w-5 h-5" />
+                    <span>Fazer Vistoria Digital Agora</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+
+                  <p className="text-[11px] text-slate-500">
+                    Você também receberá o link por e-mail e SMS para fazer quando quiser.
+                  </p>
+                </div>
               </div>
             ) : (
               <div>
                 <div className="mb-6">
                   <span className="text-xs font-bold text-brand-400 uppercase tracking-wider">
-                    Quase Pronto
+                    Cadastro de Adesão
                   </span>
                   <h3 className="text-2xl font-black text-white mt-1">
                     Garantir Plano {selectedPlan.name}
@@ -954,9 +972,9 @@ export default function HomePage() {
                   <div>
                     <label
                       htmlFor="lead-nome"
-                      className="block text-xs font-bold text-slate-300 uppercase mb-1.5"
+                      className="block text-xs font-bold text-slate-300 uppercase mb-1"
                     >
-                      Seu Nome Completo *
+                      Nome Completo do Titular *
                     </label>
                     <input
                       id="lead-nome"
@@ -965,62 +983,117 @@ export default function HomePage() {
                       value={nome}
                       onChange={(e) => setNome(e.target.value)}
                       placeholder="Ex: Carlos Silva"
-                      className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
+                      className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
                     />
                   </div>
 
-                  <div>
-                    <label
-                      htmlFor="lead-whatsapp"
-                      className="block text-xs font-bold text-slate-300 uppercase mb-1.5"
-                    >
-                      WhatsApp com DDD *
-                    </label>
-                    <input
-                      id="lead-whatsapp"
-                      type="tel"
-                      required
-                      value={whatsapp}
-                      onChange={(e) => handlePhoneChange(e.target.value)}
-                      placeholder="(21) 99999-9999"
-                      className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label
+                        htmlFor="lead-cpf"
+                        className="block text-xs font-bold text-slate-300 uppercase mb-1"
+                      >
+                        CPF do Titular *
+                      </label>
+                      <input
+                        id="lead-cpf"
+                        type="text"
+                        required
+                        maxLength={14}
+                        value={cpf}
+                        onChange={(e) => handleCpfChange(e.target.value)}
+                        placeholder="000.000.000-00"
+                        className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="lead-whatsapp"
+                        className="block text-xs font-bold text-slate-300 uppercase mb-1"
+                      >
+                        Celular / WhatsApp *
+                      </label>
+                      <input
+                        id="lead-whatsapp"
+                        type="tel"
+                        required
+                        value={whatsapp}
+                        onChange={(e) => handlePhoneChange(e.target.value)}
+                        placeholder="(21) 99999-9999"
+                        className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label
-                      htmlFor="lead-email"
-                      className="block text-xs font-bold text-slate-300 uppercase mb-1.5"
-                    >
-                      E-mail (Opcional)
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label
+                        htmlFor="lead-email"
+                        className="block text-xs font-bold text-slate-300 uppercase mb-1"
+                      >
+                        E-mail *
+                      </label>
+                      <input
+                        id="lead-email"
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="carlos@exemplo.com"
+                        className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="lead-cidade"
+                        className="block text-xs font-bold text-slate-300 uppercase mb-1"
+                      >
+                        Cidade (RJ) *
+                      </label>
+                      <input
+                        id="lead-cidade"
+                        type="text"
+                        required
+                        value={cidade}
+                        onChange={(e) => setCidade(e.target.value)}
+                        placeholder="Ex: Rio de Janeiro, Niterói..."
+                        className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl">
+                    <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={veiculoTrabalho}
+                        onChange={(e) => setVeiculoTrabalho(e.target.checked)}
+                        className="w-4 h-4 accent-brand-500 rounded"
+                      />
+                      <span>Veículo utilizado para trabalho (Uber, 99, Táxi ou Entrega)</span>
                     </label>
-                    <input
-                      id="lead-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="carlos@exemplo.com"
-                      className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
-                    />
                   </div>
 
                   <button
                     type="submit"
                     disabled={isSubmittingLead}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-4 rounded-xl transition flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/30 active:scale-95 text-base mt-2"
+                    className="w-full bg-gradient-to-r from-brand-600 to-amber-500 hover:from-brand-500 hover:to-amber-400 text-white font-extrabold py-3.5 rounded-xl transition flex items-center justify-center gap-2 shadow-xl shadow-brand-500/25 active:scale-95 text-base mt-2"
                   >
                     {isSubmittingLead ? (
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <>
-                        <MessageCircle className="w-5 h-5" />
-                        Garantir Minha Proteção no WhatsApp
+                        <span>Avançar para Vistoria Digital</span>
+                        <ArrowRight className="w-4 h-4" />
                       </>
                     )}
                   </button>
 
-                  <p className="text-[11px] text-slate-400 text-center leading-relaxed">
-                    Ao continuar, seu orçamento será registrado no nosso sistema e um consultor exclusivo dará atendimento imediato via WhatsApp.
+                  <p className="text-[11px] text-slate-500 text-center leading-relaxed">
+                    Seus dados serão cadastrados de forma segura no Power CRM e você receberá as
+                    orientações de ativação.
                   </p>
                 </form>
               </div>
