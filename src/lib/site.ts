@@ -2,10 +2,10 @@
 const digits = (v?: string) => (v || '').replace(/\D/g, '')
 
 export const SITE = {
-  whatsapp: digits(process.env.NEXT_PUBLIC_FRANQUIA_WHATSAPP),
-  nome: process.env.NEXT_PUBLIC_FRANQUIA_NOME || '',
+  whatsapp: digits(process.env.NEXT_PUBLIC_FRANQUIA_WHATSAPP) || '558420182178',
+  nome: process.env.NEXT_PUBLIC_FRANQUIA_NOME || '21Go CITmax',
   email: process.env.NEXT_PUBLIC_FRANQUIA_EMAIL || '',
-  horario: process.env.NEXT_PUBLIC_FRANQUIA_HORARIO || '',
+  horario: process.env.NEXT_PUBLIC_FRANQUIA_HORARIO || 'Segunda a Sexta das 08h às 18h',
   cnpj: process.env.NEXT_PUBLIC_FRANQUIA_CNPJ || '',
 }
 

@@ -19,6 +19,8 @@ import {
   TrendingUp,
   Sparkles,
   ExternalLink,
+  Lock,
+  KeyRound,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { StoredLead } from '@/lib/db'
@@ -93,6 +95,47 @@ export default function AdminPage() {
   const [selectedLead, setSelectedLead] = useState<StoredLead | null>(null)
   const [activeTab, setActiveTab] = useState<'leads' | 'lucro' | 'boletos' | 'scripts'>('leads')
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null)
+
+  // Estados para troca de senha
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordMsg, setPasswordMsg] = useState({ text: '', isError: false })
+  const [isChangingPass, setIsChangingPass] = useState(false)
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPasswordMsg({ text: '', isError: false })
+
+    if (newPassword !== confirmPassword) {
+      setPasswordMsg({ text: 'A confirmação de senha não confere.', isError: true })
+      return
+    }
+
+    setIsChangingPass(true)
+    try {
+      const res = await fetch('/api/admin/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setPasswordMsg({ text: data.message || 'Senha alterada com sucesso!', isError: false })
+        setCurrentPassword('')
+        setNewPassword('')
+        setConfirmPassword('')
+        setTimeout(() => setIsPasswordModalOpen(false), 2000)
+      } else {
+        setPasswordMsg({ text: data.error || 'Erro ao alterar senha.', isError: true })
+      }
+    } catch {
+      setPasswordMsg({ text: 'Erro de conexão.', isError: true })
+    } finally {
+      setIsChangingPass(false)
+    }
+  }
 
   const buildProposalText = (lead: StoredLead): string => {
     const vistoriaUrl = `https://21go.seg.br/vistoria?ref=${lead.ref || lead.id}&nome=${encodeURIComponent(lead.nome)}&placa=${encodeURIComponent(lead.placa || '')}&veiculo=${encodeURIComponent(lead.vehicle.marca + ' ' + lead.vehicle.modelo)}`
@@ -320,6 +363,17 @@ Qualquer dúvida, estou à disposição!`
                 <span className="sm:hidden">CSV</span>
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                setIsPasswordModalOpen(true)
+                setPasswordMsg({ text: '', isError: false })
+              }}
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-navy-500 px-3.5 text-xs font-bold text-white transition hover:bg-navy-800"
+            >
+              <Lock className="h-4 w-4 text-go-lime" />
+              <span>Mudar Senha</span>
+            </button>
             <button
               type="button"
               onClick={fetchLeads}
@@ -611,6 +665,79 @@ Qualquer dúvida, estou à disposição!`
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Alteração de Senha */}
+      {isPasswordModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-navy-deep/70 p-4 backdrop-blur-sm"
+        >
+          <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <button
+              onClick={() => setIsPasswordModalOpen(false)}
+              className="absolute right-4 top-4 text-muted hover:text-navy-950 transition"
+              aria-label="Fechar"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <h3 className="text-xl font-extrabold text-navy-800 mb-4 flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-go-orange" /> Alterar Senha do Painel
+            </h3>
+            <form onSubmit={handleChangePassword} className="flex flex-col gap-3">
+              <div>
+                <label className="text-xs font-bold text-muted block mb-1">Senha Atual</label>
+                <input
+                  type="password"
+                  required
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Digite sua senha atual"
+                  className="w-full rounded-lg border border-line px-3.5 py-2 text-sm focus:border-navy-950 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted block mb-1">Nova Senha</label>
+                <input
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Digite a nova senha"
+                  className="w-full rounded-lg border border-line px-3.5 py-2 text-sm focus:border-navy-950 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted block mb-1">Confirmar Nova Senha</label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirme a nova senha"
+                  className="w-full rounded-lg border border-line px-3.5 py-2 text-sm focus:border-navy-950 focus:outline-none"
+                />
+              </div>
+              {passwordMsg.text && (
+                <div
+                  className={`rounded-lg p-2.5 text-xs font-bold ${
+                    passwordMsg.isError ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                  }`}
+                >
+                  {passwordMsg.text}
+                </div>
+              )}
+              <button
+                type="submit"
+                disabled={isChangingPass}
+                className="mt-2 rounded-lg bg-navy-950 text-white font-bold py-2.5 hover:bg-navy-900 transition disabled:opacity-50"
+              >
+                {isChangingPass ? 'Salvando...' : 'Salvar Nova Senha'}
+              </button>
+            </form>
           </div>
         </div>
       )}

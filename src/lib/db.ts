@@ -39,6 +39,7 @@ export interface StoredLead {
 
 const DATA_DIR = path.join(process.cwd(), 'data')
 const LEADS_FILE = path.join(DATA_DIR, 'leads.json')
+const CONFIG_FILE = path.join(DATA_DIR, 'config.json')
 
 function ensureDataFile() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -48,6 +49,45 @@ function ensureDataFile() {
     fs.writeFileSync(LEADS_FILE, JSON.stringify([]), 'utf-8')
   }
 }
+
+export function getAdminPassword(): string {
+  try {
+    ensureDataFile()
+    if (fs.existsSync(CONFIG_FILE)) {
+      const content = fs.readFileSync(CONFIG_FILE, 'utf-8')
+      const cfg = JSON.parse(content)
+      if (cfg.adminPassword) return String(cfg.adminPassword)
+    }
+  } catch {}
+  return process.env.ADMIN_PASSWORD || 'Gael@1'
+}
+
+export function saveAdminPassword(newPassword: string): boolean {
+  try {
+    ensureDataFile()
+    let cfg: Record<string, unknown> = {}
+    if (fs.existsSync(CONFIG_FILE)) {
+      try {
+        cfg = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'))
+      } catch {}
+    }
+    cfg.adminPassword = newPassword
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2), 'utf-8')
+    process.env.ADMIN_PASSWORD = newPassword
+    return true
+  } catch (err) {
+    console.error('Erro ao salvar nova senha:', err)
+    return false
+  }
+}
+
+// Inicializa a senha salva no process.env na inicialização
+try {
+  const initPass = getAdminPassword()
+  if (initPass && process.env) {
+    process.env.ADMIN_PASSWORD = initPass
+  }
+} catch {}
 
 export function getStoredLeads(): StoredLead[] {
   try {
