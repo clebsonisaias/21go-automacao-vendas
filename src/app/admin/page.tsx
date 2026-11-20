@@ -21,6 +21,8 @@ import {
   ExternalLink,
   Lock,
   KeyRound,
+  LogOut,
+  Bot,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { StoredLead } from '@/lib/db'
@@ -28,6 +30,7 @@ import { brl } from '@/lib/site'
 import { LucroSimulator } from '@/components/admin/LucroSimulator'
 import { HinovaBoletos } from '@/components/admin/HinovaBoletos'
 import { ScriptsGo } from '@/components/admin/ScriptsGo'
+import { LunaAssistant } from '@/components/admin/LunaAssistant'
 import { DocumentAiUploader } from '@/components/common/DocumentAiUploader'
 import { DocumentAiResult } from '@/lib/types'
 
@@ -93,8 +96,16 @@ export default function AdminPage() {
   const [loadError, setLoadError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedLead, setSelectedLead] = useState<StoredLead | null>(null)
-  const [activeTab, setActiveTab] = useState<'leads' | 'lucro' | 'boletos' | 'scripts'>('leads')
+  const [activeTab, setActiveTab] = useState<'leads' | 'lucro' | 'boletos' | 'scripts' | 'luna'>('leads')
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null)
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/logout', { method: 'POST' })
+    } finally {
+      window.location.href = '/admin/login'
+    }
+  }
 
   // Estados para troca de senha
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
@@ -349,6 +360,18 @@ Qualquer dúvida, estou à disposição!`
               >
                 Scripts 21Go
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('luna')}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                  activeTab === 'luna'
+                    ? 'bg-go-orange text-navy-950 shadow'
+                    : 'text-muted-soft hover:text-white'
+                }`}
+              >
+                <Bot className="h-3.5 w-3.5" />
+                <span>IA Luna</span>
+              </button>
             </div>
 
             {activeTab === 'leads' && (
@@ -381,12 +404,23 @@ Qualquer dúvida, estou à disposição!`
             >
               Atualizar
             </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Sair do painel"
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-red-500/30 px-3 text-xs font-bold text-red-400 transition hover:bg-red-500/10 hover:text-red-300"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Sair</span>
+            </button>
           </div>
         </div>
       </header>
 
       <main className="mx-auto flex max-w-[1200px] flex-col gap-6 px-6 pb-16 pt-10">
-        {activeTab === 'lucro' ? (
+        {activeTab === 'luna' ? (
+          <LunaAssistant />
+        ) : activeTab === 'lucro' ? (
           <LucroSimulator />
         ) : activeTab === 'boletos' ? (
           <HinovaBoletos />
@@ -662,6 +696,32 @@ Qualquer dúvida, estou à disposição!`
                 >
                   <Copy className="h-4 w-4" />
                   Copiar Texto Proposta
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      setCopyFeedback('Gerando com IA Luna...')
+                      const res = await fetch('/api/ai/luna', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'pitch', lead: selectedLead }),
+                      })
+                      const data = await res.json()
+                      if (data.success && data.pitch) {
+                        handleCopy(data.pitch, '✨ Mensagem da IA Luna copiada!')
+                      } else {
+                        handleCopy(buildProposalText(selectedLead), 'Texto padrão copiado!')
+                      }
+                    } catch {
+                      handleCopy(buildProposalText(selectedLead), 'Texto padrão copiado!')
+                    }
+                  }}
+                  className="col-span-2 inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-go-orange/40 bg-orange-50/60 px-3 text-xs font-bold text-navy-950 transition hover:bg-orange-100"
+                >
+                  <Bot className="h-4 w-4 text-go-orange" />
+                  🤖 Gerar Proposta Personalizada com IA Luna
                 </button>
               </div>
             </div>

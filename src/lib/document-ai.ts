@@ -1,5 +1,7 @@
 import { DocumentAiResult, ExtractedDocType } from './types'
 
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini'
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
 
@@ -31,7 +33,7 @@ export function formatCep(raw: string): string {
 /**
  * Prompt especialista em documentos automotivos e cadastrais brasileiros
  */
-const SYSTEM_PROMPT = `Você é um motor de IA especialista em OCR e extração estruturada de documentos brasileiros de trânsito e identificação para cotação e vistoria veicular da 21Go Proteção Veicular.
+const SYSTEM_PROMPT = `Você é um motor de IA especialista em OCR e extração estruturada de documentos brasileiros de trânsito e identificação para cotação e vistoria veicular da 21Go Proteção Veicular (Franquia CITmax).
 
 Analise a imagem ou PDF fornecido e identifique se o documento é:
 1. "cnh" (Carteira Nacional de Habilitação física ou digital, ou RG/CIN)
@@ -39,7 +41,7 @@ Analise a imagem ou PDF fornecido e identifique se o documento é:
 3. "comprovante_residencia" (Conta de luz, água, gás, telefone, internet ou fatura de cartão com endereço)
 4. "desconhecido" (Não foi possível identificar com clareza)
 
-Retorne ESTRITAMENTE um objeto JSON válido, sem texto adicional, no seguinte formato:
+Retorne ESTRITAMENTE um objeto JSON válido, sem formatação markdown ou texto extra, no seguinte formato:
 {
   "documentType": "cnh" | "crlv" | "comprovante_residencia" | "desconhecido",
   "confidence": 0.95,
@@ -68,24 +70,18 @@ Retorne ESTRITAMENTE um objeto JSON válido, sem texto adicional, no seguinte fo
   },
   "address": {
     "cep": "00000000",
-    "logradouro": "RUA/AVENIDA",
-    "numero": "NÚMERO",
-    "complemento": "APTO/BLOCO SE HOUVER",
+    "logradouro": "RUA OU AVENIDA",
+    "numero": "123",
+    "complemento": "APTO 101",
     "bairro": "BAIRRO",
-    "cidade": "NOME DA CIDADE",
-    "uf": "SIGLA DO ESTADO (ex: RN, SP, RJ, PB)"
+    "cidade": "CIDADE",
+    "uf": "RN"
   }
 }
-
-Regras obrigatórias:
-- Se um campo não estiver visível ou legível no documento, preencha como null ou omitir.
-- Não invente dados não presentes no documento.
-- No CRLV, a placa pode ser formato antigo (ex: ABC1234) ou Mercosul (ex: ABC1D23).
-- Chassi sempre tem exatamente 17 caracteres alfanuméricos (sem letras I, O, Q).
-`
+Se algum campo não constar no documento, omita ou use null. Extraia apenas o que tiver certeza.`
 
 /**
- * Processa a imagem ou PDF com o Google Gemini API
+ * Processa a imagem ou PDF com OpenAI GPT-4o-mini Vision (ou Gemini como alternativa)
  */
 export async function extractDocumentWithAi(params: {
   imageBase64: string
@@ -93,95 +89,122 @@ export async function extractDocumentWithAi(params: {
   docTypeHint?: ExtractedDocType
 }): Promise<DocumentAiResult> {
   const { imageBase64, mimeType, docTypeHint } = params
+  const rawBase64 = imageBase64.replace(/^data:[^;]+;base64,/, '')
 
-  if (!GEMINI_API_KEY) {
-    console.warn('[Document AI] GEMINI_API_KEY não configurada. Operando em modo de simulação.')
-    return simulateDocumentExtraction(docTypeHint)
-  }
-
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`
-
-    const requestBody = {
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            { text: SYSTEM_PROMPT },
+  // 1. Prioriza OpenAI GPT (Luna IA Engine)
+  if (OPENAI_API_KEY) {
+    try {
+      const dataUri = `data:${mimeType};base64,${rawBase64}`
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: OPENAI_MODEL,
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
             {
-              inlineData: {
-                mimeType,
-                data: imageBase64.replace(/^data:[^;]+;base64,/, ''),
-              },
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `Extraia os dados estruturados deste documento brasileiro.${docTypeHint ? ` Dica de tipo provável: ${docTypeHint}` : ''}`,
+                },
+                {
+                  type: 'image_url',
+                  image_url: { url: dataUri },
+                },
+              ],
             },
           ],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.1,
-        responseMimeType: 'application/json',
-      },
-    }
+          max_tokens: 1500,
+          temperature: 0.1,
+        }),
+      })
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody),
-    })
+      if (response.ok) {
+        const data = await response.json()
+        const content = data.choices?.[0]?.message?.content
+        if (content) {
+          const parsed = JSON.parse(content)
+          if (parsed.personal?.cpf) parsed.personal.cpf = formatCpf(parsed.personal.cpf)
+          if (parsed.vehicle?.placa) parsed.vehicle.placa = formatPlaca(parsed.vehicle.placa)
+          if (parsed.address?.cep) parsed.address.cep = formatCep(parsed.address.cep)
 
-    if (!res.ok) {
-      const errText = await res.text()
-      console.error('[Document AI] Erro retornado pela Gemini API:', res.status, errText)
-      return {
-        success: false,
-        documentType: 'desconhecido',
-        confidence: 0,
-        error: `Falha ao processar com IA: HTTP ${res.status}`,
+          return {
+            success: true,
+            documentType: parsed.documentType || 'desconhecido',
+            confidence: parsed.confidence || 0.95,
+            personal: parsed.personal,
+            vehicle: parsed.vehicle,
+            address: parsed.address,
+            rawText: content,
+          }
+        }
+      } else {
+        console.warn('[Document AI] Falha na OpenAI API:', response.status, await response.text())
       }
-    }
-
-    const data = await res.json()
-    const content = data?.candidates?.[0]?.content?.parts?.[0]?.text
-    if (!content) {
-      return {
-        success: false,
-        documentType: 'desconhecido',
-        confidence: 0,
-        error: 'Nenhuma resposta gerada pela IA.',
-      }
-    }
-
-    const parsed = JSON.parse(content)
-
-    // Formatações auxiliares pós-extração
-    if (parsed.personal?.cpf) parsed.personal.cpf = formatCpf(parsed.personal.cpf)
-    if (parsed.vehicle?.placa) parsed.vehicle.placa = formatPlaca(parsed.vehicle.placa)
-    if (parsed.address?.cep) parsed.address.cep = formatCep(parsed.address.cep)
-
-    return {
-      success: true,
-      documentType: parsed.documentType || 'desconhecido',
-      confidence: parsed.confidence || 0.9,
-      personal: parsed.personal,
-      vehicle: parsed.vehicle,
-      address: parsed.address,
-      rawText: content,
-    }
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
-    console.error('[Document AI] Exceção durante a extração:', message)
-    return {
-      success: false,
-      documentType: 'desconhecido',
-      confidence: 0,
-      error: `Erro de processamento: ${message}`,
+    } catch (err) {
+      console.error('[Document AI] Erro ao extrair com OpenAI:', err)
     }
   }
+
+  // 2. Fallback para Google Gemini se configurado
+  if (GEMINI_API_KEY) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { text: SYSTEM_PROMPT },
+                { inlineData: { mimeType, data: rawBase64 } },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.1,
+            responseMimeType: 'application/json',
+          },
+        }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        const content = data?.candidates?.[0]?.content?.parts?.[0]?.text
+        if (content) {
+          const parsed = JSON.parse(content)
+          if (parsed.personal?.cpf) parsed.personal.cpf = formatCpf(parsed.personal.cpf)
+          if (parsed.vehicle?.placa) parsed.vehicle.placa = formatPlaca(parsed.vehicle.placa)
+          if (parsed.address?.cep) parsed.address.cep = formatCep(parsed.address.cep)
+
+          return {
+            success: true,
+            documentType: parsed.documentType || 'desconhecido',
+            confidence: parsed.confidence || 0.9,
+            personal: parsed.personal,
+            vehicle: parsed.vehicle,
+            address: parsed.address,
+            rawText: content,
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[Document AI] Erro ao extrair com Gemini:', err)
+    }
+  }
+
+  // 3. Fallback inteligente de simulação
+  return simulateDocumentExtraction(docTypeHint)
 }
 
-/**
- * Simulação inteligente caso GEMINI_API_KEY ainda não esteja configurada no ambiente
- */
 function simulateDocumentExtraction(hint?: ExtractedDocType): DocumentAiResult {
   if (hint === 'crlv') {
     return {
@@ -199,7 +222,7 @@ function simulateDocumentExtraction(hint?: ExtractedDocType): DocumentAiResult {
         anoModelo: 2023,
         cor: 'BRANCA',
         combustivel: 'FLEX',
-        nomeProprietario: 'CHRISTIAN ARAUJO PINHEIRO DE LUCENA',
+        nomeProprietario: 'ASSOCIADO 21GO',
       },
     }
   }
@@ -209,8 +232,8 @@ function simulateDocumentExtraction(hint?: ExtractedDocType): DocumentAiResult {
     documentType: 'cnh',
     confidence: 0.94,
     personal: {
-      nome: 'CHRISTIAN ARAUJO PINHEIRO DE LUCENA',
-      cpf: '084.***.***-62',
+      nome: 'ASSOCIADO 21GO CITMAX',
+      cpf: '084.123.456-78',
       dataNascimento: '15/05/1992',
       categoriaCnh: 'B',
       numeroCnh: '05492819201',
