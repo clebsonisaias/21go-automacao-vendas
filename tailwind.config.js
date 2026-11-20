@@ -7,7 +7,37 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
+      },
+      boxShadow: {
+        card: '0 1px 2px rgba(26,39,84,0.06), 0 8px 24px rgba(26,39,84,0.08)',
+        cta: '0 8px 24px rgba(242,145,29,0.35)',
+        'cta-wa': '0 8px 24px rgba(18,140,70,0.35)',
+      },
       colors: {
+        // Identidade visual 21Go (tokens do design da franquia)
+        navy: {
+          deep: '#070c22',
+          950: '#0b1230',
+          900: '#111b45',
+          800: '#1a2754',
+          700: '#22337a',
+          600: '#293c82',
+          500: '#3b52a8',
+          line: '#26346a',
+        },
+        go: {
+          orange: '#f2911d',
+          'orange-dark': '#b86400',
+          lime: '#c7d301',
+          'lime-dark': '#4d6600',
+          whatsapp: '#25d366',
+          'whatsapp-dark': '#128c46',
+        },
+        surface: { 50: '#fafbfc', 100: '#f1f4fa' },
+        line: '#e3e8f3',
+        muted: { DEFAULT: '#5b6785', 2: '#8b96b2', dark: '#a9b3ca', soft: '#c9d1e6' },
         brand: {
           50: '#fff7ed',
           100: '#ffedd5',

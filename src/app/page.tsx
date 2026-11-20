@@ -3,26 +3,37 @@
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Shield,
+  AlertTriangle,
+  ArrowRight,
+  Camera,
   Car,
   Check,
-  ArrowRight,
-  X,
-  AlertTriangle,
-  Sparkles,
-  Clock,
   CheckCircle2,
-  Lock,
   Search,
-  MessageCircle,
-  Wrench,
-  ChevronDown,
-  Zap,
-  Users,
-  CreditCard,
-  Camera,
+  X,
 } from 'lucide-react'
 import { PlanPricing, QuoteCalculationResult } from '@/lib/types'
+import { brl, money } from '@/lib/site'
+import {
+  FloatingWhatsApp,
+  SiteFooter,
+  SiteHeader,
+  TopBar,
+} from '@/components/home/SiteChrome'
+import {
+  ComoFunciona,
+  Coberturas,
+  Comparativo,
+  CtaFinal,
+  Faq,
+  PlanosPreview,
+  SeguradoraDisseNao,
+  Stats,
+} from '@/components/home/HomeSections'
+
+const inputCls =
+  'min-h-[48px] w-full rounded-lg border border-[#c9d1e6] bg-white px-3.5 text-base text-navy-800 placeholder:text-muted-2'
+const labelCls = 'text-sm font-semibold'
 
 export default function HomePage() {
   const router = useRouter()
@@ -288,812 +299,557 @@ export default function HomePage() {
     }
   }
 
-  const faqs = [
-    {
-      q: 'Precisa de análise de perfil ou consulta ao SPC/Serasa?',
-      a: 'Não! Na 21Go não fazemos consulta de crédito nem restrição por idade, estado civil, CEP de residência ou se você trabalha com aplicativo (Uber, 99). A proteção é para o veículo.',
-    },
-    {
-      q: 'Quanto tempo leva para meu veículo ficar protegido?',
-      a: 'Após o envio e aprovação da vistoria digital (feita 100% online por fotos no celular), a proteção entra em vigor de forma imediata!',
-    },
-    {
-      q: 'O que é o desconto do adesivo 21Go?',
-      a: 'Se você optar por colocar o adesivo discreto da 21Go no vidro traseiro do seu veículo, você ganha até 15% de desconto vitalício em todas as suas mensalidades.',
-    },
-    {
-      q: 'Como funciona a assistência 24h e o guincho?',
-      a: 'Você conta com uma central 0800 disponível 24 horas por dia, 7 dias por semana em todo o Brasil. Cobre reboque/guincho, socorro mecânico, socorro elétrico, troca de pneus, chaveiro e hospedagem emergencial.',
-    },
-    {
-      q: 'Como é feito o pagamento das mensalidades?',
-      a: 'As mensalidades são pagas mensalmente via boleto bancário ou Pix, com desconto de 5% por pontualidade pagando até o dia de vencimento escolhido (dia 10 ou 20).',
-    },
-  ]
+  // Mensalidade exibida conforme os descontos marcados
+  const priceFor = (plan: PlanPricing) => {
+    if (comAdesivo && quoteResult?.regras.elegivelAdesivo) return plan.mensalidadeComAdesivo
+    if (comPontualidade) return plan.mensalidadeComPontualidade
+    return plan.monthly
+  }
+
+  const closeModal = () => {
+    setIsModalOpen(false)
+    setSubmitSuccessData(null)
+  }
+
+  // Fecha o modal com Esc
+  useEffect(() => {
+    if (!isModalOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeModal()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isModalOpen])
+
+  const busy = isSearchingPlate || isCalculating
+  const spinner = (
+    <span
+      aria-label="Carregando"
+      role="status"
+      className="h-5 w-5 animate-spin rounded-full border-2 border-navy-950 border-t-transparent"
+    />
+  )
+  const tabCls = (on: boolean) =>
+    `min-h-[44px] rounded-lg text-[15px] transition ${
+      on ? 'bg-white font-bold text-navy-800 shadow-[0_1px_3px_rgba(26,39,84,0.15)]' : 'font-semibold text-muted'
+    }`
+  const ctaCls =
+    'flex min-h-[54px] w-full items-center justify-center gap-2 rounded-lg bg-go-orange text-[17px] font-extrabold text-navy-950 transition hover:-translate-y-px hover:shadow-cta disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none'
 
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-slate-900 text-slate-100 selection:bg-brand-500 selection:text-white">
-      {/* Header Fixo */}
-      <header className="bg-slate-950/80 border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-brand-500 to-amber-400 flex items-center justify-center font-black text-2xl text-white shadow-lg shadow-brand-500/25">
-              21
-            </div>
-            <div>
-              <div className="font-black text-lg leading-tight tracking-tight flex items-center gap-2 text-white">
-                21Go Proteção
-                <span className="hidden sm:inline-flex text-[10px] bg-brand-500/15 text-brand-400 font-bold px-2 py-0.5 rounded-full border border-brand-500/30 uppercase">
-                  Franquia Autorizada
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400">Atendimento Exclusivo e Direto</p>
-            </div>
-          </div>
+    <div className="flex min-h-screen flex-col bg-surface-50 font-sans text-navy-800">
+      <TopBar />
+      <SiteHeader />
 
-          <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-300">
-            <a href="#cotacao" className="hover:text-brand-400 transition">Cotação Online</a>
-            <a href="#beneficios" className="hover:text-brand-400 transition">Benefícios</a>
-            <a href="#como-funciona" className="hover:text-brand-400 transition">Como Funciona</a>
-            <a href="#duvidas" className="hover:text-brand-400 transition">Dúvidas Frequentes</a>
-          </nav>
-
-          <a
-            href="#cotacao"
-            className="inline-flex items-center gap-2 text-xs font-bold bg-brand-600 hover:bg-brand-500 text-white px-4 py-2.5 rounded-xl transition shadow-md shadow-brand-600/20 active:scale-95"
-          >
-            <span>Simular Agora</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </a>
-        </div>
-      </header>
-
-      {/* Hero Section */}
       <main className="flex-1">
-        <section id="cotacao" className="relative pt-12 pb-20 px-4 overflow-hidden">
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-brand-500/10 rounded-full blur-[120px] pointer-events-none" />
-          <div className="absolute top-1/2 right-10 w-[400px] h-[300px] bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
-
-          <div className="max-w-4xl mx-auto text-center relative z-10">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800/90 border border-slate-700/80 text-xs font-semibold text-brand-400 mb-6 shadow-inner">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              Preços Oficiais em Tempo Real • Vistoria 100% Digital
+        {/* Hero */}
+        <section
+          id="topo"
+          className="bg-navy-950 text-white [background-image:radial-gradient(ellipse_at_85%_0%,rgba(242,145,29,0.20),transparent_45%),radial-gradient(ellipse_at_0%_100%,rgba(199,211,1,0.10),transparent_45%),radial-gradient(circle_at_30%_20%,#22337a_0%,#111b45_50%,#0b1230_100%)]"
+        >
+          <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-8 px-6 pb-14 pt-10 sm:gap-14 sm:pb-24 sm:pt-20">
+            <div className="flex min-w-0 flex-[1_1_520px] flex-col gap-6">
+              <span className="inline-flex items-center gap-2 self-start rounded-full border border-go-lime/35 bg-go-lime/10 px-3.5 py-1.5 text-[13px] font-semibold text-[#e6ee5c]">
+                <Check aria-hidden className="h-4 w-4 text-go-lime" />
+                Proteção veicular em todo o Brasil desde 2004
+              </span>
+              <h1 className="m-0 text-[40px] font-extrabold leading-[1.04] tracking-[-1.2px] sm:text-[64px] sm:tracking-[-2.4px]">
+                Seu carro protegido pelo <span className="text-go-orange">preço oficial</span>, em 30 segundos.
+              </h1>
+              <p className="m-0 max-w-[560px] text-[19px] leading-relaxed text-muted-soft">
+                Digite a placa e veja na hora os planos da 21Go para o seu veículo. 100% da Tabela FIPE, sem
+                consulta ao SPC/Serasa e vistoria pelo celular — de qualquer estado.
+              </p>
+              <ul className="m-0 grid list-none gap-x-6 gap-y-3 p-0 text-base [grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))]">
+                {[
+                  'Indenização de 100% da FIPE',
+                  'Sem análise de perfil',
+                  'Aprovação em até 48h',
+                  'Sem fidelidade nem multa',
+                ].map((t) => (
+                  <li key={t} className="flex items-center gap-2.5">
+                    <Check aria-hidden className="h-5 w-5 shrink-0 text-go-orange" />
+                    {t}
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white mb-5 leading-[1.15]">
-              Proteja seu veículo pelo{' '}
-              <span className="bg-gradient-to-r from-brand-400 via-amber-300 to-brand-500 bg-clip-text text-transparent">
-                preço oficial do Rio
-              </span>
-            </h1>
+            {/* Card de cotação */}
+            <div
+              id="cotacao"
+              className="flex min-w-0 max-w-[460px] flex-[1_1_320px] scroll-mt-24 flex-col gap-5 rounded-3xl bg-white p-5 text-navy-800 shadow-[0_24px_64px_rgba(7,12,34,0.45)] sm:p-8"
+            >
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-bold tracking-[1.5px] text-muted">COTAÇÃO GRÁTIS</span>
+                <h2 className="m-0 text-[26px] font-extrabold tracking-[-0.6px]">Quanto custa proteger o seu?</h2>
+              </div>
 
-            <p className="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto mb-10 leading-relaxed">
-              Consulte grátis em <strong>30 segundos</strong> digitando a placa. Sem pegadinhas, 100% tabela FIPE e cobertura completa para roubo, furto, colisão e guincho 24h.
-            </p>
-
-            {/* Box Principal de Cotação */}
-            <div className="bg-slate-950/90 border border-slate-800 text-slate-100 rounded-3xl shadow-2xl p-6 sm:p-8 max-w-2xl mx-auto text-left backdrop-blur-xl relative">
-              <div className="flex border-b border-slate-800 mb-6 pb-3 gap-6 text-sm font-bold">
+              <div
+                role="tablist"
+                aria-label="Forma de cotação"
+                className="grid grid-cols-2 gap-1 rounded-[10px] bg-surface-100 p-1"
+              >
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={searchMode === 'placa'}
                   onClick={() => setSearchMode('placa')}
-                  className={`pb-2 border-b-2 transition flex items-center gap-2 ${
-                    searchMode === 'placa'
-                      ? 'border-brand-500 text-brand-400'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={tabCls(searchMode === 'placa')}
                 >
-                  <Search className="w-4 h-4" />
-                  Consultar por Placa (Instantâneo)
+                  Pela placa
                 </button>
                 <button
                   type="button"
+                  role="tab"
+                  aria-selected={searchMode === 'manual'}
                   onClick={() => setSearchMode('manual')}
-                  className={`pb-2 border-b-2 transition flex items-center gap-2 ${
-                    searchMode === 'manual'
-                      ? 'border-brand-500 text-brand-400'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
-                  }`}
+                  className={tabCls(searchMode === 'manual')}
                 >
-                  <Car className="w-4 h-4" />
-                  Marca e Modelo
+                  Marca e modelo
                 </button>
               </div>
 
               {searchMode === 'placa' ? (
-                <form onSubmit={handleSearchPlate} className="space-y-4">
-                  <div>
-                    <label
-                      htmlFor="placa-input"
-                      className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2"
-                    >
-                      Placa do Veículo (Padrão Antigo ou Mercosul)
+                <form onSubmit={handleSearchPlate} className="flex flex-col gap-5">
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="placa-input" className="text-sm font-semibold">
+                      Placa do veículo
                     </label>
-                    <div className="flex flex-col sm:flex-row gap-2.5">
-                      <div className="relative flex-1">
-                        <input
-                          id="placa-input"
-                          type="text"
-                          maxLength={7}
-                          value={placa}
-                          onChange={(e) => handlePlateChange(e.target.value)}
-                          placeholder="Ex: ABC1D23"
-                          className="w-full uppercase font-mono font-black text-2xl px-4 py-3.5 bg-slate-900 border-2 border-slate-700 rounded-2xl focus:border-brand-500 focus:outline-none transition tracking-widest placeholder:tracking-normal placeholder:font-normal placeholder:text-sm placeholder:text-slate-500 text-white"
-                        />
-                        <span className="absolute right-3.5 top-3.5 text-[10px] font-black bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-1 rounded-md">
-                          BRASIL
-                        </span>
+                    <div className="overflow-hidden rounded-[10px] border-[3px] border-navy-800">
+                      <div className="bg-navy-600 py-1 text-center text-[11px] font-bold tracking-[3px] text-white">
+                        BRASIL
                       </div>
-                      <button
-                        type="submit"
-                        disabled={isSearchingPlate || isCalculating}
-                        className="bg-gradient-to-r from-brand-600 to-amber-500 hover:from-brand-500 hover:to-amber-400 disabled:opacity-50 text-white font-extrabold px-8 py-3.5 rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-brand-500/25 active:scale-95 text-base"
-                      >
-                        {isSearchingPlate || isCalculating ? (
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <>
-                            <span>Ver Preço Oficial</span>
-                            <ArrowRight className="w-4 h-4" />
-                          </>
-                        )}
-                      </button>
+                      <input
+                        id="placa-input"
+                        type="text"
+                        maxLength={7}
+                        value={placa}
+                        onChange={(e) => handlePlateChange(e.target.value)}
+                        placeholder="ABC1D23"
+                        autoComplete="off"
+                        className="w-full border-0 bg-white p-3 text-center text-[32px] font-extrabold uppercase tracking-[6px] text-navy-950 placeholder:text-[#c9d1e6]"
+                      />
                     </div>
+                    <span className="text-[13px] text-muted">Padrão antigo ou Mercosul.</span>
                   </div>
+                  <button type="submit" disabled={busy} className={ctaCls}>
+                    {busy ? spinner : 'Ver meu preço agora'}
+                  </button>
                 </form>
               ) : (
-                <form onSubmit={handleManualCalculate} className="space-y-4">
-                  <div className="flex gap-6 mb-2">
-                    <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-                      <input
-                        type="radio"
-                        checked={tipo === 'carro'}
-                        onChange={() => setTipo('carro')}
-                        name="tipo"
-                        className="accent-brand-500"
-                      />
-                      Carro / Utilitário
-                    </label>
-                    <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
-                      <input
-                        type="radio"
-                        checked={tipo === 'moto'}
-                        onChange={() => setTipo('moto')}
-                        name="tipo"
-                        className="accent-brand-500"
-                      />
-                      Motocicleta
-                    </label>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-300 mb-1">Marca</label>
+                <form onSubmit={handleManualCalculate} className="flex flex-col gap-5">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2 flex flex-col gap-1.5">
+                      <label htmlFor="tipo" className={labelCls}>Tipo</label>
                       <select
+                        id="tipo"
+                        value={tipo}
+                        onChange={(e) => {
+                          setTipo(e.target.value as 'carro' | 'moto')
+                          setSelectedBrand('')
+                          setSelectedModel('')
+                        }}
+                        className={inputCls}
+                      >
+                        <option value="carro">Carro / Utilitário</option>
+                        <option value="moto">Motocicleta</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="marca" className={labelCls}>Marca</label>
+                      <select
+                        id="marca"
                         value={selectedBrand}
                         onChange={(e) => setSelectedBrand(e.target.value)}
-                        className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white"
+                        className={inputCls}
                       >
-                        <option value="">Selecione a marca...</option>
+                        <option value="">Selecione...</option>
                         {brands.map((b) => (
-                          <option key={b.code} value={b.code}>
-                            {b.name}
-                          </option>
+                          <option key={b.code} value={b.code}>{b.name}</option>
                         ))}
                       </select>
                     </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-300 mb-1">Ano</label>
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="ano" className={labelCls}>Ano</label>
                       <select
+                        id="ano"
                         value={selectedYear}
                         onChange={(e) => setSelectedYear(e.target.value)}
-                        className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white"
+                        className={inputCls}
                       >
-                        <option value="">Selecione o ano...</option>
+                        <option value="">Selecione...</option>
                         {years.map((y) => (
-                          <option key={y.code} value={y.code}>
-                            {y.name}
-                          </option>
+                          <option key={y.code} value={y.code}>{y.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="col-span-2 flex flex-col gap-1.5">
+                      <label htmlFor="modelo" className={labelCls}>Modelo</label>
+                      <select
+                        id="modelo"
+                        value={selectedModel}
+                        onChange={(e) => setSelectedModel(e.target.value)}
+                        disabled={!models.length}
+                        className={`${inputCls} disabled:opacity-50`}
+                      >
+                        <option value="">
+                          {models.length ? 'Selecione o modelo exato...' : 'Escolha a marca e o ano acima'}
+                        </option>
+                        {models.map((m) => (
+                          <option key={m.code} value={m.code}>{m.name}</option>
                         ))}
                       </select>
                     </div>
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Modelo</label>
-                    <select
-                      value={selectedModel}
-                      onChange={(e) => setSelectedModel(e.target.value)}
-                      disabled={!models.length}
-                      className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none disabled:opacity-40 text-white"
-                    >
-                      <option value="">
-                        {models.length ? 'Selecione o modelo exato...' : 'Escolha a marca e o ano acima'}
-                      </option>
-                      {models.map((m) => (
-                        <option key={m.code} value={m.code}>
-                          {m.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isCalculating || !selectedModel}
-                    className="w-full mt-2 bg-gradient-to-r from-brand-600 to-amber-500 hover:from-brand-500 hover:to-amber-400 disabled:opacity-50 text-white font-extrabold py-3.5 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-brand-500/20"
-                  >
-                    {isCalculating ? (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <Search className="w-4 h-4" />
-                        Calcular Cotação Oficial
-                      </>
-                    )}
+                  <button type="submit" disabled={isCalculating || !selectedModel} className={ctaCls}>
+                    {isCalculating ? spinner : (<><Search aria-hidden className="h-5 w-5" />Ver meu preço agora</>)}
                   </button>
                 </form>
               )}
 
               {plateError && (
-                <div className="mt-4 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2.5">
-                  <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                <div
+                  role="alert"
+                  className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm text-red-800"
+                >
+                  <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
                   {plateError}
                 </div>
               )}
-            </div>
 
-            {/* Badges de Confiança */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-12 max-w-3xl mx-auto text-left">
-              <div className="flex items-center gap-3 p-3 bg-slate-950/40 border border-slate-800/80 rounded-2xl">
-                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
-                <span className="text-xs text-slate-300 font-medium">100% Tabela FIPE</span>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-slate-950/40 border border-slate-800/80 rounded-2xl">
-                <Lock className="w-5 h-5 text-amber-400 flex-shrink-0" />
-                <span className="text-xs text-slate-300 font-medium">Sem SPC/Serasa</span>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-slate-950/40 border border-slate-800/80 rounded-2xl">
-                <Zap className="w-5 h-5 text-brand-400 flex-shrink-0" />
-                <span className="text-xs text-slate-300 font-medium">Vistoria Online</span>
-              </div>
-              <div className="flex items-center gap-3 p-3 bg-slate-950/40 border border-slate-800/80 rounded-2xl">
-                <Clock className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                <span className="text-xs text-slate-300 font-medium">Socorro 24 Horas</span>
-              </div>
+              <p className="m-0 text-center text-[13px] leading-snug text-muted">
+                Grátis e sem compromisso. Valores oficiais da 21Go, sem consulta ao SPC/Serasa.
+              </p>
             </div>
           </div>
         </section>
 
-        {/* Resultados da Cotação (Se preenchido) */}
+        {/* Resultado da cotação */}
         {quoteResult && (
-          <section id="planos-section" className="max-w-6xl mx-auto px-4 py-12 scroll-mt-20">
-            {/* Box do Veículo */}
-            <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center font-bold">
-                  <Car className="w-8 h-8" />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-brand-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Veículo Identificado com Sucesso
-                  </div>
-                  <h2 className="text-xl sm:text-2xl font-black text-white mt-0.5">
+          <section id="planos-section" className="mx-auto flex max-w-[1200px] scroll-mt-20 flex-col gap-7 px-4 py-12 sm:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-6 rounded-2xl border border-line bg-white p-5 shadow-card sm:p-7">
+              <div className="flex min-w-0 flex-[1_1_380px] items-center gap-4">
+                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[14px] bg-surface-100">
+                  <Car aria-hidden className="h-7 w-7 text-navy-600" />
+                </span>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <span className="text-xs font-bold tracking-[1.5px] text-go-lime-dark">VEÍCULO ENCONTRADO</span>
+                  <h2 className="m-0 text-[28px] font-extrabold leading-tight tracking-[-0.8px] sm:text-[32px]">
                     {quoteResult.vehicle.marca} {quoteResult.vehicle.modelo}
                   </h2>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Ano: <strong className="text-slate-200">{quoteResult.vehicle.ano}</strong> •
-                    FIPE Oficial:{' '}
-                    <span className="font-extrabold text-emerald-400 text-sm">
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL',
-                      }).format(quoteResult.vehicle.fipeValue)}
-                    </span>{' '}
-                    • Código: {quoteResult.vehicle.fipeCode}
+                  <p className="m-0 text-[15px] text-muted">
+                    Ano {quoteResult.vehicle.ano}
+                    {(placa || quoteResult.vehicle.placa) && ` · Placa ${placa || quoteResult.vehicle.placa}`} · FIPE{' '}
+                    <strong className="text-navy-800">{brl(quoteResult.vehicle.fipeValue)}</strong>
+                    {quoteResult.vehicle.fipeCode && ` · Cód. ${quoteResult.vehicle.fipeCode}`}
+                    {' · '}
+                    <a
+                      href="#cotacao"
+                      onClick={() => setQuoteResult(null)}
+                      className="text-navy-600 underline"
+                    >
+                      Trocar veículo
+                    </a>
                   </p>
                 </div>
               </div>
 
-              {/* Toggles de Descontos */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row gap-5 text-xs">
+              <fieldset className="m-0 flex flex-col gap-2.5 rounded-xl border border-line bg-surface-50 px-[18px] py-3.5">
+                <legend className="px-1.5 text-xs font-bold tracking-[1.5px] text-muted">SEUS DESCONTOS</legend>
                 {quoteResult.regras.elegivelAdesivo && (
-                  <label className="flex items-center gap-2.5 cursor-pointer font-semibold text-slate-200">
+                  <label className="flex min-h-[32px] cursor-pointer items-center gap-3 text-[15px] font-semibold">
                     <input
                       type="checkbox"
                       checked={comAdesivo}
                       onChange={(e) => setComAdesivo(e.target.checked)}
-                      className="w-4 h-4 accent-brand-500 rounded"
+                      className="h-[22px] w-[22px] accent-navy-800"
                     />
                     <span>
-                      Adesivo 21Go{' '}
-                      <span className="text-emerald-400 font-bold">
-                        (-{quoteResult.regras.percentualAdesivo}%)
-                      </span>
+                      Adesivo 21Go no vidro{' '}
+                      <strong className="text-go-lime-dark">−{quoteResult.regras.percentualAdesivo}%</strong>
                     </span>
                   </label>
                 )}
-                <label className="flex items-center gap-2.5 cursor-pointer font-semibold text-slate-200">
+                <label className="flex min-h-[32px] cursor-pointer items-center gap-3 text-[15px] font-semibold">
                   <input
                     type="checkbox"
                     checked={comPontualidade}
                     onChange={(e) => setComPontualidade(e.target.checked)}
-                    className="w-4 h-4 accent-brand-500 rounded"
+                    className="h-[22px] w-[22px] accent-navy-800"
                   />
                   <span>
-                    Pontualidade <span className="text-emerald-400 font-bold">(-5%)</span>
+                    Pagamento em dia <strong className="text-go-lime-dark">−{quoteResult.regras.percentualPontualidade || 5}%</strong>
                   </span>
                 </label>
-              </div>
+              </fieldset>
             </div>
 
             {quoteResult.regras.exigeVistoriaPresencial && (
-              <div className="mb-8 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
+              <div role="note" className="flex items-center gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+                <AlertTriangle aria-hidden className="h-5 w-5 shrink-0 text-amber-600" />
                 <span>
-                  <strong>Atenção:</strong> Este modelo específico exige vistoria presencial na sede da 21Go após o envio inicial dos dados.
+                  <strong>Atenção:</strong> este modelo específico exige vistoria presencial na sede da 21Go após o envio inicial dos dados.
                 </span>
               </div>
             )}
 
-            {/* Grid dos 4 Planos Oficiais */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {quoteResult.plans.map((plan) => {
-                let valorExibido = plan.monthly
-                if (comAdesivo && quoteResult.regras.elegivelAdesivo) {
-                  valorExibido = plan.mensalidadeComAdesivo
-                } else if (comPontualidade) {
-                  valorExibido = plan.mensalidadeComPontualidade
-                }
+            <div className="flex flex-col gap-1.5">
+              <h2 className="m-0 text-[28px] font-extrabold tracking-[-0.6px]">Escolha o seu plano</h2>
+              <p className="m-0 text-base text-muted">
+                Valores oficiais da 21Go para este veículo. Sem fidelidade nem multa de cancelamento.
+              </p>
+            </div>
 
+            <div className="grid items-stretch gap-5 [grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))]">
+              {quoteResult.plans.map((plan) => {
+                const price = priceFor(plan)
+                const hasDiscount = price < plan.monthly
+                const pop = !!plan.popular
+                const muted = pop ? 'text-muted-soft' : 'text-muted'
                 return (
-                  <div
+                  <article
                     key={plan.id}
-                    className={`relative rounded-3xl bg-slate-950 border p-6 flex flex-col transition-all duration-300 hover:-translate-y-1 ${
-                      plan.popular
-                        ? 'border-brand-500 shadow-2xl shadow-brand-500/20 ring-1 ring-brand-500'
-                        : 'border-slate-800 shadow-lg'
+                    className={`flex flex-col gap-5 rounded-2xl p-6 ${
+                      pop
+                        ? 'border-2 border-go-orange bg-navy-950 text-white shadow-[0_16px_40px_rgba(11,18,48,0.25)]'
+                        : 'border border-line bg-white'
                     }`}
                   >
-                    {plan.popular && (
-                      <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-brand-600 to-amber-500 text-white text-[11px] font-black uppercase tracking-wider px-3.5 py-1 rounded-full shadow-md">
-                        Mais Escolhido
-                      </span>
-                    )}
-
-                    <div className="mb-5">
-                      <h3 className="text-xl font-black text-white">{plan.name}</h3>
-                      <div className="mt-3 flex items-baseline gap-1">
-                        <span className="text-sm font-bold text-slate-400">R$</span>
-                        <span className="text-4xl font-black text-white tracking-tight">
-                          {valorExibido.toFixed(2).replace('.', ',')}
+                    <div className="flex flex-col gap-2.5">
+                      <div className="flex min-h-[26px] items-center justify-between gap-2">
+                        <h3 className="m-0 text-[21px] font-extrabold">{plan.name}</h3>
+                        {pop && (
+                          <span className="rounded-full bg-go-orange px-2.5 py-1 text-[11px] font-extrabold tracking-wider text-navy-950">
+                            MAIS ESCOLHIDO
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-base font-bold">R$</span>
+                        <span className="text-[42px] font-extrabold leading-none tracking-[-1.5px]">{money(price)}</span>
+                        <span className={`text-sm ${muted}`}>/mês</span>
+                      </div>
+                      {hasDiscount && (
+                        <span className={`text-sm ${muted}`}>
+                          Sem descontos: <s>R$ {money(plan.monthly)}</s>
                         </span>
-                        <span className="text-xs text-slate-400">/mês</span>
-                      </div>
-                      <div className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
-                        <span>Taxa de ativação no Pix:</span>
-                        <strong className="text-slate-200">
-                          {new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL',
-                          }).format(plan.ativacao)}
-                        </strong>
-                      </div>
+                      )}
+                      <span className={`text-sm ${muted}`}>
+                        Ativação no Pix: <strong>{brl(plan.ativacao)}</strong>
+                      </span>
                     </div>
-
-                    <div className="border-t border-slate-800/80 pt-4 flex-1">
-                      <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-3">
-                        Coberturas Inclusas:
-                      </div>
-                      <ul className="space-y-2.5 text-xs text-slate-300">
-                        {plan.coberturas.map((cob, idx) => (
-                          <li key={idx} className="flex items-start gap-2.5">
-                            <Check className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
-                            <span className="leading-tight">{cob}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
+                    <ul
+                      className={`m-0 flex flex-1 list-none flex-col gap-2.5 border-t p-0 pt-4 text-[15px] leading-snug ${
+                        pop ? 'border-navy-line' : 'border-line'
+                      }`}
+                    >
+                      {plan.coberturas.map((cob, idx) => (
+                        <li key={idx} className="flex items-start gap-2.5">
+                          <Check aria-hidden className="mt-0.5 h-[18px] w-[18px] shrink-0 text-go-orange" />
+                          <span>{cob}</span>
+                        </li>
+                      ))}
+                    </ul>
                     <button
                       type="button"
                       onClick={() => {
                         setSelectedPlan(plan)
                         setIsModalOpen(true)
                       }}
-                      className={`mt-6 w-full py-3.5 rounded-2xl font-black text-sm transition flex items-center justify-center gap-2 active:scale-95 ${
-                        plan.popular
-                          ? 'bg-gradient-to-r from-brand-600 to-amber-500 hover:from-brand-500 hover:to-amber-400 text-white shadow-lg shadow-brand-500/25'
-                          : 'bg-slate-800 hover:bg-slate-700 text-white'
+                      className={`flex min-h-[50px] items-center justify-center rounded-lg text-base font-extrabold transition hover:-translate-y-px hover:shadow-cta ${
+                        pop ? 'bg-go-orange text-navy-950' : 'border-2 border-navy-800 text-navy-800'
                       }`}
                     >
-                      <span>Contratar Este Plano</span>
-                      <ArrowRight className="w-4 h-4" />
+                      Quero este plano
                     </button>
-                  </div>
+                  </article>
                 )
               })}
             </div>
+
+            <ul className="m-0 grid list-none gap-x-6 gap-y-3 rounded-2xl bg-surface-100 px-6 py-5 text-[15px] font-semibold [grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr))]">
+              <li>100% da Tabela FIPE</li>
+              <li>Sem consulta ao SPC/Serasa</li>
+              <li>Vistoria online pelo celular</li>
+              <li>Assistência 24h em todo o Brasil</li>
+            </ul>
           </section>
         )}
 
-        {/* Como Funciona o Processo */}
-        <section id="como-funciona" className="py-20 px-4 bg-slate-950/60 border-t border-slate-800">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center max-w-2xl mx-auto mb-16">
-              <span className="text-xs font-bold uppercase tracking-wider text-brand-400">
-                Simplicidade e Agilidade
-              </span>
-              <h2 className="text-3xl sm:text-4xl font-black text-white mt-2">
-                Como funciona a adesão?
-              </h2>
-              <p className="text-slate-400 text-sm mt-3">
-                Esqueça filas e papeladas. Seu carro protegido em apenas 4 passos descomplicados:
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 relative">
-                <span className="text-4xl font-black text-brand-500/30">01</span>
-                <h3 className="font-bold text-base text-white mt-2 mb-1">Cote pela Placa</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Digite sua placa e veja instantaneamente os valores e planos disponíveis sem burocracia.
-                </p>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 relative">
-                <span className="text-4xl font-black text-brand-500/30">02</span>
-                <h3 className="font-bold text-base text-white mt-2 mb-1">Escolha seu Plano</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Selecione o plano ideal para suas necessidades e aproveite os descontos de adesivo e pontualidade.
-                </p>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 relative">
-                <span className="text-4xl font-black text-brand-500/30">03</span>
-                <h3 className="font-bold text-base text-white mt-2 mb-1">Vistoria 100% Online</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Tire as fotos do seu veículo pelo celular sem sair de casa, sem filas e com aprovação rápida.
-                </p>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 relative">
-                <span className="text-4xl font-black text-brand-500/30">04</span>
-                <h3 className="font-bold text-base text-white mt-2 mb-1">Veículo Protegido</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Após a aprovação, seu veículo já está coberto com assistência 24h em todo o Brasil.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Benefícios / Coberturas Detalhadas */}
-        <section id="beneficios" className="py-20 px-4">
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center max-w-2xl mx-auto mb-16">
-              <span className="text-xs font-bold uppercase tracking-wider text-brand-400">
-                Tudo o Que Você Precisa
-              </span>
-              <h2 className="text-3xl sm:text-4xl font-black text-white mt-2">
-                Proteção completa sem pegadinhas
-              </h2>
-              <p className="text-slate-400 text-sm mt-3">
-                Conheça os pilares que fazem da 21Go a proteção veicular preferida dos motoristas do Rio de Janeiro:
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-slate-950 border border-slate-800 rounded-3xl p-7 hover:border-slate-700 transition">
-                <div className="w-12 h-12 rounded-2xl bg-brand-500/10 text-brand-400 flex items-center justify-center mb-5">
-                  <Shield className="w-6 h-6" />
-                </div>
-                <h3 className="font-black text-lg text-white mb-2">Roubo, Furto e Colisão</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Indenização integral de 100% da Tabela FIPE em casos de roubo, furto, colisão e perda total. Sem burocracia desnecessária.
-                </p>
-              </div>
-
-              <div className="bg-slate-950 border border-slate-800 rounded-3xl p-7 hover:border-slate-700 transition">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-5">
-                  <Wrench className="w-6 h-6" />
-                </div>
-                <h3 className="font-black text-lg text-white mb-2">Assistência 24 Horas</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Guincho em todo o território nacional, socorro mecânico e elétrico, recarga de bateria, chaveiro e troca de pneus a qualquer hora.
-                </p>
-              </div>
-
-              <div className="bg-slate-950 border border-slate-800 rounded-3xl p-7 hover:border-slate-700 transition">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center mb-5">
-                  <Users className="w-6 h-6" />
-                </div>
-                <h3 className="font-black text-lg text-white mb-2">Danos Materiais a Terceiros</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Cobertura para prejuízos causados a veículos de terceiros de até R$ 100.000,00, trazendo tranquilidade total no trânsito.
-                </p>
-              </div>
-
-              <div className="bg-slate-950 border border-slate-800 rounded-3xl p-7 hover:border-slate-700 transition">
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-5">
-                  <Car className="w-6 h-6" />
-                </div>
-                <h3 className="font-black text-lg text-white mb-2">Carro Reserva</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Opções de carro reserva de 7 a 15 dias para você não ficar a pé enquanto seu veículo é reparado em oficinas credenciadas.
-                </p>
-              </div>
-
-              <div className="bg-slate-950 border border-slate-800 rounded-3xl p-7 hover:border-slate-700 transition">
-                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center mb-5">
-                  <Zap className="w-6 h-6" />
-                </div>
-                <h3 className="font-black text-lg text-white mb-2">Fenômenos da Natureza</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Proteção completa contra enchentes, alagamentos, queda de árvores e chuva de granizo, cada vez mais comuns nas cidades.
-                </p>
-              </div>
-
-              <div className="bg-slate-950 border border-slate-800 rounded-3xl p-7 hover:border-slate-700 transition">
-                <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center mb-5">
-                  <CreditCard className="w-6 h-6" />
-                </div>
-                <h3 className="font-black text-lg text-white mb-2">Sem Análise de Perfil</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Qualquer pessoa habilitada pode dirigir o veículo sem afetar a indenização. Aceitamos motoristas de app e carros de trabalho.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* FAQ - Perguntas Frequentes */}
-        <section id="duvidas" className="py-20 px-4 bg-slate-950/60 border-t border-slate-800">
-          <div className="max-w-3xl mx-auto">
-            <div className="text-center mb-12">
-              <span className="text-xs font-bold uppercase tracking-wider text-brand-400">
-                Tire Suas Dúvidas
-              </span>
-              <h2 className="text-3xl sm:text-4xl font-black text-white mt-2">
-                Perguntas Frequentes
-              </h2>
-            </div>
-
-            <div className="space-y-4">
-              {faqs.map((faq, idx) => (
-                <div
-                  key={idx}
-                  className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden transition"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                    className="w-full p-5 text-left font-bold text-sm sm:text-base text-white flex items-center justify-between gap-4"
-                  >
-                    <span>{faq.q}</span>
-                    <ChevronDown
-                      className={`w-5 h-5 text-slate-400 transition-transform ${
-                        openFaq === idx ? 'rotate-180 text-brand-400' : ''
-                      }`}
-                    />
-                  </button>
-                  {openFaq === idx && (
-                    <div className="px-5 pb-5 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-slate-800/80 pt-4">
-                      {faq.a}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+        <Stats />
+        <Coberturas />
+        <PlanosPreview />
+        <ComoFunciona />
+        <Comparativo />
+        <SeguradoraDisseNao />
+        <Faq />
+        <CtaFinal />
       </main>
 
-      {/* Modal de Cadastro Completo (Direto para o CRM + Vistoria) */}
+      <SiteFooter />
+      <FloatingWhatsApp />
+
+      {/* Cadastro de adesão (direto para o CRM + vistoria) */}
       {isModalOpen && selectedPlan && quoteResult && (
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
+          aria-labelledby="modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-navy-deep/70 p-4 backdrop-blur-sm"
         >
-          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+          <div className="relative max-h-[92vh] w-full max-w-[520px] overflow-y-auto rounded-3xl bg-white p-6 text-navy-800 shadow-[0_24px_64px_rgba(7,12,34,0.45)] sm:p-8">
             <button
               type="button"
-              onClick={() => {
-                setIsModalOpen(false)
-                setSubmitSuccessData(null)
-              }}
-              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-xl bg-slate-800"
+              onClick={closeModal}
+              aria-label="Fechar"
+              className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-lg text-muted hover:bg-surface-100"
             >
-              <X className="w-5 h-5" />
+              <X aria-hidden className="h-5 w-5" />
             </button>
 
             {submitSuccessData ? (
-              <div className="text-center py-6 space-y-4">
-                <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <h3 className="text-2xl font-black text-white">Cadastro Pré-Aprovado!</h3>
-                <p className="text-xs sm:text-sm text-slate-300 max-w-sm mx-auto leading-relaxed">
-                  Seus dados já foram registrados no nosso sistema. Para concluir a ativação da sua
-                  proteção, basta realizar a <strong>Vistoria Digital</strong> das fotos do veículo
-                  e documentos.
+              <div className="flex flex-col items-center gap-4 py-6 text-center">
+                <span className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-go-lime">
+                  <CheckCircle2 aria-hidden className="h-9 w-9 text-navy-950" />
+                </span>
+                <h3 id="modal-title" className="m-0 text-[28px] font-extrabold tracking-[-0.8px]">
+                  Cadastro pré-aprovado!
+                </h3>
+                <p className="m-0 max-w-sm text-base leading-relaxed text-muted">
+                  Seus dados já foram registrados. Para concluir a ativação da sua proteção, faça a{' '}
+                  <strong className="text-navy-800">vistoria digital</strong> com as fotos do veículo e dos documentos.
                 </p>
-
-                <div className="pt-4 space-y-3">
-                  <button
-                    type="button"
-                    onClick={() => router.push(submitSuccessData.vistoriaUrl)}
-                    className="w-full bg-gradient-to-r from-brand-600 to-amber-500 hover:from-brand-500 hover:to-amber-400 text-white font-black py-4 rounded-xl transition flex items-center justify-center gap-2 shadow-xl shadow-brand-500/25 text-base active:scale-95"
-                  >
-                    <Camera className="w-5 h-5" />
-                    <span>Fazer Vistoria Digital Agora</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-
-                  <p className="text-[11px] text-slate-500">
-                    Você também receberá o link por e-mail e SMS para fazer quando quiser.
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => router.push(submitSuccessData.vistoriaUrl)}
+                  className={`${ctaCls} mt-2`}
+                >
+                  <Camera aria-hidden className="h-5 w-5" />
+                  Fazer vistoria digital agora
+                  <ArrowRight aria-hidden className="h-4 w-4" />
+                </button>
+                <p className="m-0 text-xs text-muted">
+                  Você também receberá o link por e-mail e SMS para fazer quando quiser.
+                </p>
               </div>
             ) : (
-              <div>
-                <div className="mb-6">
-                  <span className="text-xs font-bold text-brand-400 uppercase tracking-wider">
-                    Cadastro de Adesão
-                  </span>
-                  <h3 className="text-2xl font-black text-white mt-1">
-                    Garantir Plano {selectedPlan.name}
+              <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-1 pr-10">
+                  <span className="text-xs font-bold tracking-[1.5px] text-go-orange-dark">CADASTRO DE ADESÃO</span>
+                  <h3 id="modal-title" className="m-0 text-[26px] font-extrabold tracking-[-0.6px]">
+                    Garantir plano {selectedPlan.name}
                   </h3>
-                  <div className="mt-3 p-3.5 bg-slate-950 border border-slate-800 rounded-2xl text-xs text-slate-300 space-y-1.5">
-                    <p>
-                      <strong>Veículo:</strong> {quoteResult.vehicle.marca}{' '}
-                      {quoteResult.vehicle.modelo} ({quoteResult.vehicle.ano})
-                    </p>
-                    <p>
-                      <strong>Mensalidade:</strong>{' '}
-                      <span className="text-emerald-400 font-bold">
-                        R${' '}
-                        {(comAdesivo && quoteResult.regras.elegivelAdesivo
-                          ? selectedPlan.mensalidadeComAdesivo
-                          : selectedPlan.mensalidadeComPontualidade
-                        )
-                          .toFixed(2)
-                          .replace('.', ',')}
-                        /mês
-                      </span>
-                    </p>
-                  </div>
                 </div>
 
-                <form onSubmit={handleSubmitLead} className="space-y-4">
-                  <div>
-                    <label
-                      htmlFor="lead-nome"
-                      className="block text-xs font-bold text-slate-300 uppercase mb-1"
-                    >
-                      Nome Completo do Titular *
-                    </label>
+                <dl className="m-0 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 rounded-xl bg-navy-950 p-4 text-[15px] text-white">
+                  <dt className="text-muted-soft">Veículo</dt>
+                  <dd className="m-0 text-right">
+                    {quoteResult.vehicle.marca} {quoteResult.vehicle.modelo} ({quoteResult.vehicle.ano})
+                  </dd>
+                  <dt className="text-muted-soft">Mensalidade</dt>
+                  <dd className="m-0 text-right font-bold">R$ {money(priceFor(selectedPlan))}/mês</dd>
+                  <dt className="text-muted-soft">Ativação (uma vez, no Pix)</dt>
+                  <dd className="m-0 text-right">{brl(selectedPlan.ativacao)}</dd>
+                </dl>
+
+                <form onSubmit={handleSubmitLead} className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="lead-nome" className={labelCls}>Nome completo do titular</label>
                     <input
                       id="lead-nome"
                       type="text"
                       required
+                      autoComplete="name"
                       value={nome}
                       onChange={(e) => setNome(e.target.value)}
-                      placeholder="Ex: Carlos Silva"
-                      className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
+                      placeholder="Ex.: Carlos Silva"
+                      className={inputCls}
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label
-                        htmlFor="lead-cpf"
-                        className="block text-xs font-bold text-slate-300 uppercase mb-1"
-                      >
-                        CPF do Titular *
-                      </label>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="lead-cpf" className={labelCls}>CPF do titular</label>
                       <input
                         id="lead-cpf"
                         type="text"
+                        inputMode="numeric"
                         required
                         maxLength={14}
                         value={cpf}
                         onChange={(e) => handleCpfChange(e.target.value)}
                         placeholder="000.000.000-00"
-                        className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
+                        className={inputCls}
                       />
                     </div>
-
-                    <div>
-                      <label
-                        htmlFor="lead-whatsapp"
-                        className="block text-xs font-bold text-slate-300 uppercase mb-1"
-                      >
-                        Celular / WhatsApp *
-                      </label>
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="lead-whatsapp" className={labelCls}>WhatsApp com DDD</label>
                       <input
                         id="lead-whatsapp"
                         type="tel"
                         required
+                        autoComplete="tel"
                         value={whatsapp}
                         onChange={(e) => handlePhoneChange(e.target.value)}
-                        placeholder="(21) 99999-9999"
-                        className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
+                        placeholder="(00) 00000-0000"
+                        className={inputCls}
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label
-                        htmlFor="lead-email"
-                        className="block text-xs font-bold text-slate-300 uppercase mb-1"
-                      >
-                        E-mail *
-                      </label>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="lead-email" className={labelCls}>E-mail</label>
                       <input
                         id="lead-email"
                         type="email"
                         required
+                        autoComplete="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="carlos@exemplo.com"
-                        className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
+                        placeholder="voce@exemplo.com"
+                        className={inputCls}
                       />
                     </div>
-
-                    <div>
-                      <label
-                        htmlFor="lead-cidade"
-                        className="block text-xs font-bold text-slate-300 uppercase mb-1"
-                      >
-                        Cidade (RJ) *
-                      </label>
+                    <div className="flex flex-col gap-1.5">
+                      <label htmlFor="lead-cidade" className={labelCls}>Cidade</label>
                       <input
                         id="lead-cidade"
                         type="text"
                         required
                         value={cidade}
                         onChange={(e) => setCidade(e.target.value)}
-                        placeholder="Ex: Rio de Janeiro, Niterói..."
-                        className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
+                        placeholder="Ex.: Rio de Janeiro"
+                        className={inputCls}
                       />
                     </div>
                   </div>
 
-                  <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl">
-                    <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-300 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={veiculoTrabalho}
-                        onChange={(e) => setVeiculoTrabalho(e.target.checked)}
-                        className="w-4 h-4 accent-brand-500 rounded"
-                      />
-                      <span>Veículo utilizado para trabalho (Uber, 99, Táxi ou Entrega)</span>
-                    </label>
-                  </div>
+                  <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border border-line bg-surface-50 px-4 py-2 text-[15px] font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={veiculoTrabalho}
+                      onChange={(e) => setVeiculoTrabalho(e.target.checked)}
+                      className="h-[22px] w-[22px] shrink-0 accent-navy-800"
+                    />
+                    <span>Veículo usado para trabalho (Uber, 99, táxi ou entrega)</span>
+                  </label>
 
-                  <button
-                    type="submit"
-                    disabled={isSubmittingLead}
-                    className="w-full bg-gradient-to-r from-brand-600 to-amber-500 hover:from-brand-500 hover:to-amber-400 text-white font-extrabold py-3.5 rounded-xl transition flex items-center justify-center gap-2 shadow-xl shadow-brand-500/25 active:scale-95 text-base mt-2"
-                  >
+                  <button type="submit" disabled={isSubmittingLead} className={`${ctaCls} mt-1`}>
                     {isSubmittingLead ? (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      spinner
                     ) : (
                       <>
-                        <span>Avançar para Vistoria Digital</span>
-                        <ArrowRight className="w-4 h-4" />
+                        Avançar para a vistoria digital
+                        <ArrowRight aria-hidden className="h-4 w-4" />
                       </>
                     )}
                   </button>
 
-                  <p className="text-[11px] text-slate-500 text-center leading-relaxed">
-                    Seus dados serão cadastrados de forma segura no Power CRM e você receberá as
-                    orientações de ativação.
+                  <p className="m-0 text-center text-[13px] leading-relaxed text-muted">
+                    Seus dados são cadastrados de forma segura no Power CRM e você recebe as orientações de ativação.
+                    Você não paga nada agora.
                   </p>
                 </form>
               </div>
@@ -1101,25 +857,6 @@ export default function HomePage() {
           </div>
         </div>
       )}
-
-      {/* Footer Completo */}
-      <footer className="bg-slate-950 border-t border-slate-800 text-slate-400 text-xs py-12 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-brand-500 text-white font-black flex items-center justify-center text-sm">
-              21
-            </div>
-            <div>
-              <p className="font-bold text-white">21Go Proteção Veicular — Franquia Autorizada</p>
-              <p className="text-[11px] text-slate-500">Atendimento e Cotação Online para o Estado do Rio de Janeiro</p>
-            </div>
-          </div>
-
-          <p className="text-slate-500 text-center md:text-right text-[11px] max-w-md">
-            As cotações apresentadas refletem os valores oficiais sincronizados com o motor PowerCRM. Proteção patrimonial veicular operada em regime associativo conforme o artigo 5º da CF/88.
-          </p>
-        </div>
-      </footer>
     </div>
   )
 }
