@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sendLeadToPowerCrm } from '@/lib/powercrm-lead'
 import { sendLeadToCrm } from '@/lib/crm'
 import { sendTelegramNotification } from '@/lib/telegram'
+import { sendWhatsAppQuoteMessage } from '@/lib/citchat'
 import { saveNewLead } from '@/lib/db'
 import { LeadSubmissionPayload } from '@/lib/types'
 
@@ -70,6 +71,9 @@ ${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${powerCrmResult.
 ✅ <b>Status:</b> Cadastrado e aguardando vistoria digital.`
 
     await sendTelegramNotification(telegramMessage)
+
+    // 6. Dispara WhatsApp automático via AtendeHub / CITchat para o cliente
+    await sendWhatsAppQuoteMessage(payload)
 
     return NextResponse.json({
       success: true,
