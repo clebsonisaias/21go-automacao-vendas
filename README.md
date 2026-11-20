@@ -33,6 +33,22 @@ flowchart LR
 
 ---
 
+## Rodando o site
+
+```bash
+pnpm install
+cp .env.example .env   # preencha ao menos FRANQUIA_WHATSAPP
+pnpm dev               # http://localhost:3000
+pnpm build             # build de produção (output standalone, usado pelo Dockerfile)
+```
+
+- `FRANQUIA_WHATSAPP` (DDI + DDD + número, só dígitos) alimenta os botões de WhatsApp da página e a mensagem do lead. Sem ela, o site usa o número de exemplo `5521999999999`.
+- A página (`src/app/page.tsx`) lê a variável a cada requisição, então trocar o valor no Coolify e reiniciar basta; não precisa refazer o build.
+- Tipografia (Barlow e Barlow Condensed) vem do pacote `@fontsource`, sem chamadas ao Google Fonts.
+- Placa com mais de um modelo compatível mostra a lista para a pessoa escolher; placa achada pela metade leva para a busca por marca e modelo.
+
+---
+
 ## Índice da Documentação
 
 | Arquivo | Conteúdo |

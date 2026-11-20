@@ -13,6 +13,18 @@ import { WhatsAppFloat } from './WhatsAppFloat'
 type Option = { code: string; name: string }
 type ModelOption = Option & { codFipe: string }
 
+/** Placa reconhecida, mas com mais de um modelo compatível: a pessoa escolhe o dela. */
+type PlateMatch = {
+  tipo: 'carro' | 'moto'
+  brandId: string | number
+  brandText: string
+  year: string
+  label?: string
+  candidates: ModelOption[]
+}
+
+const CALC_ERROR = 'Não foi possível calcular a cotação deste modelo. Chame um consultor no WhatsApp.'
+
 function Spinner() {
   return (
     <span
@@ -31,6 +43,7 @@ export function HomeClient({ whatsapp }: { whatsapp: string }) {
   const [isSearching, setIsSearching] = useState(false)
   const [searchError, setSearchError] = useState('')
   const [searchMode, setSearchMode] = useState<'placa' | 'manual'>('placa')
+  const [plateMatch, setPlateMatch] = useState<PlateMatch | null>(null)
 
   // Busca manual
   const [tipo, setTipo] = useState<'carro' | 'moto'>('carro')
@@ -88,6 +101,7 @@ export function HomeClient({ whatsapp }: { whatsapp: string }) {
     if (raw.length <= 7) {
       setPlaca(raw)
       setSearchError('')
+      setPlateMatch(null)
     }
   }
 
@@ -114,32 +128,103 @@ export function HomeClient({ whatsapp }: { whatsapp: string }) {
 
     setIsSearching(true)
     setSearchError('')
+    setPlateMatch(null)
     setQuoteResult(null)
 
     try {
       const res = await fetch(`/api/vehicle/plate?plate=${placa}`)
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
 
-      if (!res.ok || data.status === 'notfound') {
-        setSearchError('Não encontramos essa placa. Confira os caracteres ou busque pela marca e pelo modelo.')
+      if (res.status >= 500) {
+        setSearchError(
+          'Não conseguimos consultar a placa agora. Tente de novo em instantes ou busque pela marca e pelo modelo.',
+        )
+        return
+      }
+      if (!res.ok || data.status === 'notfound' || !data.brandId) {
+        // "partial" sem marca: sabemos o ano e o nome, mas não o suficiente para cotar
+        if (data.status === 'partial') {
+          goToManual(data)
+          return
+        }
+        setSearchError(
+          'Não encontramos essa placa. Confira os caracteres ou busque pela marca e pelo modelo.',
+        )
         return
       }
 
       setSearchedPlate(placa)
-      await calculate(
-        {
+
+      if (data.status === 'found' && data.modelId && data.codFipe) {
+        await calculate(
+          {
+            tipo: data.tipo || 'carro',
+            brandId: data.brandId,
+            brandText: data.brandText,
+            modelId: data.modelId,
+            modelText: data.modelText,
+            year: data.year,
+            codFipe: data.codFipe,
+          },
+          CALC_ERROR,
+        )
+      } else if (Array.isArray(data.candidates) && data.candidates.length) {
+        setPlateMatch({
           tipo: data.tipo || 'carro',
           brandId: data.brandId,
-          brandText: data.brandText,
-          modelId: data.modelId,
-          modelText: data.modelText,
-          year: data.year,
-          codFipe: data.codFipe,
-        },
-        'Não foi possível calcular a cotação deste modelo. Chame um consultor no WhatsApp.'
-      )
+          brandText: data.brandText || '',
+          year: String(data.year),
+          label: data.label,
+          candidates: data.candidates,
+        })
+      } else {
+        goToManual(data)
+      }
     } catch {
       setSearchError('Não conseguimos consultar agora. Tente de novo em instantes.')
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  /** Placa achada pela metade: leva para marca e modelo já com o que sabemos preenchido. */
+  const goToManual = (data: {
+    label?: string
+    year?: string | number
+    tipo?: 'carro' | 'moto'
+    brandId?: string | number
+  }) => {
+    setSearchMode('manual')
+    if (data.tipo) setTipo(data.tipo)
+    if (data.year) setSelectedYear(String(data.year))
+    if (data.brandId) setSelectedBrand(String(data.brandId))
+    setSelectedModel('')
+    setSearchError(
+      data.label
+        ? `Achamos ${data.label}, mas não deu para confirmar o modelo exato. Escolha a marca, o ano e o modelo para ver os preços.`
+        : 'Não deu para confirmar o modelo exato. Escolha a marca, o ano e o modelo para ver os preços.',
+    )
+  }
+
+  const handlePickCandidate = async (c: ModelOption) => {
+    if (!plateMatch) return
+    setIsSearching(true)
+    setSearchError('')
+    try {
+      await calculate(
+        {
+          tipo: plateMatch.tipo,
+          brandId: plateMatch.brandId,
+          brandText: plateMatch.brandText,
+          modelId: c.code,
+          modelText: c.name,
+          year: plateMatch.year,
+          codFipe: c.codFipe,
+        },
+        CALC_ERROR,
+      )
+    } catch {
+      setSearchError('Não conseguimos calcular agora. Tente de novo em instantes.')
     } finally {
       setIsSearching(false)
     }
@@ -170,7 +255,7 @@ export function HomeClient({ whatsapp }: { whatsapp: string }) {
           year: selectedYear,
           codFipe: modelObj.codFipe,
         },
-        'Não foi possível calcular a cotação deste modelo. Chame um consultor no WhatsApp.'
+        CALC_ERROR,
       )
     } catch {
       setSearchError('Não conseguimos calcular agora. Tente de novo em instantes.')
@@ -181,8 +266,30 @@ export function HomeClient({ whatsapp }: { whatsapp: string }) {
 
   const switchMode = (mode: 'placa' | 'manual') => {
     setSearchMode(mode)
+    setPlateMatch(null)
     setSearchError('')
   }
+
+  const alertBox = searchError ? (
+    <div
+      role="alert"
+      className="mt-4 flex items-start gap-3 rounded-md border-l-4 border-erro bg-white px-4 py-3 text-[0.95rem] font-medium"
+    >
+      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-erro" aria-hidden="true" />
+      <span>
+        {searchError}{' '}
+        {searchMode === 'placa' && placa.length === 7 && (
+          <button
+            type="button"
+            onClick={() => switchMode('manual')}
+            className="font-bold underline underline-offset-2"
+          >
+            Buscar por marca e modelo
+          </button>
+        )}
+      </span>
+    </div>
+  ) : null
 
   return (
     <>
@@ -199,10 +306,19 @@ export function HomeClient({ whatsapp }: { whatsapp: string }) {
           <a href="#cotacao" aria-label="21Go Proteção veicular, início">
             <Logo />
           </a>
-          <nav aria-label="Principal" className="hidden items-center gap-7 text-[0.95rem] font-semibold lg:flex">
-            <a href="#como-funciona" className="underline-offset-4 hover:underline">Como funciona</a>
-            <a href="#coberturas" className="underline-offset-4 hover:underline">Coberturas</a>
-            <a href="#duvidas" className="underline-offset-4 hover:underline">Dúvidas</a>
+          <nav
+            aria-label="Principal"
+            className="hidden items-center gap-7 text-[0.95rem] font-semibold lg:flex"
+          >
+            <a href="#como-funciona" className="underline-offset-4 hover:underline">
+              Como funciona
+            </a>
+            <a href="#coberturas" className="underline-offset-4 hover:underline">
+              Coberturas
+            </a>
+            <a href="#duvidas" className="underline-offset-4 hover:underline">
+              Dúvidas
+            </a>
           </nav>
           <a
             href={wa}
@@ -226,7 +342,8 @@ export function HomeClient({ whatsapp }: { whatsapp: string }) {
 
           <div className="order-3 lg:order-none lg:col-start-1 lg:row-start-2 lg:-mt-2">
             <p className="max-w-[34rem] text-lg leading-relaxed sm:text-xl">
-              Os valores são os oficiais da 21Go, calculados na hora pela tabela FIPE. Sem consulta ao SPC/Serasa.
+              Os valores são os oficiais da 21Go, calculados na hora pela tabela FIPE. Sem consulta ao
+              SPC/Serasa.
             </p>
             <ul className="mt-7 space-y-2.5 text-base font-semibold sm:text-lg">
               {[
@@ -283,131 +400,152 @@ export function HomeClient({ whatsapp }: { whatsapp: string }) {
                 </button>
               </form>
             ) : (
-              <form
-                onSubmit={handleManualCalculate}
-                className="rounded-lg border-[3px] border-tinta bg-white p-5 shadow-[6px_6px_0_#0E1A3B] sm:p-6"
-              >
-                <h2 className="font-display text-2xl font-bold">Buscar por marca e modelo</h2>
+              <>
+                {alertBox && <div className="mb-4">{alertBox}</div>}
+                <form
+                  onSubmit={handleManualCalculate}
+                  className="rounded-lg border-[3px] border-tinta bg-white p-5 shadow-[6px_6px_0_#0E1A3B] sm:p-6"
+                >
+                  <h2 className="font-display text-2xl font-bold">Buscar por marca e modelo</h2>
 
-                <fieldset className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
-                  <legend className="sr-only">Tipo de veículo</legend>
-                  {(
-                    [
-                      ['carro', 'Carro ou utilitário'],
-                      ['moto', 'Moto'],
-                    ] as const
-                  ).map(([v, label]) => (
-                    <label key={v} className="flex cursor-pointer items-center gap-2 font-semibold">
-                      <input
-                        type="radio"
-                        name="tipo"
-                        checked={tipo === v}
-                        onChange={() => {
-                          setTipo(v)
-                          setSelectedBrand('')
+                  <fieldset className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+                    <legend className="sr-only">Tipo de veículo</legend>
+                    {(
+                      [
+                        ['carro', 'Carro ou utilitário'],
+                        ['moto', 'Moto'],
+                      ] as const
+                    ).map(([v, label]) => (
+                      <label key={v} className="flex cursor-pointer items-center gap-2 font-semibold">
+                        <input
+                          type="radio"
+                          name="tipo"
+                          checked={tipo === v}
+                          onChange={() => {
+                            setTipo(v)
+                            setSelectedBrand('')
+                            setSelectedModel('')
+                          }}
+                          className="h-5 w-5 accent-azul"
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </fieldset>
+
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="marca" className="mb-1.5 block text-sm font-semibold">
+                        Marca
+                      </label>
+                      <select
+                        id="marca"
+                        className="campo"
+                        value={selectedBrand}
+                        onChange={(e) => {
+                          setSelectedBrand(e.target.value)
                           setSelectedModel('')
                         }}
-                        className="h-5 w-5 accent-azul"
-                      />
-                      {label}
+                      >
+                        <option value="">Escolha a marca</option>
+                        {brands.map((b) => (
+                          <option key={b.code} value={b.code}>
+                            {b.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="ano" className="mb-1.5 block text-sm font-semibold">
+                        Ano
+                      </label>
+                      <select
+                        id="ano"
+                        className="campo"
+                        value={selectedYear}
+                        onChange={(e) => {
+                          setSelectedYear(e.target.value)
+                          setSelectedModel('')
+                        }}
+                      >
+                        <option value="">Escolha o ano</option>
+                        {years.map((y) => (
+                          <option key={y.code} value={y.code}>
+                            {y.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label htmlFor="modelo" className="mb-1.5 block text-sm font-semibold">
+                      Modelo
                     </label>
-                  ))}
-                </fieldset>
-
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor="marca" className="mb-1.5 block text-sm font-semibold">Marca</label>
                     <select
-                      id="marca"
+                      id="modelo"
                       className="campo"
-                      value={selectedBrand}
-                      onChange={(e) => {
-                        setSelectedBrand(e.target.value)
-                        setSelectedModel('')
-                      }}
+                      value={selectedModel}
+                      disabled={!models.length}
+                      onChange={(e) => setSelectedModel(e.target.value)}
                     >
-                      <option value="">Escolha a marca</option>
-                      {brands.map((b) => (
-                        <option key={b.code} value={b.code}>{b.name}</option>
+                      <option value="">
+                        {models.length ? 'Escolha o modelo exato' : 'Escolha antes a marca e o ano'}
+                      </option>
+                      {models.map((m) => (
+                        <option key={m.code} value={m.code}>
+                          {m.name}
+                        </option>
                       ))}
                     </select>
                   </div>
-                  <div>
-                    <label htmlFor="ano" className="mb-1.5 block text-sm font-semibold">Ano</label>
-                    <select
-                      id="ano"
-                      className="campo"
-                      value={selectedYear}
-                      onChange={(e) => {
-                        setSelectedYear(e.target.value)
-                        setSelectedModel('')
-                      }}
-                    >
-                      <option value="">Escolha o ano</option>
-                      {years.map((y) => (
-                        <option key={y.code} value={y.code}>{y.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
 
-                <div className="mt-4">
-                  <label htmlFor="modelo" className="mb-1.5 block text-sm font-semibold">Modelo</label>
-                  <select
-                    id="modelo"
-                    className="campo"
-                    value={selectedModel}
-                    disabled={!models.length}
-                    onChange={(e) => setSelectedModel(e.target.value)}
+                  <button
+                    type="submit"
+                    disabled={isSearching || !selectedModel}
+                    className="btn mt-5 w-full bg-tinta text-white hover:bg-azul-dark"
                   >
-                    <option value="">
-                      {models.length ? 'Escolha o modelo exato' : 'Escolha antes a marca e o ano'}
-                    </option>
-                    {models.map((m) => (
-                      <option key={m.code} value={m.code}>{m.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSearching || !selectedModel}
-                  className="btn mt-5 w-full bg-tinta text-white hover:bg-azul-dark"
-                >
-                  {isSearching ? (
-                    <>
-                      <Spinner /> Buscando planos
-                    </>
-                  ) : (
-                    <>
-                      <Search className="h-5 w-5" aria-hidden="true" />
-                      Ver planos e preços
-                    </>
-                  )}
-                </button>
-              </form>
+                    {isSearching ? (
+                      <>
+                        <Spinner /> Buscando planos
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-5 w-5" aria-hidden="true" />
+                        Ver planos e preços
+                      </>
+                    )}
+                  </button>
+                </form>
+              </>
             )}
 
-            {searchError && (
-              <div
-                role="alert"
-                className="mt-4 flex items-start gap-3 rounded-md border-l-4 border-erro bg-white px-4 py-3 text-[0.95rem] font-medium"
-              >
-                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-erro" aria-hidden="true" />
-                <span>
-                  {searchError}{' '}
-                  {searchMode === 'placa' && placa.length === 7 && (
-                    <button
-                      type="button"
-                      onClick={() => switchMode('manual')}
-                      className="font-bold underline underline-offset-2"
-                    >
-                      Buscar por marca e modelo
-                    </button>
-                  )}
-                </span>
+            {plateMatch && searchMode === 'placa' && (
+              <div className="mt-5 rounded-lg border-[3px] border-tinta bg-white p-5 shadow-[6px_6px_0_#0E1A3B]">
+                <h2 className="font-display text-2xl font-bold leading-tight">
+                  Qual destes é o seu {plateMatch.brandText}?
+                </h2>
+                <p className="mt-1 text-sm text-tinta/80">
+                  A placa {placa} bate com mais de uma versão. Escolha a sua para ver o preço certo.
+                </p>
+                <ul className="mt-3 max-h-72 space-y-2 overflow-y-auto">
+                  {plateMatch.candidates.map((c) => (
+                    <li key={c.code}>
+                      <button
+                        type="button"
+                        disabled={isSearching}
+                        onClick={() => handlePickCandidate(c)}
+                        className="w-full rounded-md border-2 border-tinta/25 px-3.5 py-3 text-left font-semibold hover:border-azul hover:bg-concreto disabled:opacity-60"
+                      >
+                        {c.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
+
+            {searchMode === 'placa' && alertBox}
 
             <p className="mt-5 text-base">
               {searchMode === 'placa' ? (
