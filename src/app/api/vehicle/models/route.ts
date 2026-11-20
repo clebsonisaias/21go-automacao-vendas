@@ -15,10 +15,15 @@ export async function GET(req: NextRequest) {
     )
   }
 
+  if (!/^[\w-]{1,20}$/.test(brandId) || !/^[\w-]{1,20}$/.test(year)) {
+    return NextResponse.json({ error: 'Parâmetros inválidos' }, { status: 400 })
+  }
+
   try {
     const data = await getModels(brandId, year)
     return NextResponse.json(data)
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  } catch (err) {
+    console.error('Erro ao listar modelos:', err)
+    return NextResponse.json({ error: 'Falha ao listar modelos' }, { status: 500 })
   }
 }

@@ -60,6 +60,10 @@ export function getStoredLeads(): StoredLead[] {
   }
 }
 
+export function findLeadByRef(ref: string): StoredLead | undefined {
+  return getStoredLeads().find((l) => l.ref === ref)
+}
+
 export function saveNewLead(payload: LeadSubmissionPayload, ref: string, powercrmCode?: string): StoredLead {
   ensureDataFile()
   const leads = getStoredLeads()
@@ -109,7 +113,7 @@ export function updateLeadVistoria(
   try {
     ensureDataFile()
     const leads = getStoredLeads()
-    const index = leads.findIndex((l) => l.ref === ref || l.id === ref)
+    const index = leads.findIndex((l) => l.ref === ref)
 
     if (index !== -1) {
       leads[index].status = 'vistoria_enviada'

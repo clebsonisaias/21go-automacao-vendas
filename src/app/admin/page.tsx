@@ -40,7 +40,12 @@ function StatusBadge({ status }: { status: StoredLead['status'] }) {
   )
 }
 
-const csvCell = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
+// Neutraliza injeção de fórmula (=, +, -, @) ao abrir o CSV no Excel/Sheets e escapa aspas.
+const csvCell = (v: unknown) => {
+  const raw = String(v ?? '')
+  const safe = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw
+  return `"${safe.replace(/"/g, '""')}"`
+}
 
 function DetailGroup({
   icon: Icon,

@@ -1,25 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendLeadToPowerCrm } from '@/lib/powercrm-lead'
 import { sendLeadToCrm } from '@/lib/crm'
-import { sendTelegramNotification } from '@/lib/telegram'
+import { sendTelegramNotification, esc } from '@/lib/telegram'
+import { rateLimit } from '@/lib/rate-limit'
 import { sendWhatsAppQuoteMessage } from '@/lib/citchat'
 import { saveNewLead } from '@/lib/db'
 import { LeadSubmissionPayload } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
+const str = (v: unknown, max: number) => typeof v === 'string' && v.length <= max
+const num = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 0 && v < 1_000_000
+
+/** Valida o corpo vindo do navegador (endpoint público) antes de usá-lo em CRM, Telegram e WhatsApp. */
+function validatePayload(p: any): string | null {
+  if (!p || typeof p !== 'object') return 'Dados inválidos.'
+  if (typeof p.nome !== 'string' || !/^[\p{L}\p{M}' .-]{2,100}$/u.test(p.nome.trim())) {
+    return 'Informe o nome completo (apenas letras).'
+  }
+  const phone = typeof p.whatsapp === 'string' ? p.whatsapp.replace(/\D/g, '') : ''
+  if (phone.length < 10 || phone.length > 13) return 'WhatsApp inválido.'
+  if (!str(p.planoEscolhidoId, 40) || !p.planoEscolhidoId) return 'Plano é obrigatório.'
+  if (!str(p.planoEscolhidoNome, 60)) return 'Plano inválido.'
+  if (!num(p.mensalidadeFinal) || !num(p.ativacao)) return 'Valores do plano inválidos.'
+  if (p.cpf != null && !(typeof p.cpf === 'string' && p.cpf.replace(/\D/g, '').length === 11)) return 'CPF inválido.'
+  if (p.email != null && p.email !== '' && !(str(p.email, 120) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email))) return 'E-mail inválido.'
+  if (p.cidade != null && !str(p.cidade, 80)) return 'Cidade inválida.'
+  if (p.placa != null && !str(p.placa, 10)) return 'Placa inválida.'
+  const v = p.vehicle
+  if (!v || typeof v !== 'object' || !str(v.marca, 80) || !str(v.modelo, 120) || !str(String(v.ano ?? ''), 10)) {
+    return 'Dados do veículo inválidos.'
+  }
+  if (v.fipeValue != null && !num(v.fipeValue)) return 'Valor FIPE inválido.'
+  if (v.fipeCode != null && !str(v.fipeCode, 20)) return 'Código FIPE inválido.'
+  return null
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const payload: LeadSubmissionPayload = await req.json()
-
-    if (!payload.nome || !payload.whatsapp || !payload.planoEscolhidoId) {
+    // Endpoint público que aciona CRM, Telegram e WhatsApp oficial: limita abuso por IP.
+    if (!rateLimit(req, 'quote-submit', 5, 10 * 60 * 1000)) {
       return NextResponse.json(
-        { error: 'Nome, WhatsApp e Plano são obrigatórios' },
-        { status: 400 }
+        { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
+        { status: 429 }
       )
     }
 
-    const leadRef = `lead_${Date.now()}`
+    const payload: LeadSubmissionPayload = await req.json()
+
+    const invalid = validatePayload(payload)
+    if (invalid) {
+      return NextResponse.json({ error: invalid }, { status: 400 })
+    }
+
+    // Referência imprevisível: é ela que autoriza o envio posterior da vistoria.
+    const leadRef = `lead_${crypto.randomUUID()}`
 
     // 1. Cadastra diretamente no Power CRM com código de consultor CITmax (vrXbXyyq)
     const powerCrmResult = await sendLeadToPowerCrm(payload)
@@ -56,18 +91,18 @@ export async function POST(req: NextRequest) {
     // 5. Dispara Notificação Instantânea no Telegram para você
     const telegramMessage = `🚨 <b>NOVO CADASTRO NO SITE!</b> 🚨
 
-👤 <b>Cliente:</b> ${payload.nome}
-📱 <b>WhatsApp:</b> ${payload.whatsapp}
-${payload.cpf ? `📄 <b>CPF:</b> ${payload.cpf}\n` : ''}${payload.email ? `✉️ <b>E-mail:</b> ${payload.email}\n` : ''}${payload.cidade ? `📍 <b>Cidade:</b> ${payload.cidade}\n` : ''}🚗 <b>Veículo:</b> ${payload.vehicle.marca} ${payload.vehicle.modelo} (${payload.vehicle.ano})
-🔢 <b>Placa:</b> ${payload.placa || payload.vehicle.placa || 'Não informada'}
+👤 <b>Cliente:</b> ${esc(payload.nome)}
+📱 <b>WhatsApp:</b> ${esc(payload.whatsapp)}
+${payload.cpf ? `📄 <b>CPF:</b> ${esc(payload.cpf)}\n` : ''}${payload.email ? `✉️ <b>E-mail:</b> ${esc(payload.email)}\n` : ''}${payload.cidade ? `📍 <b>Cidade:</b> ${esc(payload.cidade)}\n` : ''}🚗 <b>Veículo:</b> ${esc(payload.vehicle.marca)} ${esc(payload.vehicle.modelo)} (${esc(payload.vehicle.ano)})
+🔢 <b>Placa:</b> ${esc(payload.placa || payload.vehicle.placa || 'Não informada')}
 💰 <b>Tabela FIPE:</b> ${fipeFormatted}
 🚕 <b>Trabalho/App:</b> ${payload.veiculoTrabalho ? 'Sim' : 'Não'}
 
-🛡️ <b>Plano Escolhido:</b> ${payload.planoEscolhidoNome}
+🛡️ <b>Plano Escolhido:</b> ${esc(payload.planoEscolhidoNome)}
 💵 <b>Mensalidade:</b> ${mensalidadeFormatted}/mês ${payload.comAdesivo ? '(com adesivo)' : ''}
 ⚡ <b>Ativação:</b> ${ativacaoFormatted}
 
-${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${powerCrmResult.qttnCd}</code>\n` : ''}💾 <b>Backup Local:</b> Salvo no painel interno (ID: <code>${storedLead.id}</code>)
+${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${esc(powerCrmResult.qttnCd)}</code>\n` : ''}💾 <b>Backup Local:</b> Salvo no painel interno (ID: <code>${storedLead.id}</code>)
 ✅ <b>Status:</b> Cadastrado e aguardando vistoria digital.`
 
     await sendTelegramNotification(telegramMessage)
@@ -88,7 +123,7 @@ ${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${powerCrmResult.
   } catch (err: any) {
     console.error('Erro ao processar envio do lead:', err)
     return NextResponse.json(
-      { error: err.message || 'Erro interno ao processar lead' },
+      { error: 'Não foi possível concluir o cadastro agora. Tente novamente em instantes.' },
       { status: 500 }
     )
   }

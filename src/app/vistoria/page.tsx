@@ -166,7 +166,8 @@ function VistoriaContent() {
       if (res.ok) {
         setIsSubmitted(true)
       } else {
-        setError('Não foi possível enviar agora. Tente novamente em instantes.')
+        const data = await res.json().catch(() => ({}))
+        setError(data?.error || 'Não foi possível enviar agora. Tente novamente em instantes.')
       }
     } catch {
       setError('Sem conexão com o servidor. Verifique sua internet e tente novamente.')
