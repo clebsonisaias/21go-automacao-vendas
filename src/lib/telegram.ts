@@ -1,3 +1,11 @@
+/** Escapa texto de usuário para o parse_mode HTML do Telegram (evita injeção de tags/links). */
+export function esc(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
 /**
  * Disparador de Notificações para o Telegram
  */

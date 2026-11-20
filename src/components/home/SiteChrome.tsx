@@ -2,9 +2,19 @@ import Image from 'next/image'
 import { MessageCircle } from 'lucide-react'
 import { SITE, whatsappUrl } from '@/lib/site'
 
-export function Logo({ size = 52, showText = true }: { size?: number; showText?: boolean }) {
+export function Logo({
+  size = 52,
+  showText = true,
+  href = '#topo',
+  subtitle = 'FRANQUIA AUTORIZADA',
+}: {
+  size?: number
+  showText?: boolean
+  href?: string
+  subtitle?: string
+}) {
   return (
-    <a href="#topo" className="flex items-center gap-3 no-underline">
+    <a href={href} className="flex items-center gap-3 no-underline">
       <Image
         src="/brand/logo-21go.png"
         alt="21Go Proteção Veicular"
@@ -16,7 +26,7 @@ export function Logo({ size = 52, showText = true }: { size?: number; showText?:
       {showText && (
         <span className="flex flex-col leading-tight">
           <span className="text-lg font-extrabold tracking-tight text-white">21Go Proteção Veicular</span>
-          <span className="text-[11px] font-bold tracking-[1.5px] text-go-lime">FRANQUIA AUTORIZADA</span>
+          <span className="text-[11px] font-bold tracking-[1.5px] text-go-lime">{subtitle}</span>
         </span>
       )}
     </a>

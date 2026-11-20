@@ -49,7 +49,7 @@ export async function identifyPlate(plate: string): Promise<PlateIdentifyRespons
  * Busca a lista de marcas por tipo (carro ou moto)
  */
 export async function getBrands(tipo: VehicleType = 'carro') {
-  const res = await fetch(`${BASE_URL}/vehicle/powercrm/marcas?tipo=${tipo}`, {
+  const res = await fetch(`${BASE_URL}/vehicle/powercrm/marcas?tipo=${tipo === 'moto' ? 'moto' : 'carro'}`, {
     headers: { Accept: 'application/json' },
     next: { revalidate: 86400 }, // Cache de 24h
   })
@@ -74,7 +74,7 @@ export async function getYears() {
  */
 export async function getModels(brandId: string | number, year: string) {
   const res = await fetch(
-    `${BASE_URL}/vehicle/powercrm/modelos?marca=${brandId}&ano=${year}`,
+    `${BASE_URL}/vehicle/powercrm/modelos?marca=${encodeURIComponent(String(brandId))}&ano=${encodeURIComponent(year)}`,
     {
       headers: { Accept: 'application/json' },
       next: { revalidate: 86400 },

@@ -28,9 +28,10 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json(result)
-  } catch (err: any) {
+  } catch (err) {
+    console.error('Erro ao calcular cotação:', err)
     return NextResponse.json(
-      { success: false, error: err.message || 'Erro ao calcular cotação' },
+      { success: false, error: 'Não foi possível calcular a cotação agora.' },
       { status: 500 }
     )
   }

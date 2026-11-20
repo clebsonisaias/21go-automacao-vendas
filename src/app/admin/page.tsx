@@ -1,62 +1,130 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
+import Image from 'next/image'
 import {
-  Shield,
-  Search,
   CheckCircle2,
   Clock,
-  Car,
-  FileText,
-  User,
-  Phone,
-  Calendar,
-  DollarSign,
   Download,
-  AlertCircle,
+  DollarSign,
   Eye,
+  FileText,
+  MessageCircle,
+  Search,
+  User,
+  Car,
   X,
-  MapPin,
+  XCircle,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { StoredLead } from '@/lib/db'
+import { brl } from '@/lib/site'
+
+const STATUS: Record<StoredLead['status'], { label: string; cls: string; icon: LucideIcon }> = {
+  vistoria_enviada: { label: 'Vistoria enviada', cls: 'bg-[#eef3b8] text-[#3d5200]', icon: CheckCircle2 },
+  pendente_vistoria: { label: 'Aguardando vistoria', cls: 'bg-[#fdebd0] text-[#8a4a00]', icon: Clock },
+  aprovado: { label: 'Aprovado', cls: 'bg-[#d9f2e3] text-[#0f6a35]', icon: CheckCircle2 },
+  cancelado: { label: 'Cancelado', cls: 'bg-[#fde2e2] text-[#a11d1d]', icon: XCircle },
+}
+
+function StatusBadge({ status }: { status: StoredLead['status'] }) {
+  const s = STATUS[status] ?? STATUS.pendente_vistoria
+  const Icon = s.icon
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold ${s.cls}`}
+    >
+      <Icon aria-hidden className="h-3.5 w-3.5" />
+      {s.label}
+    </span>
+  )
+}
+
+// Neutraliza injeção de fórmula (=, +, -, @) ao abrir o CSV no Excel/Sheets e escapa aspas.
+const csvCell = (v: unknown) => {
+  const raw = String(v ?? '')
+  const safe = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw
+  return `"${safe.replace(/"/g, '""')}"`
+}
+
+function DetailGroup({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: LucideIcon
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="rounded-xl bg-surface-100 p-4">
+      <h3 className="m-0 mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[1.5px] text-muted">
+        <Icon aria-hidden className="h-4 w-4" />
+        {title}
+      </h3>
+      <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[15px]">{children}</dl>
+    </section>
+  )
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <>
+      <dt className="text-muted">{label}</dt>
+      <dd className="m-0 min-w-0 break-words font-semibold text-navy-800">{children}</dd>
+    </>
+  )
+}
 
 export default function AdminPage() {
   const [leads, setLeads] = useState<StoredLead[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedLead, setSelectedLead] = useState<StoredLead | null>(null)
 
-  useEffect(() => {
-    fetchLeads()
-  }, [])
-
-  const fetchLeads = async () => {
+  const fetchLeads = useCallback(async () => {
     setIsLoading(true)
+    setLoadError('')
     try {
       const res = await fetch('/api/admin/leads')
       const data = await res.json()
       if (data.success) {
         setLeads(data.leads || [])
+      } else {
+        setLoadError('Não foi possível carregar os cadastros.')
       }
     } catch (err) {
       console.error('Erro ao buscar leads:', err)
+      setLoadError('Sem conexão com o servidor. Tente atualizar.')
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
-  const filteredLeads = leads.filter((l) => {
-    const term = searchTerm.toLowerCase()
-    return (
+  useEffect(() => {
+    fetchLeads()
+  }, [fetchLeads])
+
+  useEffect(() => {
+    if (!selectedLead) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedLead(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectedLead])
+
+  const term = searchTerm.toLowerCase()
+  const filteredLeads = leads.filter(
+    (l) =>
       l.nome.toLowerCase().includes(term) ||
       (l.cpf && l.cpf.includes(term)) ||
       (l.placa && l.placa.toLowerCase().includes(term)) ||
       l.whatsapp.includes(term) ||
       (l.vehicle.marca + ' ' + l.vehicle.modelo).toLowerCase().includes(term)
-    )
-  })
+  )
 
-  // Exportar CSV
   const handleExportCsv = () => {
     if (!leads.length) return
     const headers = [
@@ -75,7 +143,6 @@ export default function AdminPage() {
       'Ativacao',
       'Status',
     ]
-
     const rows = leads.map((l) => [
       new Date(l.createdAt).toLocaleString('pt-BR'),
       l.nome,
@@ -92,182 +159,190 @@ export default function AdminPage() {
       l.ativacao,
       l.status,
     ])
-
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(';'), ...rows.map((r) => r.join(';'))].join('\n')
-
-    const encodedUri = encodeURI(csvContent)
+    const csv = [headers, ...rows].map((r) => r.map(csvCell).join(';')).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
-    link.setAttribute('href', encodedUri)
-    link.setAttribute('download', `leads_21go_backup_${Date.now()}.csv`)
+    link.href = url
+    link.download = `leads_21go_backup_${Date.now()}.csv`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
+  const stats: { label: string; value: number; accent?: string }[] = [
+    { label: 'Total de cadastros', value: leads.length },
+    {
+      label: 'Aguardando vistoria',
+      value: leads.filter((l) => l.status === 'pendente_vistoria').length,
+      accent: 'text-go-orange-dark',
+    },
+    {
+      label: 'Vistorias enviadas',
+      value: leads.filter((l) => l.status === 'vistoria_enviada').length,
+      accent: 'text-go-lime-dark',
+    },
+    { label: 'Veículos de app ou táxi', value: leads.filter((l) => l.veiculoTrabalho).length },
+  ]
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-4 sm:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+    <div className="min-h-screen bg-surface-50">
+      <header className="border-b border-navy-line bg-navy-950">
+        <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-4 px-6 py-3">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-amber-500 flex items-center justify-center font-black text-2xl text-white shadow-lg shadow-brand-500/25">
-              21
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
-                Painel de Backup de Cadastros
-                <span className="text-xs bg-emerald-500/15 text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
-                  Online
-                </span>
-              </h1>
-              <p className="text-xs text-slate-400">
-                Histórico e backup independente de todos os leads e vistorias digitais
-              </p>
+            <Image
+              src="/brand/logo-21go.png"
+              alt="21Go"
+              width={48}
+              height={48}
+              className="rounded-xl object-cover"
+              priority
+            />
+            <div className="flex flex-col leading-tight">
+              <span className="text-lg font-extrabold tracking-tight text-white">Painel da franquia</span>
+              <span className="text-[11px] font-bold tracking-[1.5px] text-go-lime">USO INTERNO</span>
             </div>
           </div>
-
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
               onClick={handleExportCsv}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl border border-slate-700 transition"
+              disabled={!leads.length}
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-navy-500 px-4 text-[15px] font-semibold text-white transition hover:bg-navy-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <Download className="w-4 h-4" />
-              Exportar CSV
+              <Download aria-hidden className="h-[18px] w-[18px]" />
+              <span className="hidden sm:inline">Exportar CSV</span>
+              <span className="sm:hidden">CSV</span>
             </button>
             <button
               type="button"
               onClick={fetchLeads}
-              className="bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition shadow-md shadow-brand-500/20"
+              className="inline-flex min-h-[44px] items-center rounded-lg bg-go-orange px-5 text-[15px] font-bold text-navy-950 transition hover:-translate-y-px hover:shadow-cta"
             >
               Atualizar
             </button>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Métricas Rápidas */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-            <span className="text-xs text-slate-400 font-semibold uppercase">Total de Cadastros</span>
-            <p className="text-2xl sm:text-3xl font-black text-white mt-1">{leads.length}</p>
-          </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-            <span className="text-xs text-amber-400 font-semibold uppercase">Aguardando Vistoria</span>
-            <p className="text-2xl sm:text-3xl font-black text-amber-400 mt-1">
-              {leads.filter((l) => l.status === 'pendente_vistoria').length}
-            </p>
-          </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-            <span className="text-xs text-emerald-400 font-semibold uppercase">Vistorias Enviadas</span>
-            <p className="text-2xl sm:text-3xl font-black text-emerald-400 mt-1">
-              {leads.filter((l) => l.status === 'vistoria_enviada').length}
-            </p>
-          </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-            <span className="text-xs text-brand-400 font-semibold uppercase">Veículos de App / Táxi</span>
-            <p className="text-2xl sm:text-3xl font-black text-brand-400 mt-1">
-              {leads.filter((l) => l.veiculoTrabalho).length}
-            </p>
-          </div>
+      <main className="mx-auto flex max-w-[1200px] flex-col gap-6 px-6 pb-16 pt-10">
+        <div className="flex flex-col gap-1">
+          <h1 className="m-0 text-[32px] font-extrabold tracking-[-1px]">Cadastros recebidos</h1>
+          <p className="m-0 text-base text-muted">
+            Histórico e backup independente de todos os leads e vistorias digitais.
+          </p>
         </div>
 
-        {/* Busca */}
-        <div className="relative">
-          <Search className="w-5 h-5 text-slate-500 absolute left-4 top-3.5" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por cliente, placa, CPF, modelo ou WhatsApp..."
-            className="w-full pl-12 pr-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
-          />
-        </div>
+        <section aria-label="Resumo" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {stats.map((s) => (
+            <div key={s.label} className="rounded-2xl border border-line bg-white p-5 shadow-card">
+              <p className="m-0 text-sm text-muted">{s.label}</p>
+              <p className={`m-0 mt-2 text-4xl font-extrabold tracking-tight ${s.accent ?? 'text-navy-800'}`}>
+                {s.value}
+              </p>
+            </div>
+          ))}
+        </section>
 
-        {/* Tabela de Leads */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950/70 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
-                <tr>
-                  <th className="py-4 px-4">Data</th>
-                  <th className="py-4 px-4">Cliente</th>
-                  <th className="py-4 px-4">Veículo / Placa</th>
-                  <th className="py-4 px-4">Plano</th>
-                  <th className="py-4 px-4">Mensalidade</th>
-                  <th className="py-4 px-4">Status Vistoria</th>
-                  <th className="py-4 px-4 text-center">Ações</th>
+        <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-card">
+          <div className="flex flex-col gap-3 border-b border-line p-5 sm:flex-row sm:items-center">
+            <label htmlFor="busca" className="text-sm font-bold">
+              Buscar
+            </label>
+            <div className="relative flex-1">
+              <Search
+                aria-hidden
+                className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-2"
+              />
+              <input
+                id="busca"
+                type="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Cliente, placa, CPF, modelo ou WhatsApp"
+                className="min-h-[48px] w-full rounded-lg border border-[#c9d1e6] bg-white pl-11 pr-3.5 text-base text-navy-800 placeholder:text-muted-2"
+              />
+            </div>
+          </div>
+
+          <div className="relative overflow-x-auto">
+            <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+              <thead>
+                <tr className="text-xs font-bold uppercase tracking-[1.5px] text-muted">
+                  <th scope="col" className="px-5 py-4">Data</th>
+                  <th scope="col" className="px-5 py-4">Cliente</th>
+                  <th scope="col" className="px-5 py-4">Veículo / placa</th>
+                  <th scope="col" className="px-5 py-4">Plano</th>
+                  <th scope="col" className="px-5 py-4">Mensalidade</th>
+                  <th scope="col" className="px-5 py-4">Status</th>
+                  <th scope="col" className="px-5 py-4 text-right">
+                    <span className="sr-only">Ações</span>
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-10 text-slate-400">
-                      Carregando cadastros de backup...
+                    <td colSpan={7} className="px-5 py-12 text-center text-muted">
+                      Carregando cadastros…
+                    </td>
+                  </tr>
+                ) : loadError ? (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-12 text-center text-red-700" role="alert">
+                      {loadError}
                     </td>
                   </tr>
                 ) : filteredLeads.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-10 text-slate-500">
-                      Nenhum cadastro encontrado.
+                    <td colSpan={7} className="px-5 py-12 text-center text-muted">
+                      {leads.length
+                        ? 'Nenhum cadastro corresponde à busca.'
+                        : 'Nenhum cadastro recebido ainda.'}
                     </td>
                   </tr>
                 ) : (
                   filteredLeads.map((lead) => (
-                    <tr key={lead.id} className="hover:bg-slate-800/40 transition">
-                      <td className="py-3.5 px-4 text-slate-400 whitespace-nowrap">
-                        {new Date(lead.createdAt).toLocaleDateString('pt-BR')} às{' '}
-                        {new Date(lead.createdAt).toLocaleTimeString('pt-BR', {
-                          hour: '2-digit',
-                          minute: '2-digit',
+                    <tr key={lead.id} className="border-t border-line transition hover:bg-surface-50">
+                      <td className="whitespace-nowrap px-5 py-4 text-muted">
+                        {new Date(lead.createdAt).toLocaleString('pt-BR', {
+                          dateStyle: 'short',
+                          timeStyle: 'short',
                         })}
                       </td>
-                      <td className="py-3.5 px-4 font-bold text-white">
-                        <div>{lead.nome}</div>
-                        <div className="text-[11px] text-slate-400 font-normal">
-                          {lead.whatsapp} {lead.cpf ? `• CPF: ${lead.cpf}` : ''}
+                      <td className="px-5 py-4">
+                        <div className="font-bold text-navy-800">{lead.nome}</div>
+                        <div className="text-xs text-muted">
+                          {lead.whatsapp}
+                          {lead.cpf ? ` · CPF ${lead.cpf}` : ''}
                         </div>
                       </td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-semibold text-slate-200">
+                      <td className="px-5 py-4">
+                        <div className="font-semibold text-navy-800">
                           {lead.vehicle.marca} {lead.vehicle.modelo} ({lead.vehicle.ano})
                         </div>
-                        <div className="text-[11px] text-brand-400 font-mono">
-                          {lead.placa || 'Sem placa'} {lead.veiculoTrabalho ? '• Trabalho/App' : ''}
+                        <div className="font-mono text-xs text-muted">
+                          {lead.placa || 'Sem placa'}
+                          {lead.veiculoTrabalho ? ' · App/táxi' : ''}
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-300">
-                        {lead.planoEscolhidoNome}
+                      <td className="px-5 py-4 font-semibold">{lead.planoEscolhidoNome}</td>
+                      <td className="whitespace-nowrap px-5 py-4">
+                        <div className="font-bold text-navy-800">{brl(lead.mensalidadeFinal)}/mês</div>
+                        <div className="text-xs text-muted">Ativação {brl(lead.ativacao)}</div>
                       </td>
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="font-extrabold text-emerald-400">
-                          R$ {lead.mensalidadeFinal.toFixed(2).replace('.', ',')}/mês
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          Ativação: R$ {lead.ativacao.toFixed(2).replace('.', ',')}
-                        </div>
+                      <td className="px-5 py-4">
+                        <StatusBadge status={lead.status} />
                       </td>
-                      <td className="py-3.5 px-4">
-                        {lead.status === 'vistoria_enviada' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Vistoria Enviada
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                            <Clock className="w-3.5 h-3.5" />
-                            Pendente Vistoria
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="px-5 py-4 text-right">
                         <button
                           type="button"
                           onClick={() => setSelectedLead(lead)}
-                          className="inline-flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg font-semibold text-xs transition border border-slate-700"
+                          aria-label={`Ver detalhes de ${lead.nome}`}
+                          className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border-2 border-navy-800 px-4 text-sm font-bold text-navy-800 transition hover:bg-surface-100"
                         >
-                          <Eye className="w-3.5 h-3.5" />
+                          <Eye aria-hidden className="h-4 w-4" />
                           Detalhes
                         </button>
                       </td>
@@ -277,115 +352,109 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
+      </main>
 
-        {/* Modal de Detalhes do Lead */}
-        {selectedLead && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
-          >
-            <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-              <button
-                type="button"
-                onClick={() => setSelectedLead(null)}
-                className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-xl bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
+      {selectedLead && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="lead-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedLead(null)
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-navy-deep/70 p-4 backdrop-blur-sm"
+        >
+          <div className="relative max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-3xl bg-white p-6 text-navy-800 shadow-[0_24px_64px_rgba(7,12,34,0.45)] sm:p-8">
+            <button
+              type="button"
+              onClick={() => setSelectedLead(null)}
+              aria-label="Fechar"
+              className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-lg text-muted hover:bg-surface-100"
+            >
+              <X aria-hidden className="h-5 w-5" />
+            </button>
 
-              <div className="mb-6">
-                <span className="text-xs font-bold text-brand-400 uppercase tracking-wider">
-                  Ficha do Associado (Backup)
-                </span>
-                <h2 className="text-2xl font-black text-white mt-1">{selectedLead.nome}</h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Cadastrado em {new Date(selectedLead.createdAt).toLocaleString('pt-BR')}
-                </p>
-              </div>
-
-              <div className="space-y-4 text-xs">
-                {/* Dados Pessoais */}
-                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-2">
-                  <h3 className="font-bold text-slate-300 uppercase text-[11px] mb-2 flex items-center gap-1.5">
-                    <User className="w-4 h-4 text-brand-400" />
-                    Dados do Titular
-                  </h3>
-                  <p><strong>Nome:</strong> {selectedLead.nome}</p>
-                  <p><strong>CPF:</strong> {selectedLead.cpf || 'Não informado'}</p>
-                  <p><strong>WhatsApp:</strong> {selectedLead.whatsapp}</p>
-                  <p><strong>E-mail:</strong> {selectedLead.email || 'Não informado'}</p>
-                  <p><strong>Cidade:</strong> {selectedLead.cidade || 'Rio de Janeiro'}</p>
-                </div>
-
-                {/* Dados do Veículo */}
-                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-2">
-                  <h3 className="font-bold text-slate-300 uppercase text-[11px] mb-2 flex items-center gap-1.5">
-                    <Car className="w-4 h-4 text-brand-400" />
-                    Dados do Veículo
-                  </h3>
-                  <p><strong>Modelo:</strong> {selectedLead.vehicle.marca} {selectedLead.vehicle.modelo} ({selectedLead.vehicle.ano})</p>
-                  <p><strong>Placa:</strong> {selectedLead.placa || 'A informar'}</p>
-                  <p><strong>Código FIPE:</strong> {selectedLead.vehicle.fipeCode}</p>
-                  <p><strong>Valor FIPE:</strong> R$ {selectedLead.vehicle.fipeValue.toLocaleString('pt-BR')}</p>
-                  <p><strong>Uso em Aplicativo/Táxi:</strong> {selectedLead.veiculoTrabalho ? 'Sim' : 'Não'}</p>
-                </div>
-
-                {/* Plano e Valores */}
-                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-2">
-                  <h3 className="font-bold text-slate-300 uppercase text-[11px] mb-2 flex items-center gap-1.5">
-                    <DollarSign className="w-4 h-4 text-emerald-400" />
-                    Plano e Condições
-                  </h3>
-                  <p><strong>Plano Escolhido:</strong> {selectedLead.planoEscolhidoNome}</p>
-                  <p><strong>Mensalidade:</strong> R$ {selectedLead.mensalidadeFinal.toFixed(2).replace('.', ',')}/mês</p>
-                  <p><strong>Taxa de Ativação (Pix):</strong> R$ {selectedLead.ativacao.toFixed(2).replace('.', ',')}</p>
-                  <p><strong>Desconto Adesivo 21Go:</strong> {selectedLead.comAdesivo ? 'Aplicado' : 'Não aplicado'}</p>
-                  {selectedLead.powercrmCode && (
-                    <p><strong>Código PowerCRM:</strong> <code>{selectedLead.powercrmCode}</code></p>
-                  )}
-                </div>
-
-                {/* Status da Vistoria */}
-                <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-2">
-                  <h3 className="font-bold text-slate-300 uppercase text-[11px] mb-2 flex items-center gap-1.5">
-                    <FileText className="w-4 h-4 text-blue-400" />
-                    Documentos e Vistoria
-                  </h3>
-                  {selectedLead.vistoriaData ? (
-                    <div className="space-y-1 text-slate-300">
-                      <p><strong>CNH / RG:</strong> ✅ {selectedLead.vistoriaData.cnhOuRgNome || 'Anexado'}</p>
-                      <p><strong>Documento do Veículo (CRLV):</strong> ✅ {selectedLead.vistoriaData.crlvNome || 'Anexado'}</p>
-                      <p><strong>Comprovante de Residência:</strong> ✅ {selectedLead.vistoriaData.comprovanteResidenciaNome || 'Anexado'}</p>
-                      <p><strong>Total de Fotos do Veículo:</strong> ✅ {selectedLead.vistoriaData.totalFotos || 0} fotos</p>
-                      <p className="text-[11px] text-slate-500 mt-1">
-                        Enviado em: {new Date(selectedLead.vistoriaData.enviadoEm || '').toLocaleString('pt-BR')}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="text-amber-400">
-                      O associado ainda não enviou as fotos e documentos na página de vistoria.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-6 flex gap-3">
-                <a
-                  href={`https://wa.me/${selectedLead.whatsapp.replace(/\D/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition text-center text-xs flex items-center justify-center gap-2"
-                >
-                  <Phone className="w-4 h-4" />
-                  Chamar no WhatsApp
-                </a>
-              </div>
+            <div className="mb-5 flex flex-col items-start gap-2 pr-10">
+              <StatusBadge status={selectedLead.status} />
+              <h2 id="lead-title" className="m-0 text-[28px] font-extrabold tracking-[-0.8px]">
+                {selectedLead.nome}
+              </h2>
+              <p className="m-0 text-sm text-muted">
+                Cadastrado em {new Date(selectedLead.createdAt).toLocaleString('pt-BR')}
+              </p>
             </div>
+
+            <div className="flex flex-col gap-3.5">
+              <DetailGroup icon={User} title="Titular">
+                <Row label="CPF">{selectedLead.cpf || 'Não informado'}</Row>
+                <Row label="WhatsApp">{selectedLead.whatsapp}</Row>
+                <Row label="E-mail">{selectedLead.email || 'Não informado'}</Row>
+                <Row label="Cidade">{selectedLead.cidade || 'Não informada'}</Row>
+              </DetailGroup>
+
+              <DetailGroup icon={Car} title="Veículo">
+                <Row label="Modelo">
+                  {selectedLead.vehicle.marca} {selectedLead.vehicle.modelo} ({selectedLead.vehicle.ano})
+                </Row>
+                <Row label="Placa">{selectedLead.placa || 'A informar'}</Row>
+                <Row label="FIPE">
+                  R$ {selectedLead.vehicle.fipeValue.toLocaleString('pt-BR')} · cód.{' '}
+                  {selectedLead.vehicle.fipeCode}
+                </Row>
+                <Row label="App ou táxi">{selectedLead.veiculoTrabalho ? 'Sim' : 'Não'}</Row>
+              </DetailGroup>
+
+              <DetailGroup icon={DollarSign} title="Plano e condições">
+                <Row label="Plano">{selectedLead.planoEscolhidoNome}</Row>
+                <Row label="Mensalidade">{brl(selectedLead.mensalidadeFinal)}/mês</Row>
+                <Row label="Ativação (Pix)">{brl(selectedLead.ativacao)}</Row>
+                <Row label="Adesivo 21Go">{selectedLead.comAdesivo ? 'Aplicado' : 'Não aplicado'}</Row>
+                {selectedLead.powercrmCode && (
+                  <Row label="Código CRM">
+                    <code>{selectedLead.powercrmCode}</code>
+                  </Row>
+                )}
+              </DetailGroup>
+
+              <DetailGroup icon={FileText} title="Documentos e vistoria">
+                {selectedLead.vistoriaData ? (
+                  <>
+                    <Row label="CNH / RG">{selectedLead.vistoriaData.cnhOuRgNome || 'Anexado'}</Row>
+                    <Row label="CRLV">{selectedLead.vistoriaData.crlvNome || 'Anexado'}</Row>
+                    <Row label="Residência">
+                      {selectedLead.vistoriaData.comprovanteResidenciaNome || 'Anexado'}
+                    </Row>
+                    <Row label="Fotos">{selectedLead.vistoriaData.totalFotos || 0} do veículo</Row>
+                    {selectedLead.vistoriaData.enviadoEm && (
+                      <Row label="Enviado em">
+                        {new Date(selectedLead.vistoriaData.enviadoEm).toLocaleString('pt-BR')}
+                      </Row>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <dt className="sr-only">Situação</dt>
+                    <dd className="col-span-2 m-0 text-[#8a4a00]">
+                      O associado ainda não enviou documentos e fotos na página de vistoria.
+                    </dd>
+                  </>
+                )}
+              </DetailGroup>
+            </div>
+
+            <a
+              href={`https://wa.me/${selectedLead.whatsapp.replace(/\D/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 flex min-h-[52px] items-center justify-center gap-2 rounded-lg bg-go-whatsapp-dark text-base font-bold text-white no-underline transition hover:-translate-y-px hover:shadow-cta-wa"
+            >
+              <MessageCircle aria-hidden className="h-5 w-5" />
+              Chamar no WhatsApp
+            </a>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
