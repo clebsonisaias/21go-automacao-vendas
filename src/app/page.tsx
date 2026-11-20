@@ -14,8 +14,19 @@ import {
   CheckCircle2,
   Lock,
   Search,
-  ChevronRight,
   MessageCircle,
+  Wrench,
+  Key,
+  HelpCircle,
+  ChevronDown,
+  FileCheck,
+  Zap,
+  Users,
+  Award,
+  ThumbsUp,
+  CreditCard,
+  MapPin,
+  ExternalLink,
 } from 'lucide-react'
 import { VehicleInfo, PlanPricing, QuoteCalculationResult } from '@/lib/types'
 
@@ -51,6 +62,9 @@ export default function HomePage() {
   const [email, setEmail] = useState('')
   const [isSubmittingLead, setIsSubmittingLead] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+
+  // FAQ Accordion
+  const [openFaq, setOpenFaq] = useState<number | null>(null)
 
   // Carrega marcas e anos quando troca para manual
   useEffect(() => {
@@ -106,12 +120,11 @@ export default function HomePage() {
       const data = await res.json()
 
       if (!res.ok || data.status === 'notfound') {
-        setPlateError('Placa não encontrada. Você pode preencher manualmente abaixo.')
+        setPlateError('Placa não encontrada na base nacional. Você pode buscar por marca e modelo abaixo.')
         setIsSearchingPlate(false)
         return
       }
 
-      // Se encontrou, calcula o preço direto
       setIsCalculating(true)
       const calcRes = await fetch('/api/quote/calculate', {
         method: 'POST',
@@ -130,6 +143,10 @@ export default function HomePage() {
       const calcData = await calcRes.json()
       if (calcData.success) {
         setQuoteResult(calcData)
+        // Rola suavemente até os planos
+        setTimeout(() => {
+          document.getElementById('planos-section')?.scrollIntoView({ behavior: 'smooth' })
+        }, 150)
       } else {
         setPlateError(calcData.error || 'Não foi possível calcular a cotação deste modelo.')
       }
@@ -176,6 +193,9 @@ export default function HomePage() {
       const calcData = await calcRes.json()
       if (calcData.success) {
         setQuoteResult(calcData)
+        setTimeout(() => {
+          document.getElementById('planos-section')?.scrollIntoView({ behavior: 'smooth' })
+        }, 150)
       } else {
         setPlateError(calcData.error || 'Não foi possível calcular a cotação deste modelo.')
       }
@@ -212,7 +232,6 @@ export default function HomePage() {
 
     setIsSubmittingLead(true)
 
-    // Calcula valor final do plano conforme os toggles
     let mensalidadeFinal = selectedPlan.monthly
     if (comAdesivo && quoteResult.regras.elegivelAdesivo) {
       mensalidadeFinal = selectedPlan.mensalidadeComAdesivo
@@ -254,84 +273,119 @@ export default function HomePage() {
     }
   }
 
+  const faqs = [
+    {
+      q: 'Precisa de análise de perfil ou consulta ao SPC/Serasa?',
+      a: 'Não! Na 21Go não fazemos consulta de crédito nem restrição por idade, estado civil, CEP de residência ou se você trabalha com aplicativo (Uber, 99). A proteção é para o veículo.',
+    },
+    {
+      q: 'Quanto tempo leva para meu veículo ficar protegido?',
+      a: 'Após a aprovação da vistoria (feita 100% online por fotos no celular) e a confirmação da taxa de ativação, a proteção entra em vigor no mesmo dia!',
+    },
+    {
+      q: 'O que é o desconto do adesivo 21Go?',
+      a: 'Se você optar por colocar o adesivo discreto da 21Go no vidro traseiro do seu veículo, você ganha até 15% de desconto vitalício em todas as suas mensalidades.',
+    },
+    {
+      q: 'Como funciona a assistência 24h e o guincho?',
+      a: 'Você conta com uma central 0800 disponível 24 horas por dia, 7 dias por semana em todo o Brasil. Cobre reboque/guincho, socorro mecânico, socorro elétrico, troca de pneus, chaveiro e hospedagem emergencial.',
+    },
+    {
+      q: 'Como é feito o pagamento das mensalidades?',
+      a: 'As mensalidades são pagas mensalmente via boleto bancário ou Pix, com desconto de 5% por pontualidade pagando até o dia de vencimento escolhido (dia 10 ou 20).',
+    },
+  ]
+
   return (
-    <div className="min-h-screen flex flex-col font-sans">
-      {/* Top Bar / Header */}
-      <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-40 backdrop-blur-md bg-opacity-95">
-        <div className="max-w-6xl mx-auto px-4 py-3.5 flex items-center justify-between">
+    <div className="min-h-screen flex flex-col font-sans bg-slate-900 text-slate-100 selection:bg-brand-500 selection:text-white">
+      {/* Header Fixo */}
+      <header className="bg-slate-950/80 border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-500 flex items-center justify-center font-black text-xl tracking-tighter text-white shadow-lg shadow-brand-500/20">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-brand-500 to-amber-400 flex items-center justify-center font-black text-2xl text-white shadow-lg shadow-brand-500/25">
               21
             </div>
             <div>
-              <div className="font-extrabold text-lg leading-tight tracking-tight flex items-center gap-1.5">
+              <div className="font-black text-lg leading-tight tracking-tight flex items-center gap-2 text-white">
                 21Go Proteção
-                <span className="text-xs bg-brand-500/20 text-brand-400 font-semibold px-2 py-0.5 rounded-full border border-brand-500/30">
-                  Franquia Oficial
+                <span className="hidden sm:inline-flex text-[10px] bg-brand-500/15 text-brand-400 font-bold px-2 py-0.5 rounded-full border border-brand-500/30 uppercase">
+                  Franquia Autorizada
                 </span>
               </div>
-              <p className="text-xs text-slate-400">Atendimento e Cotação Instantânea</p>
+              <p className="text-[11px] text-slate-400">Atendimento Exclusivo e Direto</p>
             </div>
           </div>
+
+          <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-300">
+            <a href="#cotacao" className="hover:text-brand-400 transition">Cotação Online</a>
+            <a href="#beneficios" className="hover:text-brand-400 transition">Benefícios</a>
+            <a href="#como-funciona" className="hover:text-brand-400 transition">Como Funciona</a>
+            <a href="#duvidas" className="hover:text-brand-400 transition">Dúvidas Frequentes</a>
+          </nav>
 
           <a
             href="https://wa.me/5521999999999"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden sm:inline-flex items-center gap-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-lg transition shadow-sm"
+            className="inline-flex items-center gap-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl transition shadow-md shadow-emerald-600/20 active:scale-95"
           >
             <MessageCircle className="w-4 h-4" />
-            Falar com Consultor
+            <span className="hidden sm:inline">WhatsApp do Consultor</span>
+            <span className="sm:hidden">Consultor</span>
           </a>
         </div>
       </header>
 
       {/* Hero Section */}
       <main className="flex-1">
-        <section className="bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white pt-10 pb-16 px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700 text-xs font-medium text-brand-400 mb-6">
-              <Sparkles className="w-3.5 h-3.5" />
-              Cotação com Preço Oficial 21Go em Tempo Real
+        <section id="cotacao" className="relative pt-12 pb-20 px-4 overflow-hidden">
+          {/* Efeitos de Fundo */}
+          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-brand-500/10 rounded-full blur-[120px] pointer-events-none" />
+          <div className="absolute top-1/2 right-10 w-[400px] h-[300px] bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
+
+          <div className="max-w-4xl mx-auto text-center relative z-10">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800/90 border border-slate-700/80 text-xs font-semibold text-brand-400 mb-6 shadow-inner">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              Preços Oficiais em Tempo Real • Sem Fidelidade Abusiva
             </div>
 
-            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white mb-4 leading-tight">
-              Proteja seu veículo pelo <br className="hidden sm:block" />
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white mb-5 leading-[1.15]">
+              Proteja seu veículo pelo{' '}
               <span className="bg-gradient-to-r from-brand-400 via-amber-300 to-brand-500 bg-clip-text text-transparent">
-                menor valor oficial do Rio
+                preço oficial do Rio
               </span>
             </h1>
 
-            <p className="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto mb-8">
-              Simule grátis sem precisar deixar dados pessoais. Preço transparente, 100% tabela FIPE
-              e assistência 24h completa.
+            <p className="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto mb-10 leading-relaxed">
+              Consulte grátis em <strong>30 segundos</strong> digitando a placa. Sem pegadinhas, 100% tabela FIPE e cobertura completa para roubo, furto, colisão e guincho 24h.
             </p>
 
-            {/* Box de Cotação */}
-            <div className="bg-white text-slate-900 rounded-2xl shadow-2xl p-5 sm:p-7 max-w-2xl mx-auto text-left border border-slate-100">
-              {/* Switch de Modo */}
-              <div className="flex border-b border-slate-100 mb-5 pb-3 gap-4 text-sm font-semibold">
+            {/* Box Principal de Cotação */}
+            <div className="bg-slate-950/90 border border-slate-800 text-slate-100 rounded-3xl shadow-2xl p-6 sm:p-8 max-w-2xl mx-auto text-left backdrop-blur-xl relative">
+              <div className="flex border-b border-slate-800 mb-6 pb-3 gap-6 text-sm font-bold">
                 <button
                   type="button"
                   onClick={() => setSearchMode('placa')}
-                  className={`pb-2 border-b-2 transition ${
+                  className={`pb-2 border-b-2 transition flex items-center gap-2 ${
                     searchMode === 'placa'
-                      ? 'border-brand-500 text-brand-600'
-                      : 'border-transparent text-slate-400 hover:text-slate-600'
+                      ? 'border-brand-500 text-brand-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
                   }`}
                 >
+                  <Search className="w-4 h-4" />
                   Consultar por Placa (Instantâneo)
                 </button>
                 <button
                   type="button"
                   onClick={() => setSearchMode('manual')}
-                  className={`pb-2 border-b-2 transition ${
+                  className={`pb-2 border-b-2 transition flex items-center gap-2 ${
                     searchMode === 'manual'
-                      ? 'border-brand-500 text-brand-600'
-                      : 'border-transparent text-slate-400 hover:text-slate-600'
+                      ? 'border-brand-500 text-brand-400'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  Buscar por Marca e Modelo
+                  <Car className="w-4 h-4" />
+                  Marca e Modelo
                 </button>
               </div>
 
@@ -340,11 +394,11 @@ export default function HomePage() {
                   <div>
                     <label
                       htmlFor="placa-input"
-                      className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-2"
+                      className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2"
                     >
-                      Digite a Placa do Veículo
+                      Placa do Veículo (Padrão Antigo ou Mercosul)
                     </label>
-                    <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2.5">
                       <div className="relative flex-1">
                         <input
                           id="placa-input"
@@ -352,24 +406,24 @@ export default function HomePage() {
                           maxLength={7}
                           value={placa}
                           onChange={(e) => handlePlateChange(e.target.value)}
-                          placeholder="Ex: ABC1234 ou ABC1D23"
-                          className="w-full uppercase font-mono font-bold text-xl px-4 py-3.5 border-2 border-slate-200 rounded-xl focus:border-brand-500 focus:outline-none transition tracking-widest placeholder:tracking-normal placeholder:font-normal placeholder:text-sm placeholder:text-slate-400"
+                          placeholder="Ex: ABC1D23"
+                          className="w-full uppercase font-mono font-black text-2xl px-4 py-3.5 bg-slate-900 border-2 border-slate-700 rounded-2xl focus:border-brand-500 focus:outline-none transition tracking-widest placeholder:tracking-normal placeholder:font-normal placeholder:text-sm placeholder:text-slate-500 text-white"
                         />
-                        <span className="absolute right-3.5 top-3.5 text-xs font-bold bg-slate-100 text-slate-500 px-2 py-1 rounded">
+                        <span className="absolute right-3.5 top-3.5 text-[10px] font-black bg-slate-800 border border-slate-700 text-slate-300 px-2.5 py-1 rounded-md">
                           BRASIL
                         </span>
                       </div>
                       <button
                         type="submit"
                         disabled={isSearchingPlate || isCalculating}
-                        className="bg-brand-600 hover:bg-brand-500 disabled:bg-slate-300 text-white font-bold px-6 py-3.5 rounded-xl transition flex items-center justify-center gap-2 shadow-md shadow-brand-500/20"
+                        className="bg-gradient-to-r from-brand-600 to-amber-500 hover:from-brand-500 hover:to-amber-400 disabled:opacity-50 text-white font-extrabold px-8 py-3.5 rounded-2xl transition flex items-center justify-center gap-2 shadow-lg shadow-brand-500/25 active:scale-95 text-base"
                       >
                         {isSearchingPlate || isCalculating ? (
                           <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                         ) : (
                           <>
-                            <Search className="w-4 h-4" />
-                            Ver Cotação
+                            <span>Ver Preço Oficial</span>
+                            <ArrowRight className="w-4 h-4" />
                           </>
                         )}
                       </button>
@@ -377,37 +431,37 @@ export default function HomePage() {
                   </div>
                 </form>
               ) : (
-                <form onSubmit={handleManualCalculate} className="space-y-3.5">
-                  <div className="flex gap-4 mb-2">
-                    <label className="flex items-center gap-1.5 text-sm font-semibold cursor-pointer">
+                <form onSubmit={handleManualCalculate} className="space-y-4">
+                  <div className="flex gap-6 mb-2">
+                    <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
                       <input
                         type="radio"
                         checked={tipo === 'carro'}
                         onChange={() => setTipo('carro')}
                         name="tipo"
-                        className="accent-brand-600"
+                        className="accent-brand-500"
                       />
                       Carro / Utilitário
                     </label>
-                    <label className="flex items-center gap-1.5 text-sm font-semibold cursor-pointer">
+                    <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
                       <input
                         type="radio"
                         checked={tipo === 'moto'}
                         onChange={() => setTipo('moto')}
                         name="tipo"
-                        className="accent-brand-600"
+                        className="accent-brand-500"
                       />
                       Motocicleta
                     </label>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Marca</label>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">Marca</label>
                       <select
                         value={selectedBrand}
                         onChange={(e) => setSelectedBrand(e.target.value)}
-                        className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none"
+                        className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white"
                       >
                         <option value="">Selecione a marca...</option>
                         {brands.map((b) => (
@@ -419,11 +473,11 @@ export default function HomePage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">Ano</label>
+                      <label className="block text-xs font-semibold text-slate-300 mb-1">Ano</label>
                       <select
                         value={selectedYear}
                         onChange={(e) => setSelectedYear(e.target.value)}
-                        className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none"
+                        className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white"
                       >
                         <option value="">Selecione o ano...</option>
                         {years.map((y) => (
@@ -436,15 +490,15 @@ export default function HomePage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Modelo</label>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">Modelo</label>
                     <select
                       value={selectedModel}
                       onChange={(e) => setSelectedModel(e.target.value)}
                       disabled={!models.length}
-                      className="w-full p-2.5 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none disabled:bg-slate-100"
+                      className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none disabled:opacity-40 text-white"
                     >
                       <option value="">
-                        {models.length ? 'Selecione o modelo...' : 'Escolha marca e ano primeiro'}
+                        {models.length ? 'Selecione o modelo exato...' : 'Escolha a marca e o ano acima'}
                       </option>
                       {models.map((m) => (
                         <option key={m.code} value={m.code}>
@@ -457,14 +511,14 @@ export default function HomePage() {
                   <button
                     type="submit"
                     disabled={isCalculating || !selectedModel}
-                    className="w-full mt-2 bg-brand-600 hover:bg-brand-500 disabled:bg-slate-300 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2"
+                    className="w-full mt-2 bg-gradient-to-r from-brand-600 to-amber-500 hover:from-brand-500 hover:to-amber-400 disabled:opacity-50 text-white font-extrabold py-3.5 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-brand-500/20"
                   >
                     {isCalculating ? (
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <>
                         <Search className="w-4 h-4" />
-                        Calcular Cotação
+                        Calcular Cotação Oficial
                       </>
                     )}
                   </button>
@@ -472,80 +526,108 @@ export default function HomePage() {
               )}
 
               {plateError && (
-                <div className="mt-3.5 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                <div className="mt-4 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
                   {plateError}
                 </div>
               )}
             </div>
+
+            {/* Badges de Confiança */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-12 max-w-3xl mx-auto text-left">
+              <div className="flex items-center gap-3 p-3 bg-slate-950/40 border border-slate-800/80 rounded-2xl">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+                <span className="text-xs text-slate-300 font-medium">100% Tabela FIPE</span>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-slate-950/40 border border-slate-800/80 rounded-2xl">
+                <Lock className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                <span className="text-xs text-slate-300 font-medium">Sem SPC/Serasa</span>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-slate-950/40 border border-slate-800/80 rounded-2xl">
+                <Zap className="w-5 h-5 text-brand-400 flex-shrink-0" />
+                <span className="text-xs text-slate-300 font-medium">Vistoria Online</span>
+              </div>
+              <div className="flex items-center gap-3 p-3 bg-slate-950/40 border border-slate-800/80 rounded-2xl">
+                <Clock className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                <span className="text-xs text-slate-300 font-medium">Socorro 24 Horas</span>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* Resultados da Cotação */}
+        {/* Resultados da Cotação (Se preenchido) */}
         {quoteResult && (
-          <section className="max-w-6xl mx-auto px-4 py-12">
-            {/* Box de Confirmação do Veículo */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <section id="planos-section" className="max-w-6xl mx-auto px-4 py-12 scroll-mt-20">
+            {/* Box do Veículo */}
+            <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-xl">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold">
-                  <Car className="w-7 h-7" />
+                <div className="w-16 h-16 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center font-bold">
+                  <Car className="w-8 h-8" />
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-brand-600 uppercase tracking-wider">
-                    Veículo Identificado
+                  <div className="text-xs font-bold text-brand-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Veículo Identificado com Sucesso
                   </div>
-                  <h2 className="text-xl font-extrabold text-slate-900">
+                  <h2 className="text-xl sm:text-2xl font-black text-white mt-0.5">
                     {quoteResult.vehicle.marca} {quoteResult.vehicle.modelo}
                   </h2>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Ano: {quoteResult.vehicle.ano} • FIPE:{' '}
-                    <span className="font-semibold text-slate-700">
+                  <p className="text-xs text-slate-400 mt-1">
+                    Ano: <strong className="text-slate-200">{quoteResult.vehicle.ano}</strong> •
+                    FIPE Oficial:{' '}
+                    <span className="font-extrabold text-emerald-400 text-sm">
                       {new Intl.NumberFormat('pt-BR', {
                         style: 'currency',
                         currency: 'BRL',
                       }).format(quoteResult.vehicle.fipeValue)}
                     </span>{' '}
-                    • Código FIPE: {quoteResult.vehicle.fipeCode}
+                    • Código: {quoteResult.vehicle.fipeCode}
                   </p>
                 </div>
               </div>
 
               {/* Toggles de Descontos */}
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col sm:flex-row gap-4 text-xs">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row gap-5 text-xs">
                 {quoteResult.regras.elegivelAdesivo && (
-                  <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+                  <label className="flex items-center gap-2.5 cursor-pointer font-semibold text-slate-200">
                     <input
                       type="checkbox"
                       checked={comAdesivo}
                       onChange={(e) => setComAdesivo(e.target.checked)}
-                      className="w-4 h-4 accent-brand-600 rounded"
+                      className="w-4 h-4 accent-brand-500 rounded"
                     />
-                    Adesivo 21Go (-{quoteResult.regras.percentualAdesivo}%)
+                    <span>
+                      Adesivo 21Go{' '}
+                      <span className="text-emerald-400 font-bold">
+                        (-{quoteResult.regras.percentualAdesivo}%)
+                      </span>
+                    </span>
                   </label>
                 )}
-                <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+                <label className="flex items-center gap-2.5 cursor-pointer font-semibold text-slate-200">
                   <input
                     type="checkbox"
                     checked={comPontualidade}
                     onChange={(e) => setComPontualidade(e.target.checked)}
-                    className="w-4 h-4 accent-brand-600 rounded"
+                    className="w-4 h-4 accent-brand-500 rounded"
                   />
-                  Pontualidade (-5%)
+                  <span>
+                    Pontualidade <span className="text-emerald-400 font-bold">(-5%)</span>
+                  </span>
                 </label>
               </div>
             </div>
 
             {quoteResult.regras.exigeVistoriaPresencial && (
-              <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+              <div className="mb-8 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
                 <span>
-                  <strong>Atenção:</strong> Este modelo específico requer vistoria presencial na
-                  sede da 21Go após a aprovação do cadastro.
+                  <strong>Atenção:</strong> Este modelo específico exige vistoria presencial na sede da 21Go após o envio inicial dos dados.
                 </span>
               </div>
             )}
 
-            {/* Grid de Planos */}
+            {/* Grid dos 4 Planos Oficiais */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {quoteResult.plans.map((plan) => {
                 let valorExibido = plan.monthly
@@ -558,48 +640,47 @@ export default function HomePage() {
                 return (
                   <div
                     key={plan.id}
-                    className={`relative rounded-2xl bg-white border p-6 flex flex-col transition-all hover:shadow-xl ${
+                    className={`relative rounded-3xl bg-slate-950 border p-6 flex flex-col transition-all duration-300 hover:-translate-y-1 ${
                       plan.popular
-                        ? 'border-brand-500 shadow-md ring-2 ring-brand-500/20'
-                        : 'border-slate-200 shadow-sm'
+                        ? 'border-brand-500 shadow-2xl shadow-brand-500/20 ring-1 ring-brand-500'
+                        : 'border-slate-800 shadow-lg'
                     }`}
                   >
                     {plan.popular && (
-                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-brand-600 to-amber-500 text-white text-[11px] font-black uppercase tracking-wider px-3 py-0.5 rounded-full shadow-sm">
+                      <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-brand-600 to-amber-500 text-white text-[11px] font-black uppercase tracking-wider px-3.5 py-1 rounded-full shadow-md">
                         Mais Escolhido
                       </span>
                     )}
 
-                    <div className="mb-4">
-                      <h3 className="text-lg font-bold text-slate-900">{plan.name}</h3>
-                      <div className="mt-2 flex items-baseline gap-1">
-                        <span className="text-sm font-semibold text-slate-500">R$</span>
-                        <span className="text-3xl font-black text-slate-900">
+                    <div className="mb-5">
+                      <h3 className="text-xl font-black text-white">{plan.name}</h3>
+                      <div className="mt-3 flex items-baseline gap-1">
+                        <span className="text-sm font-bold text-slate-400">R$</span>
+                        <span className="text-4xl font-black text-white tracking-tight">
                           {valorExibido.toFixed(2).replace('.', ',')}
                         </span>
                         <span className="text-xs text-slate-400">/mês</span>
                       </div>
-                      <div className="text-[11px] text-slate-400 mt-1">
-                        Taxa de ativação:{' '}
-                        <strong className="text-slate-600">
+                      <div className="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1">
+                        <span>Taxa de ativação no Pix:</span>
+                        <strong className="text-slate-200">
                           {new Intl.NumberFormat('pt-BR', {
                             style: 'currency',
                             currency: 'BRL',
                           }).format(plan.ativacao)}
-                        </strong>{' '}
-                        no Pix
+                        </strong>
                       </div>
                     </div>
 
-                    <div className="border-t border-slate-100 pt-4 flex-1">
-                      <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-                        O que inclui:
+                    <div className="border-t border-slate-800/80 pt-4 flex-1">
+                      <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mb-3">
+                        Coberturas Inclusas:
                       </div>
-                      <ul className="space-y-2 text-xs text-slate-600">
+                      <ul className="space-y-2.5 text-xs text-slate-300">
                         {plan.coberturas.map((cob, idx) => (
-                          <li key={idx} className="flex items-start gap-2">
-                            <Check className="w-3.5 h-3.5 text-emerald-500 mt-0.5 flex-shrink-0" />
-                            <span>{cob}</span>
+                          <li key={idx} className="flex items-start gap-2.5">
+                            <Check className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
+                            <span className="leading-tight">{cob}</span>
                           </li>
                         ))}
                       </ul>
@@ -611,13 +692,13 @@ export default function HomePage() {
                         setSelectedPlan(plan)
                         setIsModalOpen(true)
                       }}
-                      className={`mt-6 w-full py-3 rounded-xl font-bold text-sm transition flex items-center justify-center gap-2 ${
+                      className={`mt-6 w-full py-3.5 rounded-2xl font-black text-sm transition flex items-center justify-center gap-2 active:scale-95 ${
                         plan.popular
-                          ? 'bg-brand-600 hover:bg-brand-500 text-white shadow-md shadow-brand-500/20'
-                          : 'bg-slate-900 hover:bg-slate-800 text-white'
+                          ? 'bg-gradient-to-r from-brand-600 to-amber-500 hover:from-brand-500 hover:to-amber-400 text-white shadow-lg shadow-brand-500/25'
+                          : 'bg-slate-800 hover:bg-slate-700 text-white'
                       }`}
                     >
-                      Quero Este Plano
+                      <span>Quero Este Plano</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -627,105 +708,244 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* Seção de Vantagens e Confiança */}
-        <section className="bg-slate-50 border-t border-slate-200 py-16 px-4">
+        {/* Como Funciona o Processo */}
+        <section id="como-funciona" className="py-20 px-4 bg-slate-950/60 border-t border-slate-800">
           <div className="max-w-6xl mx-auto">
-            <div className="text-center max-w-2xl mx-auto mb-12">
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-                Por que escolher nossa Franquia 21Go?
+            <div className="text-center max-w-2xl mx-auto mb-16">
+              <span className="text-xs font-bold uppercase tracking-wider text-brand-400">
+                Simplicidade e Agilidade
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-black text-white mt-2">
+                Como funciona a adesão?
               </h2>
-              <p className="text-slate-500 text-sm mt-2">
-                Mais agilidade no atendimento e a segurança da maior proteção veicular do estado.
+              <p className="text-slate-400 text-sm mt-3">
+                Esqueça filas e papeladas. Seu carro protegido em apenas 4 passos descomplicados:
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-                <div className="w-12 h-12 rounded-xl bg-amber-50 text-brand-600 flex items-center justify-center mb-4">
-                  <Shield className="w-6 h-6" />
-                </div>
-                <h3 className="font-bold text-base text-slate-900 mb-1">100% Tabela FIPE</h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Sem pegadinhas ou depreciação injusta. Indenização integral garantida em caso de
-                  roubo, furto ou perda total.
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 relative">
+                <span className="text-4xl font-black text-brand-500/30">01</span>
+                <h3 className="font-bold text-base text-white mt-2 mb-1">Cote pela Placa</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Digite sua placa e veja instantaneamente os valores e planos disponíveis sem burocracia.
                 </p>
               </div>
 
-              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-                <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
-                  <Clock className="w-6 h-6" />
-                </div>
-                <h3 className="font-bold text-base text-slate-900 mb-1">Assistência 24h Completa</h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Guincho em todo o território nacional, socorro mecânico, elétrico, chaveiro e
-                  troca de pneus a qualquer hora.
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 relative">
+                <span className="text-4xl font-black text-brand-500/30">02</span>
+                <h3 className="font-bold text-base text-white mt-2 mb-1">Escolha seu Plano</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Selecione o plano ideal para suas necessidades e aproveite os descontos de adesivo e pontualidade.
                 </p>
               </div>
 
-              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
-                  <Lock className="w-6 h-6" />
-                </div>
-                <h3 className="font-bold text-base text-slate-900 mb-1">Sem Análise de Perfil</h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Não consultamos SPC/Serasa, não exigimos CEP de pernoite e aceitamos motoristas de
-                  aplicativo e carros de trabalho.
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 relative">
+                <span className="text-4xl font-black text-brand-500/30">03</span>
+                <h3 className="font-bold text-base text-white mt-2 mb-1">Vistoria 100% Online</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Tire as fotos do seu veículo pelo celular sem sair de casa, sem filas e com aprovação rápida.
+                </p>
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 relative">
+                <span className="text-4xl font-black text-brand-500/30">04</span>
+                <h3 className="font-bold text-base text-white mt-2 mb-1">Veículo Protegido</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Após a aprovação, seu veículo já está coberto com assistência 24h em todo o Brasil.
                 </p>
               </div>
             </div>
           </div>
         </section>
+
+        {/* Benefícios / Coberturas Detalhadas */}
+        <section id="beneficios" className="py-20 px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center max-w-2xl mx-auto mb-16">
+              <span className="text-xs font-bold uppercase tracking-wider text-brand-400">
+                Tudo o Que Você Precisa
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-black text-white mt-2">
+                Proteção completa sem pegadinhas
+              </h2>
+              <p className="text-slate-400 text-sm mt-3">
+                Conheça os pilares que fazem da 21Go a proteção veicular preferida dos motoristas do Rio de Janeiro:
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="bg-slate-950 border border-slate-800 rounded-3xl p-7 hover:border-slate-700 transition">
+                <div className="w-12 h-12 rounded-2xl bg-brand-500/10 text-brand-400 flex items-center justify-center mb-5">
+                  <Shield className="w-6 h-6" />
+                </div>
+                <h3 className="font-black text-lg text-white mb-2">Roubo, Furto e Colisão</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Indenização integral de 100% da Tabela FIPE em casos de roubo, furto, colisão e perda total. Sem burocracia desnecessária.
+                </p>
+              </div>
+
+              <div className="bg-slate-950 border border-slate-800 rounded-3xl p-7 hover:border-slate-700 transition">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-5">
+                  <Wrench className="w-6 h-6" />
+                </div>
+                <h3 className="font-black text-lg text-white mb-2">Assistência 24 Horas</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Guincho em todo o território nacional, socorro mecânico e elétrico, recarga de bateria, chaveiro e troca de pneus a qualquer hora.
+                </p>
+              </div>
+
+              <div className="bg-slate-950 border border-slate-800 rounded-3xl p-7 hover:border-slate-700 transition">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center mb-5">
+                  <Users className="w-6 h-6" />
+                </div>
+                <h3 className="font-black text-lg text-white mb-2">Danos Materiais a Terceiros</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Cobertura para prejuízos causados a veículos de terceiros de até R$ 100.000,00, trazendo tranquilidade total no trânsito.
+                </p>
+              </div>
+
+              <div className="bg-slate-950 border border-slate-800 rounded-3xl p-7 hover:border-slate-700 transition">
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center mb-5">
+                  <Car className="w-6 h-6" />
+                </div>
+                <h3 className="font-black text-lg text-white mb-2">Carro Reserva</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Opções de carro reserva de 7 a 15 dias para você não ficar a pé enquanto seu veículo é reparado em oficinas credenciadas.
+                </p>
+              </div>
+
+              <div className="bg-slate-950 border border-slate-800 rounded-3xl p-7 hover:border-slate-700 transition">
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center mb-5">
+                  <Zap className="w-6 h-6" />
+                </div>
+                <h3 className="font-black text-lg text-white mb-2">Fenômenos da Natureza</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Proteção completa contra enchentes, alagamentos, queda de árvores e chuva de granizo, cada vez mais comuns nas cidades.
+                </p>
+              </div>
+
+              <div className="bg-slate-950 border border-slate-800 rounded-3xl p-7 hover:border-slate-700 transition">
+                <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center mb-5">
+                  <CreditCard className="w-6 h-6" />
+                </div>
+                <h3 className="font-black text-lg text-white mb-2">Sem Análise de Perfil</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Qualquer pessoa habilitada pode dirigir o veículo sem afetar a indenização. Aceitamos motoristas de app e carros de trabalho.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ - Perguntas Frequentes */}
+        <section id="duvidas" className="py-20 px-4 bg-slate-950/60 border-t border-slate-800">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-12">
+              <span className="text-xs font-bold uppercase tracking-wider text-brand-400">
+                Tire Suas Dúvidas
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-black text-white mt-2">
+                Perguntas Frequentes
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              {faqs.map((faq, idx) => (
+                <div
+                  key={idx}
+                  className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden transition"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                    className="w-full p-5 text-left font-bold text-sm sm:text-base text-white flex items-center justify-between gap-4"
+                  >
+                    <span>{faq.q}</span>
+                    <ChevronDown
+                      className={`w-5 h-5 text-slate-400 transition-transform ${
+                        openFaq === idx ? 'rotate-180 text-brand-400' : ''
+                      }`}
+                    />
+                  </button>
+                  {openFaq === idx && (
+                    <div className="px-5 pb-5 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-slate-800/80 pt-4">
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
+
+      {/* Floating WhatsApp Button */}
+      <a
+        href="https://wa.me/5521999999999?text=Ol%C3%A1%2C%20gostaria%20de%20fazer%20uma%20cota%C3%A7%C3%A3o%20da%2021Go"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Falar com consultor no WhatsApp"
+        className="fixed bottom-6 right-6 z-40 bg-emerald-500 hover:bg-emerald-400 text-white p-4 rounded-full shadow-2xl shadow-emerald-500/40 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 group"
+      >
+        <MessageCircle className="w-7 h-7" />
+        <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs transition-all duration-300 ease-in-out text-xs font-bold px-0 group-hover:px-2">
+          Falar no WhatsApp
+        </span>
+      </a>
 
       {/* Modal de Fechamento / Cadastro do Lead */}
       {isModalOpen && selectedPlan && quoteResult && (
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in"
         >
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative">
+          <div className="bg-slate-900 border border-slate-800 text-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative">
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-xl bg-slate-800"
             >
               <X className="w-5 h-5" />
             </button>
 
             {submitSuccess ? (
-              <div className="text-center py-8 space-y-3">
-                <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+              <div className="text-center py-8 space-y-4">
+                <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <h3 className="text-xl font-bold text-slate-900">Cotação Enviada com Sucesso!</h3>
-                <p className="text-xs text-slate-500">
-                  Redirecionando você para o WhatsApp do nosso consultor...
+                <h3 className="text-2xl font-black text-white">Cotação Concluída!</h3>
+                <p className="text-xs text-slate-300 max-w-xs mx-auto">
+                  Redirecionando você para o WhatsApp do nosso consultor com a proposta pronta...
                 </p>
               </div>
             ) : (
               <div>
                 <div className="mb-6">
-                  <span className="text-xs font-bold text-brand-600 uppercase tracking-wider">
-                    Finalizar Cotação
+                  <span className="text-xs font-bold text-brand-400 uppercase tracking-wider">
+                    Quase Pronto
                   </span>
-                  <h3 className="text-xl font-extrabold text-slate-900 mt-0.5">
+                  <h3 className="text-2xl font-black text-white mt-1">
                     Garantir Plano {selectedPlan.name}
                   </h3>
-                  <div className="mt-2 p-3 bg-slate-50 rounded-xl text-xs text-slate-600 space-y-1">
+                  <div className="mt-3 p-3.5 bg-slate-950 border border-slate-800 rounded-2xl text-xs text-slate-300 space-y-1.5">
                     <p>
                       <strong>Veículo:</strong> {quoteResult.vehicle.marca}{' '}
                       {quoteResult.vehicle.modelo} ({quoteResult.vehicle.ano})
                     </p>
                     <p>
-                      <strong>Mensalidade:</strong> R${' '}
-                      {(comAdesivo && quoteResult.regras.elegivelAdesivo
-                        ? selectedPlan.mensalidadeComAdesivo
-                        : selectedPlan.mensalidadeComPontualidade
-                      )
-                        .toFixed(2)
-                        .replace('.', ',')}
-                      /mês
+                      <strong>Mensalidade:</strong>{' '}
+                      <span className="text-emerald-400 font-bold">
+                        R${' '}
+                        {(comAdesivo && quoteResult.regras.elegivelAdesivo
+                          ? selectedPlan.mensalidadeComAdesivo
+                          : selectedPlan.mensalidadeComPontualidade
+                        )
+                          .toFixed(2)
+                          .replace('.', ',')}
+                        /mês
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -734,7 +954,7 @@ export default function HomePage() {
                   <div>
                     <label
                       htmlFor="lead-nome"
-                      className="block text-xs font-bold text-slate-700 uppercase mb-1"
+                      className="block text-xs font-bold text-slate-300 uppercase mb-1.5"
                     >
                       Seu Nome Completo *
                     </label>
@@ -744,15 +964,15 @@ export default function HomePage() {
                       required
                       value={nome}
                       onChange={(e) => setNome(e.target.value)}
-                      placeholder="Ex: João da Silva"
-                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none"
+                      placeholder="Ex: Carlos Silva"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
                     />
                   </div>
 
                   <div>
                     <label
                       htmlFor="lead-whatsapp"
-                      className="block text-xs font-bold text-slate-700 uppercase mb-1"
+                      className="block text-xs font-bold text-slate-300 uppercase mb-1.5"
                     >
                       WhatsApp com DDD *
                     </label>
@@ -763,14 +983,14 @@ export default function HomePage() {
                       value={whatsapp}
                       onChange={(e) => handlePhoneChange(e.target.value)}
                       placeholder="(21) 99999-9999"
-                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
                     />
                   </div>
 
                   <div>
                     <label
                       htmlFor="lead-email"
-                      className="block text-xs font-bold text-slate-700 uppercase mb-1"
+                      className="block text-xs font-bold text-slate-300 uppercase mb-1.5"
                     >
                       E-mail (Opcional)
                     </label>
@@ -779,29 +999,28 @@ export default function HomePage() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="joao@exemplo.com"
-                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm focus:border-brand-500 focus:outline-none"
+                      placeholder="carlos@exemplo.com"
+                      className="w-full px-4 py-3 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:border-brand-500 focus:outline-none text-white placeholder:text-slate-500"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={isSubmittingLead}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20"
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-4 rounded-xl transition flex items-center justify-center gap-2 shadow-xl shadow-emerald-600/30 active:scale-95 text-base mt-2"
                   >
                     {isSubmittingLead ? (
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <>
                         <MessageCircle className="w-5 h-5" />
-                        Garantir Cotação no WhatsApp
+                        Garantir Minha Proteção no WhatsApp
                       </>
                     )}
                   </button>
 
-                  <p className="text-[11px] text-slate-400 text-center">
-                    Seus dados são 100% protegidos e tratados exclusivamente pela nossa franquia
-                    autorizada.
+                  <p className="text-[11px] text-slate-400 text-center leading-relaxed">
+                    Ao continuar, seu orçamento será registrado no nosso sistema e um consultor exclusivo dará atendimento imediato via WhatsApp.
                   </p>
                 </form>
               </div>
@@ -810,12 +1029,21 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800 text-slate-400 text-xs py-8 px-4">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>© 21Go Franquia Autorizada — Todos os direitos reservados.</p>
-          <p className="text-slate-500">
-            Valores oficiais sincronizados em tempo real com o motor de cotação 21Go.
+      {/* Footer Completo */}
+      <footer className="bg-slate-950 border-t border-slate-800 text-slate-400 text-xs py-12 px-4">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-brand-500 text-white font-black flex items-center justify-center text-sm">
+              21
+            </div>
+            <div>
+              <p className="font-bold text-white">21Go Proteção Veicular — Franquia Autorizada</p>
+              <p className="text-[11px] text-slate-500">Atendimento e Cotação Online para o Estado do Rio de Janeiro</p>
+            </div>
+          </div>
+
+          <p className="text-slate-500 text-center md:text-right text-[11px] max-w-md">
+            As cotações apresentadas refletem os valores oficiais sincronizados com o motor PowerCRM. Proteção patrimonial veicular operada em regime associativo conforme o artigo 5º da CF/88.
           </p>
         </div>
       </footer>
