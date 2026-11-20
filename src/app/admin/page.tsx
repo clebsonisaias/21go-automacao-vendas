@@ -9,6 +9,7 @@ import {
   DollarSign,
   Eye,
   FileText,
+  LogOut,
   MessageCircle,
   Search,
   User,
@@ -125,6 +126,14 @@ export default function AdminPage() {
       (l.vehicle.marca + ' ' + l.vehicle.modelo).toLowerCase().includes(term)
   )
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/logout', { method: 'POST' })
+    } finally {
+      window.location.assign('/admin/login')
+    }
+  }
+
   const handleExportCsv = () => {
     if (!leads.length) return
     const headers = [
@@ -221,6 +230,15 @@ export default function AdminPage() {
               className="inline-flex min-h-[44px] items-center rounded-lg bg-go-orange px-5 text-[15px] font-bold text-navy-950 transition hover:-translate-y-px hover:shadow-cta"
             >
               Atualizar
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              aria-label="Sair do painel"
+              className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-navy-500 px-3.5 text-[15px] font-semibold text-white transition hover:bg-navy-800"
+            >
+              <LogOut aria-hidden className="h-[18px] w-[18px]" />
+              <span className="hidden sm:inline">Sair</span>
             </button>
           </div>
         </div>

@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /vistoria
+Disallow: /api/
 
 Sitemap: https://21go.seg.br/sitemap.xml
