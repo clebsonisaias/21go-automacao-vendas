@@ -25,6 +25,7 @@ import { StoredLead } from '@/lib/db'
 import { brl } from '@/lib/site'
 import { LucroSimulator } from '@/components/admin/LucroSimulator'
 import { HinovaBoletos } from '@/components/admin/HinovaBoletos'
+import { ScriptsGo } from '@/components/admin/ScriptsGo'
 import { DocumentAiUploader } from '@/components/common/DocumentAiUploader'
 import { DocumentAiResult } from '@/lib/types'
 
@@ -90,7 +91,7 @@ export default function AdminPage() {
   const [loadError, setLoadError] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedLead, setSelectedLead] = useState<StoredLead | null>(null)
-  const [activeTab, setActiveTab] = useState<'leads' | 'lucro' | 'boletos'>('leads')
+  const [activeTab, setActiveTab] = useState<'leads' | 'lucro' | 'boletos' | 'scripts'>('leads')
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null)
 
   const buildProposalText = (lead: StoredLead): string => {
@@ -294,6 +295,17 @@ Qualquer dúvida, estou à disposição!`
               >
                 Consulta Hinova
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('scripts')}
+                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                  activeTab === 'scripts'
+                    ? 'bg-go-orange text-navy-950 shadow'
+                    : 'text-muted-soft hover:text-white'
+                }`}
+              >
+                Scripts 21Go
+              </button>
             </div>
 
             {activeTab === 'leads' && (
@@ -324,6 +336,8 @@ Qualquer dúvida, estou à disposição!`
           <LucroSimulator />
         ) : activeTab === 'boletos' ? (
           <HinovaBoletos />
+        ) : activeTab === 'scripts' ? (
+          <ScriptsGo />
         ) : (
           <>
             <div className="flex flex-col gap-1">

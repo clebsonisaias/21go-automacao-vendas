@@ -30,6 +30,7 @@ import {
   SeguradoraDisseNao,
   Stats,
 } from '@/components/home/HomeSections'
+import { Economizometro } from '@/components/home/Economizometro'
 
 const inputCls =
   'min-h-[48px] w-full rounded-lg border border-[#c9d1e6] bg-white px-3.5 text-base text-navy-800 placeholder:text-muted-2'
@@ -671,6 +672,13 @@ export default function HomePage() {
                 )
               })}
             </div>
+
+            <Economizometro
+              fipeValue={quoteResult.vehicle.fipeValue}
+              mensalidade21Go={priceFor(quoteResult.plans.find((p) => p.popular) || quoteResult.plans[0])}
+              ativacao21Go={quoteResult.plans[0]?.ativacao || 399.99}
+              veiculoNome={`${quoteResult.vehicle.marca} ${quoteResult.vehicle.modelo}`}
+            />
 
             <ul className="m-0 grid list-none gap-x-6 gap-y-3 rounded-2xl bg-surface-100 px-6 py-5 text-[15px] font-semibold [grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr))]">
               <li>100% da Tabela FIPE</li>
