@@ -62,3 +62,54 @@ export interface LeadSubmissionPayload {
     yearId: number | string
   }
 }
+
+export type ExtractedDocType = 'cnh' | 'crlv' | 'comprovante_residencia' | 'desconhecido'
+
+export interface ExtractedPersonalInfo {
+  nome?: string
+  cpf?: string
+  rg?: string
+  orgaoExpedidor?: string
+  dataNascimento?: string
+  numeroCnh?: string
+  categoriaCnh?: string
+  validadeCnh?: string
+  primeiraHabilitacao?: string
+}
+
+export interface ExtractedVehicleInfo {
+  placa?: string
+  chassi?: string
+  renavam?: string
+  marcaModelo?: string
+  marca?: string
+  modelo?: string
+  anoFabricacao?: number | string
+  anoModelo?: number | string
+  cor?: string
+  combustivel?: string
+  nomeProprietario?: string
+  cpfCnpjProprietario?: string
+}
+
+export interface ExtractedAddressInfo {
+  cep?: string
+  logradouro?: string
+  numero?: string
+  complemento?: string
+  bairro?: string
+  cidade?: string
+  uf?: string
+}
+
+export interface DocumentAiResult {
+  success: boolean
+  documentType: ExtractedDocType
+  confidence: number
+  personal?: ExtractedPersonalInfo
+  vehicle?: ExtractedVehicleInfo
+  address?: ExtractedAddressInfo
+  rawText?: string
+  error?: string
+}
+

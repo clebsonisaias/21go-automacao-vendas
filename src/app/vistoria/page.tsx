@@ -10,9 +10,12 @@ import {
   Home,
   Info,
   UserCheck,
+  Sparkles,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Logo } from '@/components/home/SiteChrome'
+import { DocumentAiUploader } from '@/components/common/DocumentAiUploader'
+import { DocumentAiResult } from '@/lib/types'
 
 type SlotKey =
   | 'cnhOuRg'
@@ -125,6 +128,23 @@ function VistoriaContent() {
   const [showMissing, setShowMissing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [aiSummary, setAiSummary] = useState<string | null>(null)
+
+  const handleDocExtracted = (result: DocumentAiResult) => {
+    if (result.documentType === 'crlv' && result.vehicle) {
+      setAiSummary(
+        `CRLV reconhecido! Veículo: ${result.vehicle.marcaModelo || 'Identificado'} · Placa: ${result.vehicle.placa || 'OK'}`
+      )
+    } else if (result.documentType === 'cnh' && result.personal) {
+      setAiSummary(
+        `CNH reconhecida! Titular: ${result.personal.nome} · CPF: ${result.personal.cpf || 'OK'}`
+      )
+    } else if (result.documentType === 'comprovante_residencia' && result.address) {
+      setAiSummary(
+        `Comprovante reconhecido! Endereço: ${result.address.cidade || ''}/${result.address.uf || ''}`
+      )
+    }
+  }
 
   const setFile = (key: SlotKey) => (f: File | null) => {
     setFiles((prev) => ({ ...prev, [key]: f }))
@@ -258,9 +278,23 @@ function VistoriaContent() {
                   </span>
                   <div>
                     <h2 className="m-0 text-xl font-extrabold">Documentos</h2>
-                    <p className="m-0 text-sm text-muted">Os três são obrigatórios. Foto ou PDF.</p>
+                    <p className="m-0 text-sm text-muted">Envie fotos nítidas ou use o scanner de IA abaixo.</p>
                   </div>
                 </div>
+
+                <div className="mb-4">
+                  <DocumentAiUploader
+                    label="📷 Tirar foto da CNH ou CRLV (Leitura Automática com IA)"
+                    onExtracted={handleDocExtracted}
+                  />
+                  {aiSummary && (
+                    <div className="mt-2 flex items-center gap-2 rounded-xl bg-go-lime px-3.5 py-2 text-xs font-bold text-navy-950 animate-in fade-in">
+                      <Sparkles className="h-4 w-4 shrink-0 text-navy-950" />
+                      <span>{aiSummary}</span>
+                    </div>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
                   {DOCUMENTOS.map((slot) => (
                     <UploadSlot
