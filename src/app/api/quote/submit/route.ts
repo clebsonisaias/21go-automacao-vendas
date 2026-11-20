@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { sendLeadToPowerCrm } from '@/lib/powercrm-lead'
 import { sendLeadToCrm } from '@/lib/crm'
 import { LeadSubmissionPayload } from '@/lib/types'
 
@@ -17,10 +18,13 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 1. Registra no CRM 21 Go (vinculado à conta do vendedor/franquia)
+    // 1. Envia diretamente para o Power CRM com código de consultor CITmax (vrXbXyyq)
+    const powerCrmResult = await sendLeadToPowerCrm(payload)
+
+    // 2. Se configuradas as credenciais do CRM 21 Go, também notifica o CRM 21 Go
     const crmResult = await sendLeadToCrm(payload)
 
-    // 2. Prepara mensagem formatada para o WhatsApp da franquia
+    // 3. Monta a mensagem para o WhatsApp da franquia
     const fipeFormatted = payload.vehicle.fipeValue
       ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
           payload.vehicle.fipeValue
@@ -37,6 +41,11 @@ export async function POST(req: NextRequest) {
       currency: 'BRL',
     }).format(payload.ativacao)
 
+    let proposalText = ''
+    if (powerCrmResult.qttnCd) {
+      proposalText = `\n- Proposta PowerCRM: ${powerCrmResult.qttnCd}`
+    }
+
     const rawMessage = `Olá! Gostaria de contratar a proteção veicular da 21Go.
 
 *Dados do Veículo:*
@@ -47,7 +56,7 @@ export async function POST(req: NextRequest) {
 *Plano Escolhido:*
 - Plano: ${payload.planoEscolhidoNome}
 - Mensalidade: ${mensalidadeFormatted}/mês ${payload.comAdesivo ? '(com desconto de adesivo)' : ''}
-- Ativação/Adesão: ${ativacaoFormatted}
+- Ativação/Adesão: ${ativacaoFormatted}${proposalText}
 
 *Meus Dados:*
 - Nome: ${payload.nome}
@@ -61,8 +70,9 @@ Podemos dar andamento no cadastro?`
 
     return NextResponse.json({
       success: true,
+      powerCrmSuccess: powerCrmResult.success,
+      powerCrmQuotationCode: powerCrmResult.qttnCd,
       crmSuccess: crmResult.success,
-      crmMessage: crmResult.message,
       cardId: crmResult.cardId,
       whatsappUrl,
     })
