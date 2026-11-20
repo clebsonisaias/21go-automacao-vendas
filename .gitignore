@@ -4,3 +4,6 @@ node_modules/
 .DS_Store
 dist/
 .next/
+
+# cache do compilador TypeScript
+*.tsbuildinfo

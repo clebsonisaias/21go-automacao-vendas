@@ -187,6 +187,7 @@ export function enrichPlansWithRules(
       monthly: raw.monthly,
       popular: raw.popular || raw.id === 'vip',
       ativacao,
+      percentualAdesivo,
       mensalidadeComPontualidade,
       mensalidadeComAdesivo,
       coberturas: PLAN_FEATURES[raw.id] || PLAN_FEATURES['basico'],

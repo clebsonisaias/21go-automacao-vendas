@@ -1,10 +1,18 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
+const title = '21Go Proteção Veicular — Cotação Instantânea Oficial'
+const description =
+  'Simule a proteção do seu veículo em segundos com valores oficiais da 21Go. Atendimento direto e exclusivo da nossa franquia.'
+
 export const metadata: Metadata = {
-  title: '21Go Proteção Veicular — Cotação Instantânea Oficial',
-  description:
-    'Simule a proteção do seu veículo em segundos com valores oficiais da 21Go. Atendimento direto e exclusivo da nossa franquia.',
+  title,
+  description,
+  openGraph: { title, description, type: 'website', locale: 'pt_BR', siteName: '21Go Proteção Veicular' },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#F5600A',
 }
 
 export default function RootLayout({
@@ -14,7 +22,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="antialiased">{children}</body>
+      <body>{children}</body>
     </html>
   )
 }

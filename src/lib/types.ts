@@ -18,6 +18,7 @@ export interface PlanPricing {
   popular?: boolean
   // Calculados
   ativacao: number
+  percentualAdesivo?: number // 0, 10 ou 15 (varia por plano e valor FIPE)
   mensalidadeComPontualidade: number // 5% off
   mensalidadeComAdesivo: number // 10% ou 15% off + pontualidade
   coberturas: string[]
