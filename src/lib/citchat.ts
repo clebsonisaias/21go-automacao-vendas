@@ -36,12 +36,12 @@ export async function sendWhatsAppQuoteMessage(lead: LeadSubmissionPayload): Pro
 
   const message = [
     `🚗 *Olá ${lead.nome}! Tudo bem?*`,
-    `Aqui é da equipe *CITmax Proteção Veicular* (21Go).`,
+    `Aqui é da equipe *CITmax Proteção Veicular* (Franquia Oficial 21Go).`,
     ``,
     `Recebemos a sua simulação para o veículo:`,
     `🚘 *${lead.vehicle.marca} ${lead.vehicle.modelo} (${lead.vehicle.ano})*`,
     `📋 *Plano Selecionado:* ${lead.planoEscolhidoNome}`,
-    `💰 *Mensalidade estimada:* R$ ${lead.mensalidadeFinal.toFixed(2)}`,
+    `💰 *Mensalidade estimada:* R$ ${lead.mensalidadeFinal.toFixed(2)}/mês`,
     ``,
     `🛡️ *Seus Benefícios Inclusos:*`,
     `• Roubo, Furto e Perda Total 100% FIPE`,
@@ -49,10 +49,16 @@ export async function sendWhatsAppQuoteMessage(lead: LeadSubmissionPayload): Pro
     `• Sem Análise de Perfil de Condutor`,
     `• 5% de Desconto Pontualidade no boleto`,
     ``,
-    `Para ativarmos sua proteção com prioridade, envie os documentos e fotos da vistoria no link seguro abaixo:`,
-    `👉 ${vistoriaUrl}`,
+    `📸 *Próximo Passo — Vistoria Oficial 21Go (App Visto):*`,
+    `Para validar sua adesão com cobertura imediata, a 21Go exige a vistoria digital com câmera ao vivo e GPS.`,
     ``,
-    `Se tiver qualquer dúvida, basta responder esta mensagem! Estaremos à disposição.`,
+    `💡 *Instruções rápidas:*`,
+    `1. Você receberá o link oficial do App Visto por aqui no WhatsApp;`,
+    `2. Abra o link no celular e autorize o uso da câmera e GPS;`,
+    `3. Tenha em mãos sua CNH (ou RG) e documento do veículo (CRLV);`,
+    `4. Tire as fotos em local aberto e iluminado.`,
+    ``,
+    `Nossa equipe da CITmax já está acompanhando seu atendimento! Se tiver qualquer dúvida, é só responder esta mensagem.`,
   ].join("\n");
 
   try {

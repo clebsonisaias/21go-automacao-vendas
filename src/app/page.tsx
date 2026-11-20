@@ -62,6 +62,8 @@ export default function HomePage() {
   const [isSubmittingLead, setIsSubmittingLead] = useState(false)
   const [submitSuccessData, setSubmitSuccessData] = useState<{
     vistoriaUrl: string
+    quotationCode?: string
+    clientPhone?: string
   } | null>(null)
 
   // FAQ Accordion
@@ -277,6 +279,8 @@ export default function HomePage() {
       if (data.success) {
         setSubmitSuccessData({
           vistoriaUrl: data.vistoriaUrl || '/vistoria',
+          quotationCode: data.powerCrmQuotationCode,
+          clientPhone: whatsapp,
         })
       } else {
         alert(data.error || 'Erro ao processar cadastro.')
@@ -911,31 +915,66 @@ export default function HomePage() {
             </button>
 
             {submitSuccessData ? (
-              <div className="text-center py-6 space-y-4">
+              <div className="text-center py-4 space-y-4">
                 <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto border border-emerald-500/30">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
-                <h3 className="text-2xl font-black text-white">Cadastro Pré-Aprovado!</h3>
-                <p className="text-xs sm:text-sm text-slate-300 max-w-sm mx-auto leading-relaxed">
-                  Seus dados já foram registrados no nosso sistema. Para concluir a ativação da sua
-                  proteção, basta realizar a <strong>Vistoria Digital</strong> das fotos do veículo
-                  e documentos.
-                </p>
+                <div className="space-y-1">
+                  <span className="text-xs font-bold text-brand-400 uppercase tracking-wider">
+                    Proposta Registrada Oficialmente
+                  </span>
+                  <h3 className="text-2xl font-black text-white">Proposta Enviada com Sucesso!</h3>
+                  {submitSuccessData.quotationCode && (
+                    <p className="text-xs font-mono text-slate-400 bg-slate-950 px-3 py-1 rounded-full border border-slate-800 inline-block mt-1">
+                      Código CRM: <span className="text-amber-400 font-bold">{submitSuccessData.quotationCode}</span>
+                    </p>
+                  )}
+                </div>
 
-                <div className="pt-4 space-y-3">
+                <div className="text-left bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs space-y-3 text-slate-300">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-6 h-6 rounded-full bg-brand-500/20 text-brand-400 font-bold flex items-center justify-center shrink-0 text-xs">1</div>
+                    <div>
+                      <strong className="text-white block">Vistoria Oficial 21Go (App Visto)</strong>
+                      <span>A 21Go exige a vistoria por link seguro com validação de câmera ao vivo e GPS.</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-6 h-6 rounded-full bg-brand-500/20 text-brand-400 font-bold flex items-center justify-center shrink-0 text-xs">2</div>
+                    <div>
+                      <strong className="text-white block">Envio no WhatsApp</strong>
+                      <span>O link oficial será enviado diretamente para seu WhatsApp <strong>{submitSuccessData.clientPhone || ''}</strong>.</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-6 h-6 rounded-full bg-brand-500/20 text-brand-400 font-bold flex items-center justify-center shrink-0 text-xs">3</div>
+                    <div>
+                      <strong className="text-white block">Ativação Imediata</strong>
+                      <span>Assim que você tirar as fotos pelo link, sua proteção é ativada no sistema com 5% de desconto pontualidade!</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 space-y-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsModalOpen(false)
+                      setSubmitSuccessData(null)
+                    }}
+                    className="w-full bg-gradient-to-r from-brand-600 to-amber-500 hover:from-brand-500 hover:to-amber-400 text-white font-black py-3.5 rounded-xl transition flex items-center justify-center gap-2 shadow-xl shadow-brand-500/25 text-sm active:scale-95"
+                  >
+                    <span>Entendido! Aguardando Link no WhatsApp</span>
+                    <CheckCircle2 className="w-4 h-4" />
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => router.push(submitSuccessData.vistoriaUrl)}
-                    className="w-full bg-gradient-to-r from-brand-600 to-amber-500 hover:from-brand-500 hover:to-amber-400 text-white font-black py-4 rounded-xl transition flex items-center justify-center gap-2 shadow-xl shadow-brand-500/25 text-base active:scale-95"
+                    className="w-full text-slate-400 hover:text-white text-xs py-2 transition underline text-center"
                   >
-                    <Camera className="w-5 h-5" />
-                    <span>Fazer Vistoria Digital Agora</span>
-                    <ArrowRight className="w-4 h-4" />
+                    Prefere adiantar documentos manuais agora? Clique aqui
                   </button>
-
-                  <p className="text-[11px] text-slate-500">
-                    Você também receberá o link por e-mail e SMS para fazer quando quiser.
-                  </p>
                 </div>
               </div>
             ) : (

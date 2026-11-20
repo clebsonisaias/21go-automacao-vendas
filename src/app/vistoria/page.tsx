@@ -102,6 +102,16 @@ function VistoriaContent() {
               <Car className="w-5 h-5" />
             </div>
           </div>
+
+          <div className="mt-4 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-left flex items-start gap-3">
+            <Shield className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div className="text-xs text-slate-300 space-y-1">
+              <strong className="text-amber-400 font-bold block">Vistoria Oficial 21Go (App Visto):</strong>
+              <p className="leading-relaxed">
+                A 21Go também disponibiliza o link oficial do <strong>App Visto</strong> com validação por câmera ao vivo e GPS no seu WhatsApp. Se preferir adiantar os documentos e fotos por este formulário, nossa equipe validará diretamente no CRM.
+              </p>
+            </div>
+          </div>
         </header>
 
         {isSubmitted ? (
