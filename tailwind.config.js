@@ -8,18 +8,24 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        brand: {
-          50: '#fff7ed',
-          100: '#ffedd5',
-          200: '#fed7aa',
-          300: '#fdba74',
-          400: '#fb923c',
-          500: '#f97316', // Laranja 21Go vibrante
-          600: '#ea580c',
-          700: '#c2410c',
-          800: '#9a3412',
-          900: '#7c2d12',
-        },
+        // Laranja 21Go (cone de obra)
+        cone: { DEFAULT: '#F5600A', dark: '#C94A00', soft: '#FFE3D1' },
+        // Azul da faixa superior da placa Mercosul
+        azul: { DEFAULT: '#17348F', dark: '#0F2468' },
+        // Tinta: texto principal
+        tinta: '#0E1A3B',
+        // Fundo de página
+        concreto: { DEFAULT: '#E7E9EC', dark: '#D3D7DD' },
+        // Verde: somente WhatsApp e confirmações
+        verde: { DEFAULT: '#0B7F3E', dark: '#096833' },
+        erro: '#B42318',
+      },
+      fontFamily: {
+        sans: ['Barlow', 'system-ui', 'sans-serif'],
+        display: ['"Barlow Condensed"', 'Barlow', 'system-ui', 'sans-serif'],
+      },
+      borderRadius: {
+        placa: '14px',
       },
     },
   },

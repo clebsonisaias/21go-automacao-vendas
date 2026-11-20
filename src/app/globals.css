@@ -1,36 +1,166 @@
+@import '@fontsource/barlow/400.css';
+@import '@fontsource/barlow/500.css';
+@import '@fontsource/barlow/600.css';
+@import '@fontsource/barlow-condensed/500.css';
+@import '@fontsource/barlow-condensed/600.css';
+@import '@fontsource/barlow-condensed/700.css';
+@import '@fontsource/barlow-condensed/800.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 15, 23, 42;
-  --background-start-rgb: 248, 250, 252;
-  --background-end-rgb: 241, 245, 249;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-concreto font-sans text-tinta antialiased;
+    min-height: 100vh;
+  }
+  ::selection {
+    @apply bg-azul text-white;
+  }
+  /* Foco visível em qualquer fundo: anel branco + anel azul */
+  :focus-visible {
+    outline: 3px solid #17348f;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 3px #fff;
+  }
+  summary {
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-  min-height: 100vh;
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+@layer components {
+  /* Placa Mercosul */
+  .placa {
+    @apply relative overflow-hidden rounded-placa bg-white text-tinta;
+    border: 3px solid #0e1a3b;
+    box-shadow: 6px 6px 0 #0e1a3b;
+  }
+  .placa-faixa {
+    @apply flex items-center justify-between bg-azul px-3 text-white;
+    height: 2.1rem;
+  }
+  .placa-faixa span {
+    @apply font-display text-[0.8rem] font-semibold;
+    letter-spacing: 0.32em;
+  }
+  .placa-input {
+    @apply block w-full bg-transparent text-center font-display font-semibold uppercase text-tinta;
+    font-size: clamp(3.1rem, 13.5vw, 5.2rem);
+    line-height: 1;
+    letter-spacing: 0.1em;
+    padding: 0.2em 0.1em 0.14em 0.2em;
+    border: 0;
+    outline: none;
+  }
+  .placa-input::placeholder {
+    color: #c3c8d2;
+  }
+  .placa:focus-within {
+    box-shadow: 6px 6px 0 #0e1a3b, 0 0 0 4px #fff, 0 0 0 7px #17348f;
+  }
+  .placa-input:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+
+  /* Faixa tracejada de asfalto */
+  .faixa {
+    height: 14px;
+    background-color: #0e1a3b;
+    background-image: repeating-linear-gradient(
+      90deg,
+      #fff 0,
+      #fff 44px,
+      transparent 44px,
+      transparent 92px
+    );
+    background-size: 100% 3px;
+    background-repeat: no-repeat;
+    background-position: 0 center;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-6 py-3.5 font-display text-xl font-bold transition-colors;
+    letter-spacing: 0.02em;
+  }
+  .btn[disabled] {
+    @apply cursor-not-allowed opacity-60;
+  }
+
+  .campo {
+    @apply w-full rounded-md border-2 border-tinta/25 bg-white px-3.5 py-3 text-base text-tinta;
+  }
+  .campo:focus {
+    @apply border-azul;
+  }
+  .campo[disabled] {
+    @apply bg-concreto text-tinta/50;
+  }
+  .campo::placeholder {
+    @apply text-tinta/45;
+  }
+
+  /* Passos: linha tracejada entre os números */
+  .passos > li {
+    position: relative;
+  }
+  @media (min-width: 768px) {
+    .passos > li:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 1.7rem;
+      left: 4.2rem;
+      right: -1.5rem;
+      border-top: 3px dashed rgba(255, 255, 255, 0.35);
+    }
+  }
+  @media (max-width: 767px) {
+    .passos > li:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 1.6rem;
+      top: 4.2rem;
+      bottom: -1.5rem;
+      border-left: 3px dashed rgba(255, 255, 255, 0.35);
+    }
+  }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
+/* Único movimento da página: a placa assenta ao carregar */
+@keyframes placa-assenta {
+  0% {
+    transform: translateY(-28px) rotate(-1.4deg);
+    opacity: 0;
+  }
+  70% {
+    transform: translateY(3px) rotate(0.2deg);
+    opacity: 1;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
 }
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
+.placa-entrada {
+  animation: placa-assenta 640ms cubic-bezier(0.2, 0.8, 0.3, 1) 120ms both;
 }
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .placa-entrada {
+    animation: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+  }
 }
