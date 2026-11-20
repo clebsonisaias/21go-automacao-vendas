@@ -1,10 +1,25 @@
 import { NextResponse } from 'next/server'
 
-// Autenticação HTTP Basic do painel interno. Usada no middleware e, como defesa em
-// profundidade, dentro das próprias rotas /api/admin (se um bypass de middleware
-// aparecer no framework, a API continua protegida).
+// Autenticação do painel interno por sessão em cookie assinado (HMAC-SHA256).
+// Credenciais vêm do ambiente (ADMIN_EMAIL / ADMIN_PASSWORD) e NUNCA do código-fonte.
+// Compatível com o runtime Edge (middleware): usa só Web Crypto.
 
-// Comparação em tempo constante para não vazar o tamanho/conteúdo da senha por timing.
+export const ADMIN_COOKIE = 'admin_session'
+export const SESSION_MAX_AGE = 8 * 60 * 60 // 8 horas
+
+const enc = new TextEncoder()
+
+export function adminConfigured(): boolean {
+  return Boolean(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD)
+}
+
+// Segredo de assinatura: ADMIN_SESSION_SECRET ou, na falta, a própria senha
+// (trocar a senha invalida todas as sessões abertas).
+function secret(): string {
+  return process.env.ADMIN_SESSION_SECRET || process.env.ADMIN_PASSWORD || ''
+}
+
+// Comparação em tempo constante para não vazar conteúdo por timing.
 function safeEqual(a: string, b: string): boolean {
   const len = Math.max(a.length, b.length)
   let diff = a.length ^ b.length
@@ -14,44 +29,105 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0
 }
 
-function unauthorized() {
-  return new NextResponse('Autenticação necessária.', {
-    status: 401,
-    headers: {
-      'WWW-Authenticate': 'Basic realm="Painel da franquia 21Go", charset="UTF-8"',
-      'Cache-Control': 'no-store',
-    },
-  })
+/** Confere e-mail e senha. Sempre avalia os dois campos (sem curto-circuito). */
+export function verifyCredentials(email: unknown, password: unknown): boolean {
+  if (!adminConfigured() || typeof email !== 'string' || typeof password !== 'string') return false
+  const okEmail = safeEqual(email.trim().toLowerCase(), (process.env.ADMIN_EMAIL || '').trim().toLowerCase())
+  const okPass = safeEqual(password, process.env.ADMIN_PASSWORD || '')
+  return okEmail && okPass
 }
 
-/** Devolve uma resposta de bloqueio, ou null quando o acesso está autorizado. */
-export function checkAdminAuth(req: Request): NextResponse | null {
-  const password = process.env.ADMIN_PASSWORD || ''
-  const user = process.env.ADMIN_USER || 'admin'
+function b64url(bytes: ArrayBuffer): string {
+  let s = ''
+  new Uint8Array(bytes).forEach((b) => (s += String.fromCharCode(b)))
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
 
-  if (!password) {
+async function sign(data: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(secret()),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+  return b64url(await crypto.subtle.sign('HMAC', key, enc.encode(data)))
+}
+
+/** Gera o token de sessão: "<expira-em-segundos>.<assinatura>". */
+export async function createSessionToken(): Promise<string> {
+  const exp = Math.floor(Date.now() / 1000) + SESSION_MAX_AGE
+  return `${exp}.${await sign(`v1.${exp}`)}`
+}
+
+export async function verifySessionToken(token: string | undefined): Promise<boolean> {
+  if (!token || !secret()) return false
+  const dot = token.indexOf('.')
+  if (dot < 1) return false
+  const exp = Number(token.slice(0, dot))
+  if (!Number.isFinite(exp) || exp * 1000 < Date.now()) return false
+  return safeEqual(token.slice(dot + 1), await sign(`v1.${exp}`))
+}
+
+function readCookie(req: Request, name: string): string | undefined {
+  const header = req.headers.get('cookie') || ''
+  for (const part of header.split(';')) {
+    const i = part.indexOf('=')
+    if (i > 0 && part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim())
+  }
+  return undefined
+}
+
+export async function hasValidSession(req: Request): Promise<boolean> {
+  return verifySessionToken(readCookie(req, ADMIN_COOKIE))
+}
+
+/** Só aceita caminhos internos do painel (evita open redirect via ?next=). */
+export function safeNext(next: string | null | undefined): string {
+  return next && next.startsWith('/admin') && !next.startsWith('//') && !next.startsWith('/admin/login')
+    ? next
+    : '/admin'
+}
+
+/**
+ * URL absoluta no domínio público. O Next exige URL absoluta em redirecionamentos do middleware,
+ * e atrás do proxy do Coolify o host de req.url é o interno do container, não o público.
+ */
+export function absoluteUrl(req: Request, path: string): string {
+  const url = new URL(req.url)
+  const host = (req.headers.get('x-forwarded-host') || req.headers.get('host') || url.host).split(',')[0].trim()
+  const proto = (req.headers.get('x-forwarded-proto') || url.protocol.replace(':', '')).split(',')[0].trim()
+  return `${proto === 'http' || proto === 'https' ? proto : 'https'}://${host}${path}`
+}
+
+/**
+ * Devolve uma resposta de bloqueio, ou null quando há sessão válida.
+ * Páginas redirecionam para o login; a API responde 401 em JSON.
+ */
+export async function checkAdminAuth(req: Request): Promise<NextResponse | null> {
+  if (!adminConfigured()) {
     if (process.env.NODE_ENV !== 'production') return null
     return new NextResponse(
-      'Painel desativado: defina a variável ADMIN_PASSWORD no servidor para habilitar o acesso.',
+      'Painel desativado: defina ADMIN_EMAIL e ADMIN_PASSWORD no servidor para habilitar o acesso.',
       { status: 503, headers: { 'Cache-Control': 'no-store' } }
     )
   }
 
-  const header = req.headers.get('authorization') || ''
-  if (!header.startsWith('Basic ')) return unauthorized()
+  if (await hasValidSession(req)) return null
 
-  let decoded = ''
-  try {
-    const bytes = Uint8Array.from(atob(header.slice(6).trim()), (c) => c.charCodeAt(0))
-    decoded = new TextDecoder().decode(bytes)
-  } catch {
-    return unauthorized()
+  const { pathname, search } = new URL(req.url)
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.json(
+      { success: false, error: 'Sessão expirada. Entre novamente.' },
+      { status: 401, headers: { 'Cache-Control': 'no-store' } }
+    )
   }
 
-  const sep = decoded.indexOf(':')
-  if (sep < 0) return unauthorized()
-
-  const okUser = safeEqual(decoded.slice(0, sep), user)
-  const okPass = safeEqual(decoded.slice(sep + 1), password)
-  return okUser && okPass ? null : unauthorized()
+  return new NextResponse(null, {
+    status: 307,
+    headers: {
+      Location: absoluteUrl(req, `/admin/login?next=${encodeURIComponent(pathname + search)}`),
+      'Cache-Control': 'no-store',
+    },
+  })
 }
