@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://21go.seg.br/sitemap.xml
