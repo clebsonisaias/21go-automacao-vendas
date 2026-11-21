@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchOfficialPricing } from '@/lib/powercrm'
+import { createQuoteToken } from '@/lib/quote-token'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,6 +27,10 @@ export async function POST(req: NextRequest) {
       leilao: leilao || 'nao',
       carroApp: carroApp || 'nao',
     })
+
+    if (result.success && result.plans.length) {
+      result.quoteToken = createQuoteToken(result.vehicle.fipeCode, result.plans) || undefined
+    }
 
     return NextResponse.json(result)
   } catch (err) {

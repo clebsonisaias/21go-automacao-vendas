@@ -131,7 +131,7 @@ export class HinovaApiClient {
     const cpf = cpfRaw.replace(/\D/g, '')
 
     // Se estiver sem credenciais ou conexão, permite login com usuário demo para desenvolvimento
-    if (cpf === '00000000000' || (process.env.NODE_ENV !== 'production' && senha === 'demo123')) {
+    if (process.env.NODE_ENV !== 'production' && process.env.HINOVA_DEMO_LOGIN === 'true' && senha === 'demo123') {
       return this.mockAuthResult(cpf, 'Associado Demonstração 21Go')
     }
 
@@ -177,7 +177,8 @@ export class HinovaApiClient {
       console.warn(`[Hinova API] HTTP ${res.status} em autenticarAssociadoSga:`, errBody)
 
       // Fallback amigável se o servidor Hinova recusar por falta do CodigoAssociacao oficial ainda não validado
-      if (res.status === 404 || res.status === 400 || res.status === 502 || !this.codigoAssociacao) {
+      // Só em desenvolvimento e com HINOVA_DEMO_LOGIN=true. Em produção, falha fechada.
+      if (this.demoLoginAllowed() && (res.status === 404 || res.status === 400 || res.status === 502 || !this.codigoAssociacao)) {
         console.info('[Hinova API] Ativando fallback de desenvolvimento para demonstrar o portal.')
         return this.mockAuthResult(cpf, 'Associado 21Go')
       }
@@ -188,8 +189,10 @@ export class HinovaApiClient {
       }
     } catch (err: unknown) {
       console.error('[Hinova API] Exceção na autenticação:', err)
-      // Modo de resiliência: se o endpoint externo cair ou der timeout, entrega mock em dev
-      return this.mockAuthResult(cpf, 'Associado 21Go (Modo Offline)')
+      if (this.demoLoginAllowed()) {
+        return this.mockAuthResult(cpf, 'Associado 21Go (Modo Offline)')
+      }
+      return { success: false, error: 'Serviço de autenticação indisponível no momento. Tente novamente.' }
     }
   }
 
@@ -220,6 +223,9 @@ export class HinovaApiClient {
       console.warn('[Hinova API] Não foi possível consultar dados na API real, usando fallback:', err)
     }
 
+    if (!this.demoLoginAllowed()) {
+      throw new Error('Não foi possível consultar seus dados agora. Tente novamente em instantes.')
+    }
     return this.mockAssociadoDados(cpf || '12345678900')
   }
 
@@ -270,7 +276,18 @@ export class HinovaApiClient {
       console.warn('[Hinova API] Falha de rede ao registrar assistência na Hinova:', err)
     }
 
-    // Fallback: garante que o cliente receba o protocolo e a central atenda
+    // Nunca diga ao cliente que a equipe foi acionada se a chamada ao SGA falhou.
+    if (!this.demoLoginAllowed()) {
+      return {
+        success: false,
+        error:
+          'Não conseguimos registrar o pedido de assistência agora. Ligue para a central 24h ou chame no WhatsApp para atendimento imediato.',
+        mensagem:
+          'Não conseguimos registrar o pedido de assistência agora. Ligue para a central 24h ou chame no WhatsApp para atendimento imediato.',
+      } as HinovaAssistenciaResult
+    }
+
+    // Fallback de desenvolvimento (HINOVA_DEMO_LOGIN=true)
     return {
       success: true,
       protocolo: protocoloGerado,
@@ -316,6 +333,7 @@ export class HinovaApiClient {
       }
     } catch {}
 
+    if (!this.demoLoginAllowed()) return []
     return this.mockOficinas()
   }
 
@@ -352,6 +370,7 @@ export class HinovaApiClient {
       }
     } catch {}
 
+    if (!this.demoLoginAllowed()) return []
     return this.mockEventos(placa)
   }
 
@@ -386,6 +405,11 @@ export class HinovaApiClient {
       veiculos: veiculos.length > 0 ? veiculos : this.mockVeiculos(),
       dataFiliacao: String(data.DataFiliacao || '10/01/2024'),
     }
+  }
+
+  /** Login de demonstração: nunca em produção e só com flag explícita. */
+  private demoLoginAllowed(): boolean {
+    return process.env.NODE_ENV !== 'production' && process.env.HINOVA_DEMO_LOGIN === 'true'
   }
 
   private mockAuthResult(cpf: string, nomePadrao: string): HinovaAuthResult {

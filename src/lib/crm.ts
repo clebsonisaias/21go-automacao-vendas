@@ -1,11 +1,7 @@
 import { LeadSubmissionPayload } from './types'
-import { StoredLead, getStoredLeads, saveNewLead } from './db'
-import fs from 'fs'
-import path from 'path'
+import { StoredLead, getStoredLeads, writeLeads } from './db'
 
 const CRM_BASE_URL = process.env.CRM_BASE_URL || 'https://www.crm21go.site/api'
-const CRM_EMAIL = process.env.CRM_EMAIL || 'clebsonisaias@icloud.com'
-const CRM_PASSWORD = process.env.CRM_PASSWORD || '123456'
 
 const CRM_PIPE_ID = process.env.CRM_PIPE_ID || 'a41be931-04d2-46da-a0c4-1406c3c4e114'
 const CRM_PHASE_COTACOES_RECEBIDAS =
@@ -20,8 +16,9 @@ let tokenExpiresAt = 0
  * Autentica no CRM 21 Go e obtém o token Bearer
  */
 export async function getCrmToken(): Promise<string | null> {
-  const email = process.env.CRM_EMAIL || CRM_EMAIL
-  const password = process.env.CRM_PASSWORD || CRM_PASSWORD
+  // Sem credenciais padrão no código: só autentica se CRM_EMAIL/CRM_PASSWORD estiverem no ambiente.
+  const email = process.env.CRM_EMAIL || ''
+  const password = process.env.CRM_PASSWORD || ''
 
   if (!email || !password) {
     console.warn('[CRM Client] CRM_EMAIL e CRM_PASSWORD não configurados no .env')
@@ -389,10 +386,7 @@ export async function syncCrmLeadsToDatabase(): Promise<{
 
     const finalLeads = Array.from(leadsMap.values())
 
-    // Salva no leads.json
-    const DATA_DIR = path.join(process.cwd(), 'data')
-    const LEADS_FILE = path.join(DATA_DIR, 'leads.json')
-    fs.writeFileSync(LEADS_FILE, JSON.stringify(finalLeads, null, 2), 'utf-8')
+    writeLeads(finalLeads)
 
     return {
       success: true,

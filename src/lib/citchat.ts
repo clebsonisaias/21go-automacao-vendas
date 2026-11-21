@@ -1,4 +1,5 @@
 import { LeadSubmissionPayload } from "./types";
+import { absolute } from './links'
 
 interface AtendeHubMessagePayload {
   canalId?: string;
@@ -11,15 +12,13 @@ interface AtendeHubMessagePayload {
 const CITCHAT_GATEWAY_URL =
   process.env.CITCHAT_GATEWAY_URL ||
   'https://atendehub.170.82.252.195.sslip.io/gateway/sms'
-const CITCHAT_GATEWAY_TOKEN =
-  process.env.CITCHAT_GATEWAY_TOKEN || 'ImQq5Lek2czuha3IPmPdXJ8EnBejCXpe'
+// Sem token padrão no código: o gateway só é usado se CITCHAT_GATEWAY_TOKEN estiver definido.
+const CITCHAT_GATEWAY_TOKEN = process.env.CITCHAT_GATEWAY_TOKEN || ''
 
 const ATENDEHUB_URL =
   process.env.ATENDEHUB_URL || 'https://atendai.citmax.com.br'
 const ATENDEHUB_API_KEY = process.env.ATENDEHUB_API_KEY || ''
 const ATENDEHUB_CANAL_ID = process.env.ATENDEHUB_CANAL_ID || ''
-const APP_BASE_URL =
-  process.env.NEXT_PUBLIC_APP_URL || 'https://21go.seg.br'
 
 /**
  * Envia mensagem direta pelo Gateway do CITchat / AtendeHub (WhatsApp Oficial CITmax)
@@ -90,7 +89,7 @@ export async function sendCitchatMessage(
  */
 export async function sendWhatsAppQuoteMessage(
   lead: LeadSubmissionPayload,
-  options?: { quotationCode?: string; vistoriaUrl?: string }
+  options?: { quotationCode?: string; vistoriaUrl?: string; pagamentoUrl?: string }
 ): Promise<{
   success: boolean
   error?: string
@@ -104,10 +103,9 @@ export async function sendWhatsAppQuoteMessage(
     : null
 
   const vistoriaUrl = options?.vistoriaUrl
-    ? (options.vistoriaUrl.startsWith('http')
-        ? options.vistoriaUrl
-        : `${APP_BASE_URL}${options.vistoriaUrl}`)
-    : `${APP_BASE_URL}/vistoria?placa=${encodeURIComponent(lead.placa || lead.vehicle.placa || '')}&nome=${encodeURIComponent(lead.nome)}`
+    ? absolute(options.vistoriaUrl)
+    : `${absolute('/vistoria')}?placa=${encodeURIComponent(lead.placa || lead.vehicle.placa || '')}&nome=${encodeURIComponent(lead.nome)}`
+  const pagamentoUrl = options?.pagamentoUrl ? absolute(options.pagamentoUrl) : null
 
   const message = [
     `🚗 *Olá ${lead.nome}! Tudo bem?*`,
@@ -125,7 +123,17 @@ export async function sendWhatsAppQuoteMessage(
     `• Sem Análise de Perfil de Condutor`,
     `• 5% de Desconto Pontualidade na mensalidade`,
     ``,
-    ...(checkoutUrl
+    ...(pagamentoUrl
+      ? [
+          `💳 *1. Pague a taxa de adesão via Pix:*`,
+          `Abra o link, copie o código ou leia o QR Code. A confirmação é automática:`,
+          `👉 ${pagamentoUrl}`,
+          ``,
+          `📸 *2. Vistoria digital:*`,
+          `Assim que o Pix for confirmado, enviamos aqui o link da vistoria (fotos pelo celular).`,
+          ``,
+        ]
+      : checkoutUrl
       ? [
           `✍️ *1. Assinar e Ativar Imediatamente Online:*`,
           `Você pode assinar o termo de adesão e pagar o Pix de ativação agora mesmo no link seguro oficial:`,
@@ -133,10 +141,14 @@ export async function sendWhatsAppQuoteMessage(
           ``,
         ]
       : []),
-    `📸 *2. Vistoria Digital Rápida no Celular:*`,
-    `Para validar a sua cobertura com ativação imediata, basta abrir o link de auto-vistoria e fotografar o veículo:`,
-    `👉 ${vistoriaUrl}`,
-    ``,
+    ...(pagamentoUrl
+      ? []
+      : [
+          `📸 *2. Vistoria Digital Rápida no Celular:*`,
+          `Para validar a sua cobertura com ativação imediata, basta abrir o link de auto-vistoria e fotografar o veículo:`,
+          `👉 ${vistoriaUrl}`,
+          ``,
+        ]),
     `Qualquer dúvida, é só responder esta mensagem diretamente aqui no WhatsApp! 🤝`,
   ].join('\n')
 
@@ -170,4 +182,45 @@ export async function sendWhatsAppVistoriaConfirmation(params: {
   ].join('\n')
 
   return sendCitchatMessage(phone, message)
+}
+
+/**
+ * Avisa o cliente que o Pix da adesão foi confirmado e envia o link da vistoria digital.
+ */
+export async function sendWhatsAppAdesaoConfirmada(params: {
+  telefone: string
+  nome: string
+  vistoriaUrl: string
+  valor: number
+}): Promise<{ success: boolean; error?: string; data?: any }> {
+  const message = [
+    `✅ *Pagamento confirmado!*`,
+    ``,
+    `Olá *${params.nome}*, recebemos o Pix da taxa de adesão (R$ ${params.valor.toFixed(2)}). Obrigado!`,
+    ``,
+    `📸 *Próximo passo — vistoria digital:*`,
+    `Abra o link, envie CNH/RG, documento do veículo, comprovante de residência e as fotos do veículo:`,
+    `👉 ${params.vistoriaUrl}`,
+    ``,
+    `Depois da conferência da nossa equipe, sua proteção é ativada. 🤝`,
+  ].join('\n')
+
+  return sendCitchatMessage(params.telefone, message)
+}
+
+/** Avisa o cliente que a vistoria foi aprovada pela equipe. */
+export async function sendWhatsAppVistoriaAprovada(params: {
+  telefone: string
+  nome: string
+  placa: string
+}): Promise<{ success: boolean; error?: string; data?: any }> {
+  const message = [
+    `🎉 *Vistoria aprovada!*`,
+    ``,
+    `Olá *${params.nome}*, a vistoria do veículo de placa *${params.placa}* foi aprovada pela nossa equipe.`,
+    ``,
+    `Estamos concluindo o seu cadastro como associado. Em seguida você receberá aqui os dados de acesso e as mensalidades. 🤝`,
+  ].join('\n')
+
+  return sendCitchatMessage(params.telefone, message)
 }

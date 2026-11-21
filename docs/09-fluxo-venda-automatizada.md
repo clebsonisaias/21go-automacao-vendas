@@ -1,6 +1,6 @@
 # 09 — Fluxo de Venda Automatizada 21Go
 
-**Cora (Adesão Única) + CITchat/AtendeHub + CRM 21Go + Hinova SGA (Mensalidades Recorrentes)**
+**Mercado Pago (Pix da adesão) + CITchat/AtendeHub + CRM 21Go + Hinova SGA (Mensalidades Recorrentes)**
 
 ---
 
@@ -8,7 +8,7 @@
 
 | Componente | Responsabilidade | Mecanismo |
 |---|---|---|
-| **Taxa de Adesão (Entrada Única)** | **Cora** | Cobrança Pix / boleto instantâneo via API/Webhook Cora |
+| **Taxa de Adesão (Entrada Única)** | **Mercado Pago** | Pix via Orders API (`POST /v1/orders`) + webhook `order` assinado (`/api/webhooks/mercadopago`) |
 | **Mensalidades Recorrentes** | **CRM 21Go + Hinova SGA** | Boletos mensais gerados no SGA após a ativação do associado |
 | **Disparo de Mensagens WhatsApp** | **CITchat (AtendeHub)** | Gateway oficial CITmax (`/gateway/sms`) |
 | **Vistoria Digital Prévia** | **CRM 21Go (Vistoria Própria)** | Link PWA com câmera ao vivo, GPS e validação |
@@ -18,7 +18,7 @@
 ## 2. Fluxo Completo de Auto-Contratação
 
 1. Cliente cota e preenche dados no site.
-2. Paga a **taxa de adesão** via **Cora** (webhook confirma o pagamento).
+2. Paga a **taxa de adesão** via **Pix do Mercado Pago** na página `/pagamento` (webhook ou polling confirma o pagamento; o valor é fixado pelo servidor).
 3. Backend anexa CNH + CRLV no card do CRM.
 4. Backend gera o link de vistoria no CRM (`POST /api/vistoria-propria/{negociacaoId}`).
 5. **CITchat** envia o link da vistoria por WhatsApp.
@@ -34,7 +34,7 @@
 | # | Etapa | Endpoint / Ação | Responsável | Status |
 |---|------|------------------|-------------|----------------|
 | 1 | Criar lead / cotação | `POST /api/negociacoes/lead` | Backend | Ativo |
-| 2 | Confirmar adesão única | Webhook Cora | Cora → Backend | Em estruturação |
+| 2 | Confirmar adesão única | Webhook `order` Mercado Pago (+ polling/reconciliador) | Mercado Pago → Backend | **Implementado** |
 | 3 | Anexar CNH + CRLV | `POST /api/pipes/cards/{cardId}/documentos` | Backend | Mapeado |
 | 4 | Gerar link de vistoria | `POST /api/vistoria-propria/{negociacaoId}` | CRM 21Go | Testado (200 OK) |
 | 5 | Enviar link por WhatsApp | Gateway CITchat | CITchat | **Testado (200 OK)** |
@@ -48,7 +48,7 @@
 ## 4. Integração do Gateway CITchat (Validada em Produção)
 
 - **URL de Disparo:**
-  `https://atendehub.170.82.252.195.sslip.io/gateway/sms?token=ImQq5Lek2czuha3IPmPdXJ8EnBejCXpe`
+  `$CITCHAT_GATEWAY_URL?token=$CITCHAT_GATEWAY_TOKEN` (variáveis de ambiente; o token **não** fica versionado)
 - **Método:** `POST`
 - **Headers:** `Content-Type: application/json`
 - **Payload Homologado:**
@@ -73,7 +73,7 @@
 ## 5. Pontos Críticos e Regras de Segurança
 
 1. **Adesão vs Mensalidade:**
-   - O **Cora** cobra apenas a taxa de adesão inicial (Pix único).
+   - O **Mercado Pago** cobra apenas a taxa de adesão inicial (Pix único).
    - As mensalidades seguintes são geradas pelo **Hinova SGA / CRM**.
 2. **Pré-requisito da Vistoria:**
    - O link de auto-vistoria exige que o card já tenha CPF, CNH e CRLV.
