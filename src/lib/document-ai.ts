@@ -1,7 +1,8 @@
 import { DocumentAiResult, ExtractedDocType } from './types'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
-const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-6-luna'
+const PRIMARY_MODEL = 'gpt-6-luna'
+const BACKUP_MODEL = 'gpt-6-sol'
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
 
@@ -130,7 +131,6 @@ function postProcess(parsed: any): DocumentAiResult {
     address: parsed.address,
   }
 
-  // Formata e valida CPF
   if (result.personal?.cpf) {
     result.personal.cpf = formatCpf(result.personal.cpf)
     if (!isValidCpf(result.personal.cpf)) {
@@ -139,7 +139,6 @@ function postProcess(parsed: any): DocumentAiResult {
     }
   }
 
-  // Formata e valida placa
   if (result.vehicle?.placa) {
     result.vehicle.placa = formatPlaca(result.vehicle.placa)
     if (!isValidPlaca(result.vehicle.placa)) {
@@ -148,12 +147,10 @@ function postProcess(parsed: any): DocumentAiResult {
     }
   }
 
-  // Formata CEP
   if (result.address?.cep) {
     result.address.cep = formatCep(result.address.cep)
   }
 
-  // Normaliza UF para 2 letras maiúsculas
   if (result.address?.uf) {
     result.address.uf = result.address.uf.toUpperCase().slice(0, 2)
   }
@@ -162,7 +159,64 @@ function postProcess(parsed: any): DocumentAiResult {
 }
 
 /**
- * Processa a imagem ou PDF com OpenAI GPT-6 Luna (barato e com visão)
+ * Tenta extrair com um modelo específico da OpenAI
+ */
+async function tryOpenAIModel(
+  model: string,
+  dataUri: string,
+  docTypeHint?: ExtractedDocType
+): Promise<DocumentAiResult | null> {
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `Extraia os dados deste documento brasileiro com máxima precisão.${docTypeHint ? ` Tipo esperado: ${docTypeHint}` : ''}`,
+              },
+              {
+                type: 'image_url',
+                image_url: { url: dataUri, detail: 'high' },
+              },
+            ],
+          },
+        ],
+        max_tokens: 2000,
+        temperature: 0.05,
+      }),
+    })
+
+    if (response.ok) {
+      const data = await response.json()
+      const content = data.choices?.[0]?.message?.content
+      if (content) {
+        const parsed = JSON.parse(content)
+        console.log(`[Document AI] Sucesso com ${model}`)
+        return postProcess(parsed)
+      }
+    } else {
+      console.warn(`[Document AI] ${model} falhou:`, response.status)
+    }
+  } catch (err) {
+    console.error(`[Document AI] Erro com ${model}:`, err)
+  }
+  return null
+}
+
+/**
+ * Processa a imagem ou PDF.
+ * Prioridade: gpt-6-luna → gpt-6-sol (backup) → Gemini
  */
 export async function extractDocumentWithAi(params: {
   imageBase64: string
@@ -171,57 +225,20 @@ export async function extractDocumentWithAi(params: {
 }): Promise<DocumentAiResult> {
   const { imageBase64, mimeType, docTypeHint } = params
   const rawBase64 = imageBase64.replace(/^data:[^;]+;base64,/, '')
+  const dataUri = `data:${mimeType};base64,${rawBase64}`
 
-  // 1. Prioriza OpenAI GPT-6 Luna (25x mais barato que gpt-4o)
+  // 1. Tenta gpt-6-luna (principal, mais barato)
   if (OPENAI_API_KEY) {
-    try {
-      const dataUri = `data:${mimeType};base64,${rawBase64}`
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: OPENAI_MODEL,
-          response_format: { type: 'json_object' },
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: `Extraia os dados deste documento brasileiro com máxima precisão.${docTypeHint ? ` Tipo esperado: ${docTypeHint}` : ''}`,
-                },
-                {
-                  type: 'image_url',
-                  image_url: { url: dataUri, detail: 'high' },
-                },
-              ],
-            },
-          ],
-          max_tokens: 2000,
-          temperature: 0.05,
-        }),
-      })
+    const lunaResult = await tryOpenAIModel(PRIMARY_MODEL, dataUri, docTypeHint)
+    if (lunaResult) return lunaResult
 
-      if (response.ok) {
-        const data = await response.json()
-        const content = data.choices?.[0]?.message?.content
-        if (content) {
-          const parsed = JSON.parse(content)
-          return postProcess(parsed)
-        }
-      } else {
-        console.warn('[Document AI] Falha na OpenAI API:', response.status)
-      }
-    } catch (err) {
-      console.error('[Document AI] Erro ao extrair com OpenAI:', err)
-    }
+    // 2. Fallback para gpt-6-sol (backup)
+    console.log('[Document AI] gpt-6-luna falhou, tentando gpt-6-sol...')
+    const solResult = await tryOpenAIModel(BACKUP_MODEL, dataUri, docTypeHint)
+    if (solResult) return solResult
   }
 
-  // 2. Fallback para Google Gemini
+  // 3. Fallback para Google Gemini
   if (GEMINI_API_KEY) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`
@@ -250,6 +267,7 @@ export async function extractDocumentWithAi(params: {
         const content = data?.candidates?.[0]?.content?.parts?.[0]?.text
         if (content) {
           const parsed = JSON.parse(content)
+          console.log('[Document AI] Sucesso com Gemini')
           return postProcess(parsed)
         }
       }
@@ -258,7 +276,7 @@ export async function extractDocumentWithAi(params: {
     }
   }
 
-  // 3. Fallback
+  // 4. Fallback final
   return simulateDocumentExtraction(docTypeHint)
 }
 
