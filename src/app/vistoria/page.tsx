@@ -172,7 +172,6 @@ function VistoriaContent() {
   const searchParams = useSearchParams()
   const ref = searchParams.get('ref') || ''
 
-
   const nome = searchParams.get('nome') || 'Associado'
   const placa = searchParams.get('placa') || ''
   const veiculo = searchParams.get('veiculo') || 'Veículo'
@@ -195,8 +194,6 @@ function VistoriaContent() {
   const [aiSummary, setAiSummary] = useState<string | null>(null)
   const [situacao, setSituacao] = useState<Situacao | null>(null)
 
-  // Quem já mandou os documentos vê os próximos passos (e não o formulário de novo).
-  // Depois disso, confere a cada 8 s se a equipe enviou o link do App Visto ou liberou o Pix.
   useEffect(() => {
     if (!ref) return
     let stop = false
@@ -220,7 +217,7 @@ function VistoriaContent() {
     }
   }, [ref])
 
-  const handleDocExtracted = (result: DocumentAiResult) => {
+  const handleDocExtracted = async (result: DocumentAiResult) => {
     if (result.documentType === 'crlv' && result.vehicle) {
       setAiSummary(
         `CRLV reconhecido! Veículo: ${result.vehicle.marcaModelo || 'Identificado'} · Placa: ${result.vehicle.placa || 'OK'}`
@@ -233,6 +230,19 @@ function VistoriaContent() {
       setAiSummary(
         `Comprovante reconhecido! Endereço: ${result.address.cidade || ''}/${result.address.uf || ''}`
       )
+    }
+
+    // Envia os dados extraídos para completar o cadastro automaticamente
+    if (ref) {
+      try {
+        await fetch('/api/vistoria/extrair', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ref, extracted: result }),
+        })
+      } catch {
+        // falha silenciosa: os dados ainda são úteis na tela
+      }
     }
   }
 
@@ -256,7 +266,6 @@ function VistoriaContent() {
     setError('')
 
     try {
-      // 1) Envia cada documento/foto de verdade (um por vez, para funcionar em conexão fraca).
       const entries = (Object.entries(files) as [SlotKey, File | null][]).filter(([, f]) => f)
       let done = 0
       for (const [slot, file] of entries) {
@@ -275,7 +284,6 @@ function VistoriaContent() {
         done++
       }
 
-      // 2) Conclui a vistoria.
       setProgress('Concluindo…')
       const res = await fetch('/api/vistoria/submit', {
         method: 'POST',
@@ -334,7 +342,7 @@ function VistoriaContent() {
                 Envie os seus documentos
               </h1>
               <p className="m-0 text-base text-muted">
-                CNH ou RG, documento do carro (CRLV) e comprovante de residência. Fotos nítidas ou PDF.
+                CNH ou RG, documento do carro (CRLV) e comprovante de residência. A IA preenche os dados automaticamente.
               </p>
             </div>
 
@@ -377,13 +385,13 @@ function VistoriaContent() {
                   </span>
                   <div>
                     <h2 className="m-0 text-xl font-extrabold">Documentos</h2>
-                    <p className="m-0 text-sm text-muted">Envie fotos nítidas ou use o scanner de IA abaixo.</p>
+                    <p className="m-0 text-sm text-muted">A IA extrai nome, CPF, placa e endereço automaticamente.</p>
                   </div>
                 </div>
 
                 <div className="mb-4">
                   <DocumentAiUploader
-                    label="📷 Tirar foto da CNH ou CRLV (Leitura Automática com IA)"
+                    label="📷 Tirar foto da CNH, CRLV ou Comprovante (Leitura Automática)"
                     onExtracted={handleDocExtracted}
                   />
                   {aiSummary && (
@@ -410,9 +418,7 @@ function VistoriaContent() {
               <aside className="flex items-start gap-3 rounded-xl border border-go-orange bg-[#fef5e7] p-4 text-sm leading-relaxed text-navy-800">
                 <Info aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-go-orange-dark" />
                 <p className="m-0">
-                  <strong>As fotos do veículo são feitas no App Visto, a vistoria oficial da 21Go.</strong> Depois dos
-                  documentos, nossa equipe envia o link no seu WhatsApp, com validação por câmera ao vivo e
-                  GPS. Aqui você envia só os documentos. A adesão é paga no final, com a vistoria aprovada.
+                  <strong>Os dados da CNH, CRLV e comprovante são lidos automaticamente.</strong> Você só precisa informar e-mail e WhatsApp se ainda não tiver feito. As fotos do veículo são feitas no App Visto.
                 </p>
               </aside>
 
