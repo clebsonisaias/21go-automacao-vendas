@@ -72,6 +72,8 @@ export interface StoredLead {
     | 'em_negociacao'
     | 'cotacoes_recebidas'
     | 'vendas_concretizadas'
+  /** Arquivos reais da vistoria gravados no servidor (ver vistoria-files.ts). */
+  vistoriaArquivos?: Record<string, { ext: string; mime: string; size: number; originalName: string; savedAt: string }>
   vistoriaData?: {
     cnhOuRgNome?: string
     crlvNome?: string
@@ -81,7 +83,7 @@ export interface StoredLead {
   }
 }
 
-const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data')
+export const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data')
 const LEADS_FILE = path.join(DATA_DIR, 'leads.json')
 
 function ensureDataFile() {
