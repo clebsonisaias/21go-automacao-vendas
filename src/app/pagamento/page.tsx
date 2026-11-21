@@ -12,7 +12,7 @@ interface PixData {
   ticketUrl?: string
 }
 
-type Phase = 'loading' | 'pending' | 'paid' | 'expired' | 'error'
+type Phase = 'loading' | 'locked' | 'pending' | 'paid' | 'expired' | 'error'
 
 const brl = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
@@ -57,9 +57,9 @@ function PagamentoContent() {
         goVistoria(data.vistoriaUrl)
         return
       }
-      if (data.status === 'vistoria' && data.vistoriaUrl) {
-        // A vistoria vem antes do pagamento.
-        router.replace(data.vistoriaUrl)
+      if (data.status === 'bloqueado') {
+        // A adesão é o último passo: só abre depois da vistoria aprovada pela equipe.
+        setPhase('locked')
         return
       }
       setPix(data)
@@ -188,8 +188,23 @@ function PagamentoContent() {
             </span>
             <h1 className="m-0 text-[26px] font-extrabold tracking-[-0.8px]">Pagamento confirmado!</h1>
             <p className="m-0 max-w-sm text-base text-muted">
-              Seu cadastro está completo. Nossa equipe vai conferir a vistoria e avisar você pelo WhatsApp quando a
-              proteção for ativada.
+              Seu cadastro está completo. Nossa equipe conclui a sua associação e avisa você pelo WhatsApp.
+            </p>
+            <a
+              href="/"
+              className="mt-2 inline-flex min-h-[48px] items-center rounded-lg border border-navy-800 px-6 font-bold text-navy-800 no-underline transition hover:bg-surface-100"
+            >
+              Voltar à página inicial
+            </a>
+          </section>
+        )}
+
+        {phase === 'locked' && (
+          <section aria-live="polite" className="flex flex-col items-center gap-4 rounded-2xl border border-line bg-white p-8 text-center shadow-card">
+            <h1 className="m-0 text-[24px] font-extrabold tracking-[-0.6px]">A adesão é o último passo</h1>
+            <p className="m-0 max-w-sm text-base text-muted">
+              Primeiro vem a vistoria no App Visto, pelo link que enviamos no seu WhatsApp. Com a vistoria aprovada,
+              enviamos o Pix da adesão por lá.
             </p>
             <a
               href="/"

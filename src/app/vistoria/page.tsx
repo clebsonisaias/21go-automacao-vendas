@@ -3,6 +3,7 @@
 import React, { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
+  Loader2,
   ArrowRight,
   Camera,
   CheckCircle2,
@@ -107,6 +108,65 @@ function UploadSlot({
   )
 }
 
+type Situacao = { documentos: boolean; appVistoUrl: string | null; pagamentoUrl: string | null; pago: boolean }
+
+/** Próximos passos depois dos documentos: atualiza sozinho quando a equipe envia o link ou libera o Pix. */
+function ProximosPassos({ situacao }: { situacao: Situacao | null }) {
+  if (situacao?.pago) {
+    return (
+      <p className="m-0 max-w-md text-base leading-relaxed text-muted">
+        Adesão paga. Seu cadastro está completo e nossa equipe avisa você pelo WhatsApp.
+      </p>
+    )
+  }
+  if (situacao?.pagamentoUrl) {
+    return (
+      <div className="flex w-full max-w-md flex-col gap-3">
+        <p className="m-0 text-base leading-relaxed text-muted">
+          Vistoria aprovada! Falta só o último passo: a taxa de adesão por Pix.
+        </p>
+        <a
+          href={situacao.pagamentoUrl}
+          className="flex min-h-[52px] items-center justify-center rounded-xl bg-emerald-700 px-6 text-base font-extrabold text-white no-underline transition hover:bg-emerald-800"
+        >
+          Pagar a adesão via Pix
+        </a>
+      </div>
+    )
+  }
+  if (situacao?.appVistoUrl) {
+    return (
+      <div className="flex w-full max-w-md flex-col gap-3">
+        <p className="m-0 text-base leading-relaxed text-muted">
+          Sua vistoria está liberada. Faça as fotos do veículo no App Visto, a vistoria oficial da 21Go. O mesmo link
+          foi para o seu WhatsApp.
+        </p>
+        <a
+          href={situacao.appVistoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex min-h-[52px] items-center justify-center rounded-xl bg-navy-900 px-6 text-base font-extrabold text-white no-underline transition hover:bg-navy-800"
+        >
+          Fazer a vistoria no App Visto
+        </a>
+        <p className="m-0 text-xs text-muted">Com a vistoria aprovada, o Pix da adesão aparece aqui e no WhatsApp.</p>
+      </div>
+    )
+  }
+  return (
+    <div className="flex max-w-md flex-col items-center gap-3">
+      <p className="m-0 text-base leading-relaxed text-muted">
+        Recebemos seus documentos. Nossa equipe está gerando o link da vistoria oficial (App Visto). Ele aparece aqui
+        nesta tela e no seu WhatsApp. Com a vistoria aprovada, enviamos o Pix da adesão, que é o último passo.
+      </p>
+      <p aria-live="polite" className="m-0 inline-flex items-center gap-2 text-sm font-semibold text-navy-800">
+        <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
+        Aguardando o link da vistoria…
+      </p>
+    </div>
+  )
+}
+
 function VistoriaContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -133,6 +193,32 @@ function VistoriaContent() {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [progress, setProgress] = useState('')
   const [aiSummary, setAiSummary] = useState<string | null>(null)
+  const [situacao, setSituacao] = useState<Situacao | null>(null)
+
+  // Quem já mandou os documentos vê os próximos passos (e não o formulário de novo).
+  // Depois disso, confere a cada 8 s se a equipe enviou o link do App Visto ou liberou o Pix.
+  useEffect(() => {
+    if (!ref) return
+    let stop = false
+    const check = async () => {
+      try {
+        const res = await fetch(`/api/vistoria/situacao?ref=${encodeURIComponent(ref)}`, { cache: 'no-store' })
+        if (!res.ok) return
+        const data: Situacao = await res.json()
+        if (stop) return
+        setSituacao(data)
+        if (data.documentos) setIsSubmitted(true)
+      } catch {
+        /* tenta de novo no próximo ciclo */
+      }
+    }
+    check()
+    const t = setInterval(check, 8000)
+    return () => {
+      stop = true
+      clearInterval(t)
+    }
+  }, [ref])
 
   const handleDocExtracted = (result: DocumentAiResult) => {
     if (result.documentType === 'crlv' && result.vehicle) {
@@ -199,11 +285,6 @@ function VistoriaContent() {
 
       if (res.ok) {
         const data = await res.json().catch(() => ({}))
-        // Adesão por último: vistoria enviada, segue para o Pix.
-        if (data?.pagamentoUrl) {
-          router.push(data.pagamentoUrl)
-          return
-        }
         setIsSubmitted(true)
       } else {
         const data = await res.json().catch(() => ({}))
@@ -238,10 +319,7 @@ function VistoriaContent() {
             <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.8px]">
               Documentos enviados!
             </h1>
-            <p className="m-0 max-w-md text-base leading-relaxed text-muted">
-              Recebemos seus documentos. Nossa equipe vai enviar o link da vistoria oficial (App Visto) no seu
-              WhatsApp.
-            </p>
+            <ProximosPassos situacao={situacao} />
             <a
               href="/"
               className="mt-2 inline-flex min-h-[48px] items-center rounded-lg border border-navy-800 px-6 font-bold text-navy-800 no-underline transition hover:bg-surface-100"
@@ -332,9 +410,9 @@ function VistoriaContent() {
               <aside className="flex items-start gap-3 rounded-xl border border-go-orange bg-[#fef5e7] p-4 text-sm leading-relaxed text-navy-800">
                 <Info aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-go-orange-dark" />
                 <p className="m-0">
-                  <strong>As fotos do veículo são feitas no App Visto, a vistoria oficial da 21Go.</strong> Depois do
-                  pagamento da adesão, nossa equipe envia o link no seu WhatsApp, com validação por câmera ao vivo e
-                  GPS. Aqui você envia só os documentos.
+                  <strong>As fotos do veículo são feitas no App Visto, a vistoria oficial da 21Go.</strong> Depois dos
+                  documentos, nossa equipe envia o link no seu WhatsApp, com validação por câmera ao vivo e
+                  GPS. Aqui você envia só os documentos. A adesão é paga no final, com a vistoria aprovada.
                 </p>
               </aside>
 
@@ -349,7 +427,7 @@ function VistoriaContent() {
                 disabled={isSubmitting}
                 className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-lg bg-go-orange text-[17px] font-extrabold text-navy-950 transition hover:-translate-y-px hover:shadow-cta disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
               >
-                {isSubmitting ? progress || 'Enviando…' : 'Enviar documentos e ir para o pagamento'}
+                {isSubmitting ? progress || 'Enviando…' : 'Enviar documentos'}
                 {!isSubmitting && <ArrowRight aria-hidden className="h-5 w-5" />}
               </button>
             </form>

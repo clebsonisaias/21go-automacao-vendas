@@ -76,6 +76,8 @@ export function LeadDrawer({
   const panelRef = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const [approving, setApproving] = useState(false)
+  const [appVisto, setAppVisto] = useState(lead.appVistoUrl || '')
+  const [sendingVisto, setSendingVisto] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [draft, setDraft] = useState(lead)
   // onClose em ref: o efeito de foco roda só ao abrir/fechar, não a cada re-render do pai.
@@ -138,7 +140,7 @@ export function LeadDrawer({
       })
       const data = await res.json().catch(() => ({}))
       if (res.ok) {
-        notify(data.whatsappEnviado ? 'Vistoria aprovada. Cliente avisado no WhatsApp.' : 'Vistoria aprovada. WhatsApp não enviado — avise o cliente.')
+        notify(data.message || (data.whatsappEnviado ? 'Vistoria aprovada. Cliente avisado no WhatsApp.' : 'Vistoria aprovada. WhatsApp não enviado: avise o cliente.'))
         await onApproved()
       } else {
         notify(data?.error || 'Não foi possível aprovar. Tente de novo.', 'error')
@@ -147,6 +149,30 @@ export function LeadDrawer({
       notify('Sem conexão. Tente de novo.', 'error')
     } finally {
       setApproving(false)
+    }
+  }
+
+  const sendAppVisto = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSendingVisto(true)
+    try {
+      const res = await fetch('/api/admin/app-visto', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ref: lead.ref, url: appVisto }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        if (data.lead) setDraft(data.lead)
+        notify(data.message || 'Link enviado.')
+        await onApproved()
+      } else {
+        notify(data?.error || 'Não foi possível enviar o link. Tente de novo.', 'error')
+      }
+    } catch {
+      notify('Sem conexão. Tente de novo.', 'error')
+    } finally {
+      setSendingVisto(false)
     }
   }
 
@@ -320,6 +346,34 @@ export function LeadDrawer({
             ) : (
               <p className="m-0 py-2 text-sm text-muted">O cliente ainda não enviou a vistoria.</p>
             )}
+            <form onSubmit={sendAppVisto} className="flex flex-col gap-2 pt-3">
+              <label htmlFor="app-visto-url" className="text-sm font-medium text-navy-900">
+                Link do App Visto (gerado no CRM)
+              </label>
+              <input
+                id="app-visto-url"
+                type="url"
+                inputMode="url"
+                required
+                placeholder="https://"
+                value={appVisto}
+                onChange={(e) => setAppVisto(e.target.value)}
+                className="min-h-[44px] w-full rounded-lg border border-line px-3 text-sm text-navy-900 focus:border-navy-600 focus:outline-none focus:ring-2 focus:ring-navy-600/20"
+              />
+              <button
+                type="submit"
+                disabled={sendingVisto}
+                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-navy-800 px-4 text-sm font-semibold text-navy-900 transition-colors hover:bg-surface-100 disabled:cursor-wait"
+              >
+                {sendingVisto && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
+                {sendingVisto ? 'Enviando…' : draft.appVistoUrl ? 'Enviar de novo ao cliente' : 'Enviar ao cliente (WhatsApp e site)'}
+              </button>
+              {draft.appVistoEnviadoEm && (
+                <p className="m-0 text-xs text-muted">
+                  Enviado em {new Date(draft.appVistoEnviadoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}. O cliente vê o link no site.
+                </p>
+              )}
+            </form>
             <div className="pt-3">
               <DocumentAiUploader label="Ler CNH ou CRLV com IA" onExtracted={onDocument} />
             </div>
@@ -339,7 +393,7 @@ export function LeadDrawer({
               ) : (
                 <CheckCircle2 aria-hidden className="h-4 w-4" />
               )}
-              {approving ? 'Aprovando…' : 'Aprovar vistoria e avisar cliente'}
+              {approving ? 'Aprovando…' : pago ? 'Aprovar vistoria e avisar cliente' : 'Vistoria aprovada: enviar Pix da adesão'}
             </button>
           )}
           <a

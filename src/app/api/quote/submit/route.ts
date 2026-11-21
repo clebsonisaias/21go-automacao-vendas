@@ -136,13 +136,14 @@ ${payload.cpf ? `📄 <b>CPF:</b> ${esc(payload.cpf)}\n` : ''}${payload.email ? 
 ⚡ <b>Ativação:</b> ${ativacaoFormatted}
 
 ${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${esc(powerCrmResult.qttnCd)}</code>\n` : ''}${checkoutUrl ? `🔗 <b>Link Checkout:</b> ${esc(checkoutUrl)}\n` : ''}💾 <b>Backup Local:</b> Salvo no painel interno (ID: <code>${storedLead.id}</code>)
-✅ <b>Status:</b> Cadastrado e aguardando a vistoria digital${cobrarPix ? ' (a adesão por Pix é o último passo)' : ''}.`
+✅ <b>Status:</b> Cadastrado e aguardando os documentos${cobrarPix ? '. Ordem: documentos → App Visto → aprovação no /admin → Pix da adesão' : ''}.`
 
     await sendTelegramNotification(telegramMessage)
 
     // 6. Dispara WhatsApp automático via AtendeHub / CITchat para o cliente (com link de checkout e vistoria)
     await sendWhatsAppQuoteMessage(payload, {
-      quotationCode: powerCrmResult.qttnCd,
+      // Com o Pix do site, a adesão é o último passo: nada de link de pagamento no cadastro.
+      quotationCode: cobrarPix ? undefined : powerCrmResult.qttnCd,
       vistoriaUrl,
     })
 

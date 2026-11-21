@@ -62,6 +62,9 @@ export interface StoredLead {
   diaVencimento?: number
   rawCrm?: Record<string, unknown>
   pagamento?: LeadPagamento
+  /** Link da vistoria oficial (App Visto), gerado no CRM e colado no /admin. */
+  appVistoUrl?: string
+  appVistoEnviadoEm?: string
   status:
     | 'aguardando_pagamento'
     | 'adesao_paga'

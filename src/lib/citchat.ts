@@ -145,7 +145,7 @@ export async function sendWhatsAppQuoteMessage(
       ? []
       : [
           `📄 *Próximo passo: envie seus documentos*`,
-          `Abra o link e envie CNH ou RG, documento do carro e comprovante de residência. Depois, o Pix da adesão:`,
+          `Abra o link e envie CNH ou RG, documento do carro e comprovante de residência. Depois enviamos aqui o link da vistoria (App Visto); a adesão é paga só no final, com a vistoria aprovada:`,
           `👉 ${vistoriaUrl}`,
           ``,
         ]),
@@ -175,7 +175,8 @@ export async function sendWhatsAppVistoriaConfirmation(params: {
     ``,
     `Olá *${params.nome}*, recebemos seus documentos para a placa *${params.placa}*.`,
     ``,
-    `Depois do Pix da adesão, enviamos aqui o link da vistoria oficial da 21Go (App Visto), para as fotos do veículo.`,
+    `Próximo passo: em breve enviamos aqui o link da vistoria oficial da 21Go (App Visto), para as fotos do veículo.`,
+    `A taxa de adesão (Pix) é o último passo, depois da vistoria aprovada.`,
     ``,
     `Obrigado por escolher a *CITmax & 21Go*!`,
   ].join('\n')
@@ -203,9 +204,47 @@ export async function sendWhatsAppAdesaoConfirmada(params: {
           `👉 ${params.vistoriaUrl}`,
         ]
       : [
-          `📸 Próximo passo: em breve enviamos aqui o link da vistoria oficial da 21Go (App Visto), para as fotos do veículo.`,
-          `Depois da vistoria aprovada, você recebe a confirmação da sua proteção. 🤝`,
+          `🎉 Seu cadastro está completo. Estamos concluindo a sua associação e em seguida você recebe aqui os dados de acesso e as mensalidades. 🤝`,
         ]),
+  ].join('\n')
+
+  return sendCitchatMessage(params.telefone, message)
+}
+
+/** Envia ao cliente o link do App Visto (vistoria oficial da 21Go, gerado no CRM). */
+export async function sendWhatsAppAppVisto(params: {
+  telefone: string
+  nome: string
+  url: string
+}): Promise<{ success: boolean; error?: string; data?: any }> {
+  const message = [
+    `📸 *Sua vistoria está liberada!*`,
+    ``,
+    `Olá *${params.nome}*, faça agora a vistoria oficial da 21Go no App Visto (fotos do veículo pelo celular, com câmera ao vivo e GPS):`,
+    `👉 ${params.url}`,
+    ``,
+    `Com a vistoria aprovada, enviamos aqui o Pix da adesão, que é o último passo.`,
+  ].join('\n')
+
+  return sendCitchatMessage(params.telefone, message)
+}
+
+/** Vistoria aprovada: envia o link do Pix da adesão (último passo). */
+export async function sendWhatsAppAdesaoLiberada(params: {
+  telefone: string
+  nome: string
+  placa: string
+  pagamentoUrl: string
+  valor: number
+}): Promise<{ success: boolean; error?: string; data?: any }> {
+  const message = [
+    `🎉 *Vistoria aprovada!*`,
+    ``,
+    `Olá *${params.nome}*, a vistoria do veículo de placa *${params.placa}* foi aprovada.`,
+    ``,
+    `💳 *Último passo: pague a taxa de adesão (R$ ${params.valor.toFixed(2)}) via Pix.*`,
+    `Abra o link, copie o código ou leia o QR Code. A confirmação é automática:`,
+    `👉 ${params.pagamentoUrl}`,
   ].join('\n')
 
   return sendCitchatMessage(params.telefone, message)

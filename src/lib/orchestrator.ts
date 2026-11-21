@@ -5,8 +5,8 @@ import { sendWhatsAppAdesaoConfirmada } from './citchat'
 import { absolute, vistoriaPath } from './links'
 
 // Orquestra o funil após a cotação:
-//   cadastro → Pix da adesão (Mercado Pago) → [pago] → link da vistoria por WhatsApp
-//   → vistoria enviada → aprovação (manual, no painel/CRM) → mensalidades (Hinova SGA)
+//   cadastro → documentos → vistoria no App Visto (link enviado pela equipe)
+//   → aprovação no painel (libera o Pix) → Pix da adesão (último passo) → mensalidades (Hinova SGA)
 //
 // Esta camada só cuida da parte que roda com APIs oficiais/contratadas. Etapas que dependem de
 // endpoints internos do CRM da franqueadora (gerar vistoria no CRM, "enviar ao SGA") continuam
@@ -35,7 +35,7 @@ export async function syncPaymentFromOrder(ref: string, order: MpOrder): Promise
     }
 
     l.pagamento.paidAt = new Date().toISOString()
-    if (l.status === 'aguardando_pagamento') l.status = 'adesao_paga'
+    if (l.status === 'aguardando_pagamento') l.status = 'aprovado'
     justPaid = true
   })
 
@@ -59,7 +59,7 @@ async function onAdesaoPaga(lead: StoredLead): Promise<void> {
 💵 <b>Adesão recebida:</b> ${brl(lead.pagamento?.valor ?? lead.ativacao)}
 🧾 <b>Order MP:</b> <code>${esc(lead.pagamento?.orderId)}</code>
 
-${vistoriaFeita ? '➡️ Documentos já enviados. Gere no CRM o link do App Visto e envie ao cliente; depois aprove no /admin.' : '➡️ Os documentos ainda não foram enviados.'}`)
+${vistoriaFeita ? '➡️ Cadastro completo (documentos, vistoria e adesão). Cadastre no Hinova SGA para gerar as mensalidades.' : '➡️ Os documentos ainda não foram enviados.'}`)
 
   const sent = await sendWhatsAppAdesaoConfirmada({
     telefone: lead.whatsapp,

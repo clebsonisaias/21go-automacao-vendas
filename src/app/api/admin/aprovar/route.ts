@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { checkAdminAuth } from '@/lib/admin-auth'
 import { findLeadByRef, updateLead } from '@/lib/db'
-import { sendWhatsAppVistoriaAprovada } from '@/lib/citchat'
+import { sendWhatsAppAdesaoLiberada, sendWhatsAppVistoriaAprovada } from '@/lib/citchat'
+import { absolute, pagamentoPath } from '@/lib/links'
 import { esc, sendTelegramNotification } from '@/lib/telegram'
 import { mpEnabled } from '@/lib/mercadopago'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * Aprova a vistoria de um cadastro (ação humana, no painel). Só vale para quem já pagou a adesão
- * (quando há cobrança online) e já enviou a vistoria. Avisa o cliente por WhatsApp.
+ * Aprova a vistoria de um cadastro (ação humana, no painel). Com Pix online e adesão ainda não
+ * paga, aprovar libera o Pix (último passo) e manda o link ao cliente; o pagamento conclui o cadastro.
  * O envio ao Hinova SGA / geração das mensalidades continua sendo feito pela equipe.
  */
 export async function POST(req: NextRequest) {
@@ -27,8 +28,29 @@ export async function POST(req: NextRequest) {
       { status: 409 }
     )
   }
-  if ((lead.pagamento || mpEnabled()) && !lead.pagamento?.paidAt) {
-    return NextResponse.json({ success: false, error: 'A adesão ainda não foi paga.' }, { status: 409 })
+  // Adesão por último: vistoria aprovada → libera o Pix e manda o link ao cliente.
+  if (mpEnabled() && !lead.pagamento?.paidAt) {
+    const liberado = updateLead(lead.ref, (l) => {
+      l.status = 'aguardando_pagamento'
+    })
+    await sendTelegramNotification(
+      `✅ <b>Vistoria aprovada</b> — ${esc(lead.nome)} (${esc(lead.placa || 'sem placa')}). Pix da adesão liberado e enviado ao cliente.`
+    )
+    const waPix = await sendWhatsAppAdesaoLiberada({
+      telefone: lead.whatsapp,
+      nome: lead.nome,
+      placa: lead.placa || 'do veículo',
+      pagamentoUrl: absolute(pagamentoPath(lead.ref)),
+      valor: lead.ativacao,
+    })
+    return NextResponse.json({
+      success: true,
+      lead: liberado,
+      whatsappEnviado: waPix.success,
+      message: waPix.success
+        ? 'Vistoria aprovada. Link do Pix da adesão enviado no WhatsApp.'
+        : 'Vistoria aprovada. WhatsApp não enviado: mande ao cliente o link do Pix.',
+    })
   }
 
   const updated = updateLead(lead.ref, (l) => {
