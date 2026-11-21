@@ -3,7 +3,6 @@ import { MpOrder, applyOrderToPagamento, getOrder, isOrderPaid, orderAmountMatch
 import { sendTelegramNotification, esc } from './telegram'
 import { sendWhatsAppAdesaoConfirmada } from './citchat'
 import { absolute, vistoriaPath } from './links'
-import { avancarCard } from './crm-vistoria'
 
 // Orquestra o funil após a cotação:
 //   cadastro → documentos → vistoria no App Visto (link enviado pela equipe)
@@ -48,8 +47,6 @@ export async function syncPaymentFromOrder(ref: string, order: MpOrder): Promise
 
 async function onAdesaoPaga(lead: StoredLead): Promise<void> {
   // Card do CRM vai para "Liberadas para cadastro" (próximo passo da equipe: Hinova SGA).
-  const movido = Boolean(lead.crmVistoria?.negId && process.env.CRM_EMAIL)
-  if (movido) await avancarCard(lead.crmVistoria!.negId!, 'LIBERADAS_CADASTRO')
   const vistoriaFeita = Boolean(lead.vistoriaData)
   const vistoriaUrl = absolute(vistoriaPath(lead))
 
@@ -63,7 +60,7 @@ async function onAdesaoPaga(lead: StoredLead): Promise<void> {
 💵 <b>Adesão recebida:</b> ${brl(lead.pagamento?.valor ?? lead.ativacao)}
 🧾 <b>Order MP:</b> <code>${esc(lead.pagamento?.orderId)}</code>
 
-${vistoriaFeita ? `➡️ Cadastro completo (documentos, vistoria e adesão).${movido ? ' Card movido para "Liberadas para cadastro" no CRM.' : ''} Cadastre no Hinova SGA para gerar as mensalidades.` : '➡️ Os documentos ainda não foram enviados.'}`)
+${vistoriaFeita ? '➡️ Cadastro completo (documentos, vistoria e adesão). Cadastre no Hinova SGA para gerar as mensalidades.' : '➡️ Os documentos ainda não foram enviados.'}`)
 
   const sent = await sendWhatsAppAdesaoConfirmada({
     telefone: lead.whatsapp,
