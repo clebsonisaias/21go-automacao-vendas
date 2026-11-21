@@ -186,7 +186,7 @@ export function ComoFunciona() {
     ['01', 'Cote pela placa', 'Em 30 segundos você vê os planos e valores para o seu veículo.', false],
     ['02', 'Escolha o plano', 'Aproveite os descontos de adesivo e pontualidade e informe seus dados.', false],
     ['03', 'Vistoria pelo app', 'Tire as fotos do veículo pelo celular. 100% digital, sem filas.', false],
-    ['04', 'Pronto, protegido', 'Aprovação em até 48h e assistência 24h em todo o Brasil.', true],
+    ['04', 'Adesão no Pix e pronto', 'Por último, pague a adesão por Pix. Aprovação em até 48h e assistência 24h em todo o Brasil.', true],
   ] as const
   return (
     <section id="como-funciona" className="scroll-mt-20 px-6 py-14 sm:py-24">
@@ -292,7 +292,7 @@ export function SeguradoraDisseNao() {
 
 const FAQS = [
   ['Precisa de análise de perfil ou consulta ao SPC/Serasa?', 'Não. A 21Go não consulta crédito nem restringe por idade, estado civil, CEP ou por você trabalhar com aplicativo (Uber, 99). A proteção é para o veículo.'],
-  ['Quanto tempo leva para meu veículo ficar protegido?', 'Depois da vistoria aprovada (feita 100% online, por fotos no celular) e da confirmação da taxa de ativação, a proteção entra em vigor no mesmo dia.'],
+  ['Quanto tempo leva para meu veículo ficar protegido?', 'Você faz a vistoria (100% online, por fotos no celular) e, por último, paga a taxa de adesão por Pix. Com a vistoria aprovada, a proteção entra em vigor no mesmo dia.'],
   ['Atendem em todo o Brasil?', 'Sim. A cotação, a adesão e a vistoria são 100% online, e a assistência 24h e o guincho funcionam em todo o território nacional.'],
   ['O que é o desconto do adesivo 21Go?', 'Se você colocar o adesivo discreto da 21Go no vidro traseiro, ganha até 15% de desconto em todas as mensalidades.'],
   ['Como funciona a assistência 24h e o guincho?', 'Uma central 0800 atende 24 horas por dia, 7 dias por semana, em todo o Brasil: guincho, socorro mecânico e elétrico, troca de pneus, chaveiro e hospedagem emergencial.'],

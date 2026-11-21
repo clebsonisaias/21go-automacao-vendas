@@ -749,16 +749,16 @@ export default function HomePage() {
                 <ol className="m-0 flex w-full list-none flex-col gap-3 rounded-xl bg-navy-950 p-4 text-left text-sm text-white">
                   {[
                     [
-                      'Vistoria oficial 21Go (App Visto)',
-                      'A 21Go exige a vistoria por link seguro, com validação de câmera ao vivo e GPS.',
+                      'Vistoria pelo celular',
+                      `Envie os documentos e as fotos do veículo. O link também foi para o seu WhatsApp ${submitSuccessData.clientPhone || ''}.`,
                     ],
                     [
-                      'Envio no WhatsApp',
-                      `O link oficial será enviado diretamente para o seu WhatsApp ${submitSuccessData.clientPhone || ''}.`,
+                      'Adesão no Pix (último passo)',
+                      'Depois da vistoria, você paga a taxa de adesão por Pix, na mesma tela.',
                     ],
                     [
-                      'Ativação imediata',
-                      'Assim que você tirar as fotos pelo link, sua proteção é ativada no sistema com 5% de desconto de pontualidade!',
+                      'Aprovação e ativação',
+                      'Nossa equipe confere a vistoria e avisa pelo WhatsApp quando a proteção estiver ativa.',
                     ],
                   ].map(([title, text], i) => (
                     <li key={title} className="flex items-start gap-3">
