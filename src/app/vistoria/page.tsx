@@ -53,7 +53,7 @@ const FOTOS: Slot[] = [
   { key: 'fotoPainel', title: 'Painel com KM', hint: 'Chave ligada', icon: Camera },
 ]
 
-const TOTAL = DOCUMENTOS.length + FOTOS.length
+const TOTAL = DOCUMENTOS.length
 
 function UploadSlot({
   slot,
@@ -222,7 +222,7 @@ function VistoriaContent() {
       <header className="border-b border-navy-line bg-navy-950">
         <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-4 px-6 py-3">
           <Logo size={48} href="/" />
-          <span className="hidden text-sm font-semibold text-white sm:block">Vistoria e documentos</span>
+          <span className="hidden text-sm font-semibold text-white sm:block">Documentos</span>
         </div>
       </header>
 
@@ -236,11 +236,11 @@ function VistoriaContent() {
               <CheckCircle2 aria-hidden className="h-9 w-9 text-navy-950" />
             </span>
             <h1 className="m-0 text-[28px] font-extrabold tracking-[-0.8px]">
-              Documentos e vistoria enviados!
+              Documentos enviados!
             </h1>
             <p className="m-0 max-w-md text-base leading-relaxed text-muted">
-              Recebemos seus documentos. Nossa equipe já está revisando as fotos para aprovar e liberar a sua
-              proteção.
+              Recebemos seus documentos. Nossa equipe vai enviar o link da vistoria oficial (App Visto) no seu
+              WhatsApp.
             </p>
             <a
               href="/"
@@ -253,10 +253,10 @@ function VistoriaContent() {
           <>
             <div className="flex flex-col gap-2">
               <h1 className="m-0 text-[28px] font-extrabold leading-tight tracking-[-1px] sm:text-4xl">
-                Envie os documentos e as fotos do veículo
+                Envie os seus documentos
               </h1>
               <p className="m-0 text-base text-muted">
-                Fotos nítidas, em local bem iluminado e mostrando as placas.
+                CNH ou RG, documento do carro (CRLV) e comprovante de residência. Fotos nítidas ou PDF.
               </p>
             </div>
 
@@ -329,35 +329,12 @@ function VistoriaContent() {
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-line bg-white p-5 shadow-card sm:p-7">
-                <div className="mb-5 flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-100 text-sm font-extrabold text-navy-700">
-                    02
-                  </span>
-                  <div>
-                    <h2 className="m-0 text-xl font-extrabold">Fotos do veículo</h2>
-                    <p className="m-0 text-sm text-muted">Toque em cada quadro para abrir a câmera.</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3">
-                  {FOTOS.map((slot) => (
-                    <UploadSlot
-                      key={slot.key}
-                      slot={slot}
-                      file={files[slot.key]}
-                      onChange={setFile(slot.key)}
-                      camera
-                    />
-                  ))}
-                </div>
-              </section>
-
               <aside className="flex items-start gap-3 rounded-xl border border-go-orange bg-[#fef5e7] p-4 text-sm leading-relaxed text-navy-800">
                 <Info aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-go-orange-dark" />
                 <p className="m-0">
-                  <strong>Vistoria oficial 21Go (App Visto).</strong> A 21Go também disponibiliza o link oficial do
-                  App Visto, com validação por câmera ao vivo e GPS, no seu WhatsApp. Se preferir adiantar os
-                  documentos e fotos por este formulário, nossa equipe validará diretamente no CRM.
+                  <strong>As fotos do veículo são feitas no App Visto, a vistoria oficial da 21Go.</strong> Depois do
+                  pagamento da adesão, nossa equipe envia o link no seu WhatsApp, com validação por câmera ao vivo e
+                  GPS. Aqui você envia só os documentos.
                 </p>
               </aside>
 
@@ -372,7 +349,7 @@ function VistoriaContent() {
                 disabled={isSubmitting}
                 className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-lg bg-go-orange text-[17px] font-extrabold text-navy-950 transition hover:-translate-y-px hover:shadow-cta disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
               >
-                {isSubmitting ? progress || 'Enviando…' : 'Enviar documentos e concluir vistoria'}
+                {isSubmitting ? progress || 'Enviando…' : 'Enviar documentos e ir para o pagamento'}
                 {!isSubmitting && <ArrowRight aria-hidden className="h-5 w-5" />}
               </button>
             </form>

@@ -184,9 +184,9 @@ export function PlanosPreview() {
 export function ComoFunciona() {
   const steps = [
     ['01', 'Cote pela placa', 'Em 30 segundos você vê os planos e valores para o seu veículo.', false],
-    ['02', 'Escolha o plano', 'Aproveite os descontos de adesivo e pontualidade e informe seus dados.', false],
-    ['03', 'Vistoria pelo app', 'Tire as fotos do veículo pelo celular. 100% digital, sem filas.', false],
-    ['04', 'Adesão no Pix e pronto', 'Por último, pague a adesão por Pix. Aprovação em até 48h e assistência 24h em todo o Brasil.', true],
+    ['02', 'Escolha o plano e envie os documentos', 'CNH ou RG, documento do carro e comprovante de residência, pelo celular.', false],
+    ['03', 'Adesão no Pix', 'Pague a taxa de adesão por Pix, na mesma tela.', false],
+    ['04', 'Vistoria no App Visto e pronto', 'Fotos do veículo na vistoria oficial da 21Go, pelo link no WhatsApp. Aprovação em até 48h.', true],
   ] as const
   return (
     <section id="como-funciona" className="scroll-mt-20 px-6 py-14 sm:py-24">
@@ -292,7 +292,7 @@ export function SeguradoraDisseNao() {
 
 const FAQS = [
   ['Precisa de análise de perfil ou consulta ao SPC/Serasa?', 'Não. A 21Go não consulta crédito nem restringe por idade, estado civil, CEP ou por você trabalhar com aplicativo (Uber, 99). A proteção é para o veículo.'],
-  ['Quanto tempo leva para meu veículo ficar protegido?', 'Você faz a vistoria (100% online, por fotos no celular) e, por último, paga a taxa de adesão por Pix. Com a vistoria aprovada, a proteção entra em vigor no mesmo dia.'],
+  ['Quanto tempo leva para meu veículo ficar protegido?', 'Você envia os documentos pelo site, paga a adesão por Pix e faz a vistoria do veículo no App Visto, pelo link que enviamos no WhatsApp. Com a vistoria aprovada, a proteção entra em vigor no mesmo dia.'],
   ['Atendem em todo o Brasil?', 'Sim. A cotação, a adesão e a vistoria são 100% online, e a assistência 24h e o guincho funcionam em todo o território nacional.'],
   ['O que é o desconto do adesivo 21Go?', 'Se você colocar o adesivo discreto da 21Go no vidro traseiro, ganha até 15% de desconto em todas as mensalidades.'],
   ['Como funciona a assistência 24h e o guincho?', 'Uma central 0800 atende 24 horas por dia, 7 dias por semana, em todo o Brasil: guincho, socorro mecânico e elétrico, troca de pneus, chaveiro e hospedagem emergencial.'],
