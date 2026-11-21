@@ -88,6 +88,22 @@ function errMsg(data: any, fallback: string): string {
   return `${typeof m === 'string' ? m : fallback}${faltas}`.slice(0, 240)
 }
 
+const PARTICULAS = new Set(['DE', 'DA', 'DO', 'DOS', 'DAS', 'E'])
+const palavras = (nome: unknown) =>
+  String(nome ?? '')
+    .split(/\s+/)
+    .map(norm)
+    .filter((w) => w.length >= 2 && !PARTICULAS.has(w))
+
+/** Mesma pessoa se as palavras de um nome estão todas no outro (e há pelo menos 2, ou o primeiro nome bate sozinho). */
+function mesmoNome(a: unknown, b: unknown): boolean {
+  const pa = palavras(a)
+  const pb = palavras(b)
+  if (!pa.length || !pb.length || pa[0] !== pb[0]) return false
+  const [curto, longo] = pa.length <= pb.length ? [pa, new Set(pb)] : [pb, new Set(pa)]
+  return curto.every((w) => longo.has(w))
+}
+
 type Neg = { id: string; createdAt?: string; arquivada?: boolean; cotacoes?: { id: string; placa?: string | null }[]; associado?: { nome?: string } }
 
 /** Negociação do cadastro no CRM: mesma placa, criada depois do cadastro no site (com folga). */
@@ -97,15 +113,14 @@ async function findNegociacao(lead: StoredLead): Promise<{ negId: string; cotaca
   const { status, data } = await crm<any>('GET', `/negociacoes?search=${encodeURIComponent(placa)}`)
   if (status !== 200) throw new Error(errMsg(data, `lista de negociações falhou (HTTP ${status})`))
   const list: Neg[] = Array.isArray(data) ? data : data?.data || data?.items || []
-  const desde = new Date(lead.createdAt).getTime() - 15 * 60_000
-  // Mesma placa pode ter mais de uma negociação (outros testes, outro dono): exige o mesmo primeiro nome.
-  const primeiro = norm(String(lead.nome || '').trim().split(/\s+/)[0])
+  // Mesma pessoa: todas as palavras do nome de um lado aparecem no outro. O CRM troca o nome pelo da CNH
+  // depois da leitura dos documentos ("clebson isaias" vira "Clebson Isaías de Azevedo Silva").
+  // Sem limite de data: o PowerCRM reaproveita a negociação quando a mesma pessoa cota a mesma placa de novo.
   const candidatas = list
-    .filter((n) => !n.arquivada && new Date(n.createdAt || 0).getTime() >= desde)
-    .filter((n) => primeiro.length >= 2 && norm(n.associado?.nome).startsWith(primeiro))
+    .filter((n) => !n.arquivada && mesmoNome(lead.nome, n.associado?.nome))
     .map((n) => ({ n, cot: (n.cotacoes || []).find((c) => norm(c.placa) === placa) }))
     .filter((x): x is { n: Neg; cot: { id: string } } => Boolean(x.cot))
-    .sort((a, b) => new Date(a.n.createdAt || 0).getTime() - new Date(b.n.createdAt || 0).getTime())
+    .sort((a, b) => new Date(b.n.createdAt || 0).getTime() - new Date(a.n.createdAt || 0).getTime())
   const hit = candidatas[0]
   return hit ? { negId: hit.n.id, cotacaoId: hit.cot.id } : null
 }
