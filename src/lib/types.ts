@@ -113,6 +113,8 @@ export interface DocumentAiResult {
   vehicle?: ExtractedVehicleInfo
   address?: ExtractedAddressInfo
   rawText?: string
+  model?: string
+  latencyMs?: number
   error?: string
 }
 

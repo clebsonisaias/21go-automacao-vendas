@@ -27,9 +27,10 @@ async function login(): Promise<string> {
   })
   const data = await res.json()
   if (!res.ok || !data.token) throw new Error('Login falhou')
-  token = data.token
+  const newToken = String(data.token)
+  token = newToken
   tokenAt = Date.now()
-  return token
+  return newToken
 }
 
 async function getToken(): Promise<string> {
