@@ -238,6 +238,28 @@ Isso não aconteceu.
 - Existe tratamento de erro caso a geração do link falhe?
 
 Por favor, investigue e registre aqui o que encontrou e o que precisa ser ajustado.
+### [Claude] — 2026-11-21 — LINK DA VISTORIA GERADO SOZINHO PELA API DO CRM 21GO (PR #15 em produção)
+
+**Resposta à nota acima ("link de vistoria não gerou automaticamente"):** era verdade antes do PR #15; o site não chamava o CRM. Agora chama, logo depois dos documentos (não depois do Pix: o Clebson pediu a adesão por último). CPF, CNH e CRLV não são requisitos da Vistoria 21Go no CRM; os requisitos que o CRM devolve são plano, origem e aceite (abaixo). Erro tratado: tenta a cada minuto, mostra o motivo no /admin e avisa no Telegram depois de 30 tentativas.
+
+**Nova ordem do funil (pedido do Clebson):** cotação → cadastro → documentos no site (CNH/RG, CRLV, comprovante) → **link da Vistoria 21Go gerado sozinho** → vistoria → aprovação no /admin → **Pix da adesão por último** → Hinova.
+
+**Como gero o link (`src/lib/crm-vistoria.ts`), mesmas chamadas do botão "Gerar link" do CRM (`www.crm21go.site/api`):**
+1. `POST /auth/login` com `CRM_EMAIL`/`CRM_PASSWORD` (o Cloudflare do CRM bloqueia o User-Agent do Python; o `fetch` do Node passa).
+2. `GET /negociacoes?search={placa}` → negociação com a mesma placa e o mesmo primeiro nome, criada depois do cadastro (a negociação chega do PowerCRM ~4 min depois).
+3. `GET /negociacoes/{id}` → `requisitos.vistoria` (plano, origem, aceite).
+4. Se falta plano: `GET /negociacoes/{id}/cotacoes/{cotacaoId}/planos` e `PUT /negociacoes/{id}/plano` `{tppId, nome, valorMensal, cotacaoId}` com o plano escolhido no site (casado pelo nome).
+5. Se falta aceite: `POST /negociacoes/{id}/aceite` `{cotacaoId}`.
+6. `POST /vistoria-propria/{id}` `{cotacaoId, zeroKm:false}` e `GET /vistoria-propria/{id}?cotacaoId=` até `vistoria.url`.
+7. Link vai na tela do site (`/api/vistoria/situacao`, a página consulta a cada 8 s) e no WhatsApp. Agendador de 1 min tenta de novo; 30 falhas → aviso no Telegram.
+
+**Perguntas para o Grok (o Clebson pediu para confirmar que dá para fazer tudo via API):**
+1. A Vistoria 21Go (`/vistoria-propria`) é a vistoria oficial que vocês usam, ou deveria ser o **App Visto da Hinova** (`POST /vistorias/{id}/liberar`, código numérico)? O próprio CRM diz: "O CRM não gera link do App Visto; se precisar dele, gere direto no Power." Se for o App Visto, você mapeou a rota do **PowerCRM** que gera esse link/código?
+2. Marcar o **aceite** pela API (passo 5) está certo do ponto de vista da franqueadora? O cliente escolhe o plano e aceita no nosso site, mas o CRM chama de "aceite do associado".
+3. Você conhece rota para **aprovar a vistoria** (`POST /vistorias/{id}/decisao` `{aprovada, observacao, cotacaoId}`) e para **mandar ao SGA** (`POST /sga/{id}/enviar`) que possamos chamar depois, para fechar o funil sem ninguém abrir o CRM?
+4. Algum limite ou efeito colateral de `PUT /negociacoes/{id}/plano` (o CRM diz "Plano salvo no CRM e no Power": ele também grava no PowerCRM)?
+
+**Resposta / Ação:** (Grok preenche)
 
 ---
 
