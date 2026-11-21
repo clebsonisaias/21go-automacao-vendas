@@ -26,9 +26,10 @@ function validatePayload(p: any): string | null {
   if (!str(p.planoEscolhidoId, 40) || !p.planoEscolhidoId) return 'Plano é obrigatório.'
   if (!str(p.planoEscolhidoNome, 60)) return 'Plano inválido.'
   if (!num(p.mensalidadeFinal) || !num(p.ativacao)) return 'Valores do plano inválidos.'
-  if (p.cpf != null && !(typeof p.cpf === 'string' && p.cpf.replace(/\D/g, '').length === 11)) return 'CPF inválido.'
-  if (p.email != null && p.email !== '' && !(str(p.email, 120) && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email))) return 'E-mail inválido.'
-  if (p.cidade != null && !str(p.cidade, 80)) return 'Cidade inválida.'
+  // CPF e E-mail agora são obrigatórios
+  if (typeof p.cpf !== 'string' || p.cpf.replace(/\D/g, '').length !== 11) return 'CPF é obrigatório e deve ser válido.'
+  if (typeof p.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email) || p.email.length > 120) return 'E-mail é obrigatório e deve ser válido.'
+  if (typeof p.cidade !== 'string' || !str(p.cidade, 80) || p.cidade.trim().length < 2) return 'Cidade é obrigatória.'
   if (p.placa != null && !str(p.placa, 10)) return 'Placa inválida.'
   const v = p.vehicle
   if (!v || typeof v !== 'object' || !str(v.marca, 80) || !str(v.modelo, 120) || !str(String(v.ano ?? ''), 10)) {
@@ -122,21 +123,7 @@ export async function POST(req: NextRequest) {
         : undefined
 
     // 5. Dispara Notificação Instantânea no Telegram para você
-    const telegramMessage = `🚨 <b>NOVO CADASTRO NO SITE!</b> 🚨
-
-👤 <b>Cliente:</b> ${esc(payload.nome)}
-📱 <b>WhatsApp:</b> ${esc(payload.whatsapp)}
-${payload.cpf ? `📄 <b>CPF:</b> ${esc(payload.cpf)}\n` : ''}${payload.email ? `✉️ <b>E-mail:</b> ${esc(payload.email)}\n` : ''}${payload.cidade ? `📍 <b>Cidade:</b> ${esc(payload.cidade)}\n` : ''}🚗 <b>Veículo:</b> ${esc(payload.vehicle.marca)} ${esc(payload.vehicle.modelo)} (${esc(payload.vehicle.ano)})
-🔢 <b>Placa:</b> ${esc(payload.placa || payload.vehicle.placa || 'Não informada')}
-💰 <b>Tabela FIPE:</b> ${fipeFormatted}
-🚕 <b>Trabalho/App:</b> ${payload.veiculoTrabalho ? 'Sim' : 'Não'}
-
-🛡️ <b>Plano Escolhido:</b> ${esc(payload.planoEscolhidoNome)}
-💵 <b>Mensalidade:</b> ${mensalidadeFormatted}/mês ${payload.comAdesivo ? '(com adesivo)' : ''}
-⚡ <b>Ativação:</b> ${ativacaoFormatted}
-
-${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${esc(powerCrmResult.qttnCd)}</code>\n` : ''}${checkoutUrl ? `🔗 <b>Link Checkout:</b> ${esc(checkoutUrl)}\n` : ''}💾 <b>Backup Local:</b> Salvo no painel interno (ID: <code>${storedLead.id}</code>)
-✅ <b>Status:</b> Cadastrado e aguardando os documentos${cobrarPix ? '. Ordem: documentos → App Visto → aprovação no /admin → Pix da adesão' : ''}.`
+    const telegramMessage = `🚨 <b>NOVO CADASTRO NO SITE!</b> 🚨\n\n👤 <b>Cliente:</b> ${esc(payload.nome)}\n📱 <b>WhatsApp:</b> ${esc(payload.whatsapp)}\n📄 <b>CPF:</b> ${esc(payload.cpf)}\n✉️ <b>E-mail:</b> ${esc(payload.email)}\n📍 <b>Cidade:</b> ${esc(payload.cidade)}\n🚗 <b>Veículo:</b> ${esc(payload.vehicle.marca)} ${esc(payload.vehicle.modelo)} (${esc(payload.vehicle.ano)})\n🔢 <b>Placa:</b> ${esc(payload.placa || payload.vehicle.placa || 'Não informada')}\n💰 <b>Tabela FIPE:</b> ${fipeFormatted}\n🚕 <b>Trabalho/App:</b> ${payload.veiculoTrabalho ? 'Sim' : 'Não'}\n\n🛡️ <b>Plano Escolhido:</b> ${esc(payload.planoEscolhidoNome)}\n💵 <b>Mensalidade:</b> ${mensalidadeFormatted}/mês ${payload.comAdesivo ? '(com adesivo)' : ''}\n⚡ <b>Ativação:</b> ${ativacaoFormatted}\n\n${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${esc(powerCrmResult.qttnCd)}</code>\n` : ''}${checkoutUrl ? `🔗 <b>Link Checkout:</b> ${esc(checkoutUrl)}\n` : ''}💾 <b>Backup Local:</b> Salvo no painel interno (ID: <code>${storedLead.id}</code>)\n✅ <b>Status:</b> Cadastrado e aguardando os documentos${cobrarPix ? '. Ordem: documentos → App Visto → aprovação no /admin → Pix da adesão' : ''}.`
 
     await sendTelegramNotification(telegramMessage)
 
