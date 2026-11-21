@@ -2,6 +2,7 @@ import { StoredLead, findLeadByRef, getStoredLeads, updateLead } from './db'
 import { sendWhatsAppAppVisto } from './citchat'
 import { esc, sendTelegramNotification } from './telegram'
 import { readVistoriaFile } from './vistoria-files'
+import { sendEmail } from './email'
 import { aprovarVistoria } from './vistoria-aprovacao'
 import sharp from 'sharp'
 
@@ -360,6 +361,17 @@ export async function entregarLinkVistoria(lead: StoredLead, url: string, origem
     if (l.crmVistoria) l.crmVistoria.ultimoErro = undefined
   })
   const wa = await sendWhatsAppAppVisto({ telefone: lead.whatsapp, nome: lead.nome, url })
+  await sendEmail({
+    para: lead.email,
+    nome: lead.nome,
+    assunto: 'Sua vistoria 21Go está liberada',
+    titulo: 'Sua vistoria está liberada',
+    paragrafos: [
+      'Faça as fotos do veículo pelo celular, na vistoria oficial da 21Go (câmera ao vivo e GPS).',
+      'Depois das fotos, a equipe da 21Go analisa a vistoria. Quando for aprovada, enviamos por aqui e pelo WhatsApp o link do Pix da adesão, que é o último passo.',
+    ],
+    botao: { texto: 'Fazer a vistoria', url },
+  })
   await sendTelegramNotification(
     `📸 <b>Link da vistoria ${origem === 'auto' ? 'gerado sozinho no CRM e ' : ''}enviado</b> — ${esc(lead.nome)} (${esc(
       lead.placa || 'sem placa'

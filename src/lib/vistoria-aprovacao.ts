@@ -3,6 +3,7 @@ import { sendWhatsAppAdesaoLiberada, sendWhatsAppVistoriaAprovada } from './citc
 import { absolute, pagamentoPath } from './links'
 import { esc, sendTelegramNotification } from './telegram'
 import { mpEnabled } from './mercadopago'
+import { sendEmail } from './email'
 
 // Vistoria aprovada (no CRM 21Go ou no /admin). Com Pix online e adesão não paga, libera o Pix da adesão,
 // que é o último passo: a tela do cliente mostra o botão e o link vai no WhatsApp. Sem Pix online,
@@ -28,6 +29,17 @@ export async function aprovarVistoria(
     await sendTelegramNotification(
       `✅ <b>Vistoria aprovada ${quem}</b> — ${esc(lead.nome)} (${esc(lead.placa || 'sem placa')}). Pix da adesão liberado: aparece na tela do cliente e vai no WhatsApp.`
     )
+    await sendEmail({
+      para: lead.email,
+      nome: lead.nome,
+      assunto: 'Vistoria aprovada: falta só a adesão',
+      titulo: 'Sua vistoria foi aprovada!',
+      paragrafos: [
+        `Falta só o último passo: a taxa de adesão de R$ ${lead.ativacao.toFixed(2).replace('.', ',')} por Pix.`,
+        'Abra o link, copie o código ou leia o QR Code. A confirmação é automática. Depois do pagamento, a 21Go envia os seus dados de acesso.',
+      ],
+      botao: { texto: 'Pagar a adesão via Pix', url: absolute(pagamentoPath(lead.ref)) },
+    })
     const wa = await sendWhatsAppAdesaoLiberada({
       telefone: lead.whatsapp,
       nome: lead.nome,
@@ -48,6 +60,13 @@ export async function aprovarVistoria(
   await sendTelegramNotification(
     `✅ <b>Vistoria aprovada ${quem}</b> — ${esc(lead.nome)} (${esc(lead.placa || 'sem placa')}). Próximo passo: cadastrar no Hinova SGA para gerar as mensalidades.`
   )
+  await sendEmail({
+    para: lead.email,
+    nome: lead.nome,
+    assunto: 'Vistoria aprovada',
+    titulo: 'Sua vistoria foi aprovada!',
+    paragrafos: ['Estamos concluindo a sua associação. A 21Go envia os seus dados de acesso e as mensalidades.'],
+  })
   const wa = await sendWhatsAppVistoriaAprovada({
     telefone: lead.whatsapp,
     nome: lead.nome,

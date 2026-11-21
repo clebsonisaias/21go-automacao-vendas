@@ -110,6 +110,7 @@ function UploadSlot({
 
 type Situacao = {
   documentos: boolean
+  documentosEm?: string | null
   appVistoUrl: string | null
   vistoriaStatus?: string | null
   pagamentoUrl: string | null
@@ -120,7 +121,7 @@ type Situacao = {
 const ETAPA_VISTORIA: Record<string, string> = {
   criada: 'Aguardando as suas fotos.',
   em_andamento: 'Recebendo as suas fotos.',
-  aguardando_revisao: 'Fotos recebidas. Nossa equipe está analisando a vistoria.',
+  aguardando_revisao: 'Fotos recebidas. A 21Go está analisando a vistoria.',
   aprovada: 'Vistoria aprovada!',
 }
 
@@ -129,7 +130,7 @@ function ProximosPassos({ situacao }: { situacao: Situacao | null }) {
   if (situacao?.pago) {
     return (
       <p className="m-0 max-w-md text-base leading-relaxed text-muted">
-        Adesão paga. Seu cadastro está completo e nossa equipe avisa você pelo WhatsApp.
+        Adesão paga. Seu cadastro está completo. A 21Go envia os seus dados de acesso por e-mail e WhatsApp.
       </p>
     )
   }
@@ -168,20 +169,65 @@ function ProximosPassos({ situacao }: { situacao: Situacao | null }) {
             {ETAPA_VISTORIA[situacao.vistoriaStatus]}
           </p>
         )}
-        <p className="m-0 text-xs text-muted">Com a vistoria aprovada, o Pix da adesão aparece aqui e no WhatsApp.</p>
+        <p className="m-0 text-sm leading-relaxed text-muted">
+          Depois das fotos, a equipe da 21Go analisa a vistoria, o que pode levar um tempo. Não precisa ficar nesta
+          tela: quando aprovar, enviamos pelo e-mail e pelo WhatsApp cadastrados o link do Pix da adesão. Os dados de
+          acesso a própria 21Go envia.
+        </p>
       </div>
     )
   }
+  return <AguardandoLink desde={situacao?.documentosEm} />
+}
+
+// Tempo normal para o link sair: o PowerCRM leva uns 4 minutos para passar o cadastro ao CRM da 21Go.
+const ESPERA_LINK_MS = 4 * 60_000
+
+/** Espera do link com contagem regressiva de 4 minutos a partir do envio dos documentos. */
+function AguardandoLink({ desde }: { desde?: string | null }) {
+  const inicio = desde ? new Date(desde).getTime() : null
+  const [agora, setAgora] = useState(() => Date.now())
+  useEffect(() => {
+    const t = setInterval(() => setAgora(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  const restante = inicio ? Math.max(0, inicio + ESPERA_LINK_MS - agora) : ESPERA_LINK_MS
+  const passou = Boolean(inicio) && restante === 0
+  const seg = Math.ceil(restante / 1000)
+  const relogio = `${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}`
+  const progresso = inicio ? Math.min(100, ((ESPERA_LINK_MS - restante) / ESPERA_LINK_MS) * 100) : 0
+  // Leitor de tela: só o minuto, para não anunciar a cada segundo.
+  const minutos = Math.max(1, Math.ceil(seg / 60))
+
   return (
-    <div className="flex max-w-md flex-col items-center gap-3">
+    <div className="flex w-full max-w-md flex-col items-center gap-4">
       <p className="m-0 text-base leading-relaxed text-muted">
-        Recebemos seus documentos. Nossa equipe está gerando o link da vistoria oficial (App Visto). Ele aparece aqui
-        nesta tela e no seu WhatsApp. Com a vistoria aprovada, enviamos o Pix da adesão, que é o último passo.
+        Recebemos seus documentos e estamos gerando o link da vistoria oficial da 21Go.{' '}
+        <strong className="text-navy-800">É normal levar uns 4 minutos.</strong> O link aparece aqui sozinho e também
+        chega no seu WhatsApp e e-mail.
       </p>
-      <p aria-live="polite" className="m-0 inline-flex items-center gap-2 text-sm font-semibold text-navy-800">
-        <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
-        Aguardando o link da vistoria…
-      </p>
+
+      {passou ? (
+        <p aria-live="polite" className="m-0 inline-flex items-center gap-2 text-sm font-semibold text-navy-800">
+          <Loader2 aria-hidden className="h-4 w-4 shrink-0 animate-spin" />
+          Está levando um pouco mais que o normal. Pode aguardar aqui ou fechar: avisamos no WhatsApp e e-mail.
+        </p>
+      ) : (
+        <div className="flex w-full flex-col items-center gap-2">
+          <span aria-hidden className="font-mono text-4xl font-extrabold tabular-nums text-navy-950">
+            {relogio}
+          </span>
+          <div aria-hidden className="h-2 w-full overflow-hidden rounded-full bg-surface-100">
+            <div className="h-full rounded-full bg-go-lime" style={{ width: `${progresso}%` }} />
+          </div>
+          <p aria-live="polite" className="m-0 inline-flex items-center gap-2 text-sm font-semibold text-navy-800">
+            <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
+            <span className="sr-only">Faltam cerca de {minutos} {minutos === 1 ? 'minuto' : 'minutos'}. </span>
+            Gerando o link da vistoria…
+          </p>
+        </div>
+      )}
     </div>
   )
 }

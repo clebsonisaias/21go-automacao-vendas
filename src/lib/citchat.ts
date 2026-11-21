@@ -212,7 +212,7 @@ export async function sendWhatsAppAdesaoConfirmada(params: {
           `👉 ${params.vistoriaUrl}`,
         ]
       : [
-          `🎉 Seu cadastro está completo. Estamos concluindo a sua associação e em seguida você recebe aqui os dados de acesso e as mensalidades. 🤝`,
+          `🎉 Seu cadastro está completo. A 21Go envia os seus dados de acesso por e-mail e WhatsApp. 🤝`,
         ]),
   ].join('\n')
 
@@ -231,7 +231,7 @@ export async function sendWhatsAppAppVisto(params: {
     `${ola(params.nome, true)}, faça agora a vistoria oficial da 21Go no App Visto (fotos do veículo pelo celular, com câmera ao vivo e GPS):`,
     `👉 ${params.url}`,
     ``,
-    `Com a vistoria aprovada, enviamos aqui o Pix da adesão, que é o último passo.`,
+    `Depois das fotos, a equipe da 21Go analisa a vistoria (pode levar um tempo). Quando aprovar, enviamos aqui e no seu e-mail o Pix da adesão, que é o último passo.`,
   ].join('\n')
 
   return sendCitchatMessage(params.telefone, message)
@@ -269,7 +269,7 @@ export async function sendWhatsAppVistoriaAprovada(params: {
     ``,
     `${ola(params.nome, true)}, a vistoria do veículo de placa *${params.placa}* foi aprovada pela nossa equipe.`,
     ``,
-    `Estamos concluindo o seu cadastro como associado. Em seguida você receberá aqui os dados de acesso e as mensalidades. 🤝`,
+    `Estamos concluindo a sua associação. A 21Go envia os seus dados de acesso e as mensalidades. 🤝`,
   ].join('\n')
 
   return sendCitchatMessage(params.telefone, message)

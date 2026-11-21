@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(
     {
       documentos: Boolean(lead.vistoriaData),
+      documentosEm: lead.vistoriaData?.enviadoEm || null,
       appVistoUrl: lead.appVistoUrl || null,
       vistoriaStatus: lead.crmVistoria?.vistoriaStatus || null,
       pagamentoUrl: pixLiberado ? pagamentoPath(lead.ref) : null,
