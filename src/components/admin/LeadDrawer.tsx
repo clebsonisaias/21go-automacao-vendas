@@ -1,0 +1,359 @@
+'use client'
+
+import React, { useEffect, useRef, useState } from 'react'
+import { Bot, CheckCircle2, Copy, ExternalLink, Loader2, MessageCircle, X } from 'lucide-react'
+import type { StoredLead } from '@/lib/db'
+import { brl } from '@/lib/site'
+import { DocumentAiUploader } from '@/components/common/DocumentAiUploader'
+import type { DocumentAiResult } from '@/lib/types'
+import { StatusLabel } from './lead-status'
+import { Tooltip } from './Tooltip'
+
+const SITE = 'https://21go.seg.br'
+
+export function vistoriaUrlFor(lead: StoredLead): string {
+  return `${SITE}/vistoria?ref=${encodeURIComponent(lead.ref || lead.id)}&nome=${encodeURIComponent(
+    lead.nome
+  )}&placa=${encodeURIComponent(lead.placa || '')}&veiculo=${encodeURIComponent(
+    `${lead.vehicle.marca} ${lead.vehicle.modelo}`
+  )}`
+}
+
+// Texto enviado ao cliente pelo WhatsApp (conteúdo da mensagem, não UI).
+export function proposalText(lead: StoredLead): string {
+  return `Olá, ${lead.nome}! Tudo bem? Aqui é o Clebson da 21Go Proteção Veicular. 🚗
+
+Segue a proposta para o seu veículo:
+🚘 *${lead.vehicle.marca} ${lead.vehicle.modelo} (${lead.vehicle.ano})*
+${lead.placa ? `🔢 *Placa:* ${lead.placa}\n` : ''}⭐ *Plano:* ${lead.planoEscolhidoNome}
+💰 *Taxa de ativação:* ${brl(lead.ativacao)}
+💳 *Mensalidade com desconto:* ${brl(lead.mensalidadeFinal)}/mês
+
+🛡️ *Coberturas:*
+• Roubo, furto, colisão e perda total (100% Tabela FIPE)
+• Assistência 24h com guincho
+• Sem perfil de condutor e sem consulta SPC/Serasa
+
+👉 *Para concluir, faça a vistoria digital no link:*
+${vistoriaUrlFor(lead)}
+
+Qualquer dúvida, estou à disposição!`
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[120px_1fr] gap-3 py-2 text-sm">
+      <dt className="text-muted">{label}</dt>
+      <dd className="m-0 min-w-0 break-words text-navy-800">{children}</dd>
+    </div>
+  )
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="border-t border-line px-6 py-4 first:border-t-0">
+      <h3 className="m-0 mb-1 text-xs font-semibold uppercase tracking-wide text-muted">{title}</h3>
+      <dl className="m-0 divide-y divide-line">{children}</dl>
+    </section>
+  )
+}
+
+const btnSecondary =
+  'inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-line bg-white px-3 text-sm font-semibold text-navy-800 transition-colors hover:bg-surface-100 disabled:cursor-not-allowed disabled:text-muted'
+
+export function LeadDrawer({
+  lead,
+  onClose,
+  onApproved,
+  notify,
+}: {
+  lead: StoredLead
+  onClose: () => void
+  onApproved: () => Promise<void> | void
+  notify: (message: string, tone?: 'ok' | 'error') => void
+}) {
+  const panelRef = useRef<HTMLDivElement>(null)
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const [approving, setApproving] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [draft, setDraft] = useState(lead)
+  // onClose em ref: o efeito de foco roda só ao abrir/fechar, não a cada re-render do pai.
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  useEffect(() => setDraft(lead), [lead])
+
+  // Foco: entra no botão fechar, fica preso no painel e volta para quem abriu.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null
+    closeRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onCloseRef.current()
+        return
+      }
+      if (e.key !== 'Tab' || !panelRef.current) return
+      const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+      if (!focusables.length) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+      opener?.focus?.()
+    }
+  }, [])
+
+  const copy = async (text: string, message: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      notify(message)
+    } catch {
+      notify('Não foi possível copiar. Selecione o texto manualmente.', 'error')
+    }
+  }
+
+  const approve = async () => {
+    setApproving(true)
+    try {
+      const res = await fetch('/api/admin/aprovar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ref: lead.ref }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        notify(data.whatsappEnviado ? 'Vistoria aprovada. Cliente avisado no WhatsApp.' : 'Vistoria aprovada. WhatsApp não enviado — avise o cliente.')
+        await onApproved()
+      } else {
+        notify(data?.error || 'Não foi possível aprovar. Tente de novo.', 'error')
+      }
+    } catch {
+      notify('Sem conexão. Tente de novo.', 'error')
+    } finally {
+      setApproving(false)
+    }
+  }
+
+  const generatePitch = async () => {
+    setGenerating(true)
+    try {
+      const res = await fetch('/api/ai/luna', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'pitch', lead }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data.success && data.pitch) await copy(data.pitch, 'Proposta da IA copiada.')
+      else await copy(proposalText(lead), 'IA indisponível. Texto padrão copiado.')
+    } catch {
+      await copy(proposalText(lead), 'IA indisponível. Texto padrão copiado.')
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const onDocument = (result: DocumentAiResult) => {
+    setDraft((prev) => ({
+      ...prev,
+      nome: result.personal?.nome || prev.nome,
+      cpf: result.personal?.cpf || prev.cpf,
+      placa: result.vehicle?.placa || prev.placa,
+    }))
+    notify('Dados lidos do documento. Confira antes de usar.')
+  }
+
+  const assoc = (draft.rawCrm as { associado?: Record<string, string> } | undefined)?.associado
+  const endereco = assoc?.endereco
+    ? [assoc.endereco, assoc.numero, assoc.bairro, assoc.cep ? `CEP ${assoc.cep}` : ''].filter(Boolean).join(', ')
+    : ''
+  const pago = draft.pagamento?.paidAt
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end">
+      <div aria-hidden className="absolute inset-0 bg-navy-deep/50" onClick={onClose} />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lead-drawer-title"
+        className="admin-light relative flex h-full w-full flex-col bg-white shadow-[-8px_0_32px_rgba(7,12,34,0.08)] border-l border-line sm:max-w-[480px]"
+      >
+        <header className="flex items-start justify-between gap-4 border-b border-line px-6 py-4">
+          <div className="min-w-0">
+            <h2 id="lead-drawer-title" className="m-0 truncate text-lg font-semibold text-navy-900">
+              {draft.nome}
+            </h2>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <StatusLabel status={draft.status} />
+              <span className="text-sm text-muted">
+                {new Date(draft.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+              </span>
+            </div>
+          </div>
+          <Tooltip label="Fechar detalhes" kbd="Esc" side="left">
+            <button
+              ref={closeRef}
+              type="button"
+              onClick={onClose}
+              aria-label="Fechar detalhes"
+              aria-keyshortcuts="Escape"
+              className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-100 hover:text-navy-900"
+            >
+              <X aria-hidden className="h-5 w-5" />
+            </button>
+          </Tooltip>
+        </header>
+
+        <div className="flex-1 overflow-y-auto">
+          <Section title="Contato">
+            <Field label="WhatsApp">{draft.whatsapp}</Field>
+            <Field label="CPF">{draft.cpf || '—'}</Field>
+            <Field label="E-mail">{draft.email || '—'}</Field>
+            <Field label="Cidade">{draft.cidade || '—'}</Field>
+            {endereco && <Field label="Endereço">{endereco}</Field>}
+            {assoc?.cnh && <Field label="CNH">{assoc.cnh}</Field>}
+          </Section>
+
+          <Section title="Veículo">
+            <Field label="Modelo">
+              {draft.vehicle.marca} {draft.vehicle.modelo} ({draft.vehicle.ano})
+            </Field>
+            <Field label="Placa">
+              <span className="font-mono tracking-wider">{draft.placa || '—'}</span>
+            </Field>
+            <Field label="FIPE">
+              {brl(draft.vehicle.fipeValue || 0)}
+              <span className="text-muted"> · {draft.vehicle.fipeCode}</span>
+            </Field>
+            {draft.vehicle.cor && <Field label="Cor">{draft.vehicle.cor}</Field>}
+            {draft.vehicle.combustivel && <Field label="Combustível">{draft.vehicle.combustivel}</Field>}
+            {draft.vehicle.chassi && (
+              <Field label="Chassi">
+                <span className="font-mono text-xs">{draft.vehicle.chassi}</span>
+              </Field>
+            )}
+            <Field label="App ou táxi">{draft.veiculoTrabalho ? 'Sim' : 'Não'}</Field>
+          </Section>
+
+          <Section title="Plano e pagamento">
+            <Field label="Plano">{draft.planoEscolhidoNome}</Field>
+            <Field label="Mensalidade">{brl(draft.mensalidadeFinal)}/mês</Field>
+            <Field label="Adesão">{brl(draft.ativacao)}</Field>
+            {draft.pagamento && (
+              <Field label="Pix da adesão">
+                {pago ? (
+                  <span className="inline-flex items-center gap-1.5 text-emerald-700">
+                    <CheckCircle2 aria-hidden className="h-4 w-4" />
+                    Pago em {new Date(pago).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                  </span>
+                ) : (
+                  'Aguardando pagamento'
+                )}
+              </Field>
+            )}
+            {draft.diaVencimento && <Field label="Vencimento">Todo dia {draft.diaVencimento}</Field>}
+            <Field label="Adesivo 21Go">{draft.comAdesivo ? 'Sim' : 'Não'}</Field>
+            {draft.powercrmCode && (
+              <Field label="Código CRM">
+                <span className="font-mono text-xs">{draft.powercrmCode}</span>
+              </Field>
+            )}
+            {draft.checkoutUrl && (
+              <Field label="Cotação Power">
+                <a
+                  href={draft.checkoutUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-semibold text-navy-600 underline-offset-2 hover:underline"
+                >
+                  Abrir checkout
+                  <ExternalLink aria-hidden className="h-3.5 w-3.5" />
+                </a>
+              </Field>
+            )}
+          </Section>
+
+          <Section title="Vistoria e documentos">
+            {draft.vistoriaData ? (
+              <>
+                <Field label="CNH / RG">{draft.vistoriaData.cnhOuRgNome || '—'}</Field>
+                <Field label="CRLV">{draft.vistoriaData.crlvNome || '—'}</Field>
+                <Field label="Residência">{draft.vistoriaData.comprovanteResidenciaNome || '—'}</Field>
+                <Field label="Fotos">{draft.vistoriaData.totalFotos || 0}</Field>
+                {draft.vistoriaData.enviadoEm && (
+                  <Field label="Enviada em">
+                    {new Date(draft.vistoriaData.enviadoEm).toLocaleString('pt-BR', {
+                      dateStyle: 'short',
+                      timeStyle: 'short',
+                    })}
+                  </Field>
+                )}
+              </>
+            ) : (
+              <p className="m-0 py-2 text-sm text-muted">O cliente ainda não enviou a vistoria.</p>
+            )}
+            <div className="pt-3">
+              <DocumentAiUploader label="Ler CNH ou CRLV com IA" onExtracted={onDocument} />
+            </div>
+          </Section>
+        </div>
+
+        <footer className="flex flex-col gap-2 border-t border-line bg-surface-50 px-6 py-4">
+          {draft.status === 'vistoria_enviada' && (
+            <button
+              type="button"
+              onClick={approve}
+              disabled={approving}
+              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-navy-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-navy-800 disabled:cursor-wait disabled:bg-navy-700"
+            >
+              {approving ? (
+                <Loader2 aria-hidden className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle2 aria-hidden className="h-4 w-4" />
+              )}
+              {approving ? 'Aprovando…' : 'Aprovar vistoria e avisar cliente'}
+            </button>
+          )}
+          <a
+            href={`https://wa.me/${draft.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(proposalText(draft))}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-go-whatsapp-dark px-4 text-sm font-semibold text-white no-underline transition-colors hover:bg-[#0f7a3c]"
+          >
+            <MessageCircle aria-hidden className="h-4 w-4" />
+            Enviar proposta no WhatsApp
+          </a>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" className={btnSecondary} onClick={() => copy(vistoriaUrlFor(draft), 'Link da vistoria copiado.')}>
+              <Copy aria-hidden className="h-4 w-4" />
+              Copiar link vistoria
+            </button>
+            <button type="button" className={btnSecondary} onClick={() => copy(proposalText(draft), 'Proposta copiada.')}>
+              <Copy aria-hidden className="h-4 w-4" />
+              Copiar proposta
+            </button>
+            <button type="button" className={`${btnSecondary} col-span-2`} onClick={generatePitch} disabled={generating}>
+              {generating ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Bot aria-hidden className="h-4 w-4" />}
+              {generating ? 'Gerando…' : 'Gerar proposta com IA'}
+            </button>
+          </div>
+        </footer>
+      </div>
+    </div>
+  )
+}

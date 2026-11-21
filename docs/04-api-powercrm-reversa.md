@@ -26,27 +26,37 @@ Content-Type: application/json; charset=UTF-8
 Accept: application/json
 ```
 
-### Payload Oficial Mapeado:
+### Payload oficial (conferido com o script do formulário em 2026-11-21)
+
+Fonte: `https://resources.powercrm.com.br/assets/external/js/script.pwrcrm.js` (usado pelo cotacao.me).
+Implementação: `src/lib/powercrm-lead.ts`.
 
 ```json
 {
-  "formCode": "4QwWw1QV",
-  "companyUserCode": "vrXbXyyq",
+  "companyHash": "<lido de GET /frmByCd?code=FORM_CODE>",
+  "formCode": "<POWERCRM_FORM_CODE>",
+  "leadSource": "<leadSubSourceId ou leadSourceId do formulário>",
+  "pipelineColumn": "<pipelineColumnId do formulário>",
+  "companyUserCode": "<POWERCRM_CONSULTANT_CODE>",
   "clientName": "Nome do Cliente",
-  "clientTelephone": "84999999999",
+  "clientPhone": "(84) 99999-9999",
   "clientEmail": "cliente@email.com",
-  "clientCpf": "123.456.789-00",
-  "vehicleType": 1,
-  "brand": "FIAT",
-  "model": "MOBI LIKE 1.0 Fire Flex 5p.",
-  "modelYear": 2021,
-  "plate": "ABC1D23",
-  "state": "20",
-  "city": "Natal",
-  "workVehicle": false,
-  "observation": "Cotação gerada via plataforma 21go.seg.br | Plano VIP | Valor FIPE: R$ 48.500,00"
+  "clientCity": "3779",
+  "vehiclePlate": "ABC1D23",
+  "vehicleType": "1",
+  "vehicleBranch": "27",
+  "vehicleModel": "917",
+  "vehicleYear": "2022",
+  "vehicleIsWork": false,
+  "observation": "Plano, mensalidade, adesão, FIPE e CPF (não há campo próprio)",
+  "utmParameters": {}
 }
 ```
+
+- **`companyHash` é obrigatório.** Sem ele o endpoint responde 400/500.
+- `vehicleBranch`, `vehicleModel` e `clientCity` são **IDs** do Power CRM, não nomes (Fiat = 27, Argo 1.0 = 917, Parnamirim = 3779). Marca e modelo vêm de `powercrmMeta` na cotação; cidade de `utilities.powercrm.com.br/state/stt` e `/city/ct?st=`.
+- Só é sucesso quando a resposta traz `"success": true`.
+- Cada POST cria uma simulação real no CRM: não testar em produção.
 
 ### Tipos de Veículo (`vehicleType`):
 - `1`: Carros / Passeio / Utilitários leves

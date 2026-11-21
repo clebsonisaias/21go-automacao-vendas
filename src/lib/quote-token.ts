@@ -1,5 +1,5 @@
 import crypto from 'node:crypto'
-import { PlanPricing } from './types'
+import { PlanPricing, VehicleInfo } from './types'
 
 // Token assinado devolvido pela cotação. O navegador o reenvia no cadastro, e o servidor
 // usa os valores que ELE mesmo calculou (taxa de adesão, mensalidades). Sem isso, qualquer
@@ -16,10 +16,16 @@ interface QuotePlanSnapshot {
   n: string
 }
 
+type PowercrmMeta = { brandId: number | string; modelId: number | string; yearId: number | string }
+
 interface QuoteTokenPayload {
   exp: number
   fipe: string
   plans: Record<string, QuotePlanSnapshot>
+  /** Dados oficiais do veículo, como devolvidos pelo motor de preço (Power CRM / FIPE). */
+  veh?: VehicleInfo
+  /** IDs do Power CRM (marca/modelo/ano), usados no envio do lead. */
+  meta?: PowercrmMeta
 }
 
 // Reserva: se nenhuma variável foi definida, usa um segredo aleatório gerado na subida do servidor.
@@ -41,11 +47,21 @@ function sign(data: string, key: string): string {
   return crypto.createHmac('sha256', key).update(data).digest('base64url')
 }
 
-export function createQuoteToken(fipeCode: string, plans: PlanPricing[]): string | null {
+export function createQuoteToken(vehicle: VehicleInfo, plans: PlanPricing[], meta?: PowercrmMeta): string | null {
   const key = secret()
   const payload: QuoteTokenPayload = {
     exp: Date.now() + TTL_MS,
-    fipe: fipeCode,
+    fipe: vehicle.fipeCode,
+    veh: {
+      marca: vehicle.marca,
+      modelo: vehicle.modelo,
+      ano: vehicle.ano,
+      fipeValue: vehicle.fipeValue,
+      fipeCode: vehicle.fipeCode,
+      categoria: vehicle.categoria,
+      combustivel: vehicle.combustivel,
+    },
+    meta,
     plans: Object.fromEntries(
       plans.map((p) => [
         p.id,
@@ -59,6 +75,8 @@ export function createQuoteToken(fipeCode: string, plans: PlanPricing[]): string
 
 export interface VerifiedQuote {
   fipe: string
+  vehicle?: VehicleInfo
+  meta?: PowercrmMeta
   plan: { id: string; name: string; monthly: number; pontualidade: number; adesivo: number; ativacao: number }
 }
 
@@ -79,6 +97,8 @@ export function verifyQuoteToken(token: unknown, planId: string): VerifiedQuote 
     if (!plan) return null
     return {
       fipe: payload.fipe,
+      vehicle: payload.veh,
+      meta: payload.meta,
       plan: { id: planId, name: plan.n, monthly: plan.m, pontualidade: plan.p, adesivo: plan.a, ativacao: plan.ad },
     }
   } catch {

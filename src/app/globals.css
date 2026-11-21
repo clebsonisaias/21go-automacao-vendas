@@ -45,3 +45,10 @@ a:focus-visible {
 ::-webkit-scrollbar-thumb:hover {
   background: #8b96b2;
 }
+
+/* Painel admin (fundo claro): foco em azul-marinho para contraste AA (>= 3:1) sobre branco.
+   O laranja padrão continua nas áreas escuras (cabeçalho). */
+.admin-light :focus-visible {
+  outline: 2px solid #22337a;
+  outline-offset: 2px;
+}
