@@ -31,9 +31,24 @@ function ola(nome?: string, negrito = false): string {
   return negrito ? `Olá *${n}*` : `Olá ${n}`
 }
 
+/**
+ * Template da Meta para quando o cliente está fora da janela de 24h (cliente novo quase sempre está).
+ * O gateway do AtendeHub manda o texto livre dentro da janela e, fora dela, este template com as
+ * variáveis; sem `template`, usa o template de reserva da CITmax com o texto inteiro numa variável.
+ * Nomes e variáveis: docs/CONTEXTO_IA.md (templates `citmax_21go_*`).
+ */
+export interface TemplateWa {
+  template: string
+  params: string[]
+}
+
+/** Valor em reais como vai no template: 269,53 */
+const reais = (v: number) => v.toFixed(2).replace('.', ',')
+
 export async function sendCitchatMessage(
   recipientRaw: string,
-  body: string
+  body: string,
+  tpl?: TemplateWa
 ): Promise<{ success: boolean; data?: any; error?: string }> {
   let recipient = recipientRaw.replace(/\D/g, '')
   if (!recipient) return { success: false, error: 'Telefone vazio' }
@@ -46,16 +61,21 @@ export async function sendCitchatMessage(
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recipient, body }),
+        body: JSON.stringify({ recipient, body, ...(tpl ? { template: tpl.template, params: tpl.params } : {}) }),
+        signal: AbortSignal.timeout(30000),
       })
 
       if (res.ok) {
-        const data = await res.json()
-        console.log('[CITchat Gateway] Mensagem enviada com sucesso:', data)
+        const data = await res.json().catch(() => ({}))
+        // Só o resultado: nada de telefone nem texto no log.
+        console.log(`[CITchat Gateway] ${data?.status || 'enviado'}${tpl ? ` (${tpl.template})` : ''}`)
         return { success: true, data }
       }
-      const errTxt = await res.text()
-      console.warn('[CITchat Gateway] Falha no envio via gateway:', res.status, errTxt)
+      const err = await res.json().catch(() => ({}))
+      const motivo = typeof err?.error === 'string' ? err.error.slice(0, 200) : `HTTP ${res.status}`
+      console.warn(`[CITchat Gateway] não enviou${tpl ? ` (${tpl.template})` : ''}: ${res.status} ${motivo}`)
+      // 4xx é resposta definitiva do gateway (ex.: fora da janela sem template): não insiste por outro caminho.
+      if (res.status >= 400 && res.status < 500) return { success: false, error: motivo }
     } catch (e: any) {
       console.error('[CITchat Gateway] Erro de rede no gateway:', e.message)
     }
@@ -160,7 +180,21 @@ export async function sendWhatsAppQuoteMessage(
     `Qualquer dúvida, é só responder esta mensagem diretamente aqui no WhatsApp! 🤝`,
   ].join('\n')
 
-  return sendCitchatMessage(phone, message)
+  // Template só no fluxo normal (documentos primeiro); os caminhos antigos caem no template de reserva.
+  const tpl: TemplateWa | undefined =
+    !pagamentoUrl && !checkoutUrl
+      ? {
+          template: 'citmax_21go_documentos',
+          params: [
+            `${lead.vehicle.marca} ${lead.vehicle.modelo} ${lead.vehicle.ano}`,
+            lead.planoEscolhidoNome,
+            reais(lead.mensalidadeFinal),
+            vistoriaUrl,
+          ],
+        }
+      : undefined
+
+  return sendCitchatMessage(phone, message, tpl)
 }
 
 /**
@@ -189,7 +223,7 @@ export async function sendWhatsAppVistoriaConfirmation(params: {
     `Obrigado por escolher a *CITmax & 21Go*!`,
   ].join('\n')
 
-  return sendCitchatMessage(phone, message)
+  return sendCitchatMessage(phone, message, { template: 'citmax_21go_docs_recebidos', params: [params.placa] })
 }
 
 /**
@@ -216,7 +250,11 @@ export async function sendWhatsAppAdesaoConfirmada(params: {
         ]),
   ].join('\n')
 
-  return sendCitchatMessage(params.telefone, message)
+  return sendCitchatMessage(
+    params.telefone,
+    message,
+    params.vistoriaUrl ? undefined : { template: 'citmax_21go_pagamento', params: [reais(params.valor)] }
+  )
 }
 
 /** Envia ao cliente o link do App Visto (vistoria oficial da 21Go, gerado no CRM). */
@@ -234,7 +272,7 @@ export async function sendWhatsAppAppVisto(params: {
     `Depois das fotos, a equipe da 21Go analisa a vistoria (pode levar um tempo). Quando aprovar, enviamos aqui e no seu e-mail o Pix da adesão, que é o último passo.`,
   ].join('\n')
 
-  return sendCitchatMessage(params.telefone, message)
+  return sendCitchatMessage(params.telefone, message, { template: 'citmax_21go_vistoria', params: [params.url] })
 }
 
 /** Vistoria aprovada: envia o link do Pix da adesão (último passo). */
@@ -255,7 +293,10 @@ export async function sendWhatsAppAdesaoLiberada(params: {
     `👉 ${params.pagamentoUrl}`,
   ].join('\n')
 
-  return sendCitchatMessage(params.telefone, message)
+  return sendCitchatMessage(params.telefone, message, {
+    template: 'citmax_21go_pix_adesao',
+    params: [params.placa, reais(params.valor), params.pagamentoUrl],
+  })
 }
 
 /** Avisa o cliente que a vistoria foi aprovada pela equipe. */
