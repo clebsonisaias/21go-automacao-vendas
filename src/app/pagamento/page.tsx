@@ -188,7 +188,7 @@ function PagamentoContent() {
             </span>
             <h1 className="m-0 text-[26px] font-extrabold tracking-[-0.8px]">Pagamento confirmado!</h1>
             <p className="m-0 max-w-sm text-base text-muted">
-              Seu cadastro está completo. Nossa equipe conclui a sua associação e avisa você pelo WhatsApp.
+              Seu cadastro está completo. A 21Go envia os seus dados de acesso por e-mail e WhatsApp.
             </p>
             <a
               href="/"

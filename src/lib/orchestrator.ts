@@ -2,6 +2,7 @@ import { StoredLead, getLeadsAwaitingPayment, updateLead } from './db'
 import { MpOrder, applyOrderToPagamento, getOrder, isOrderPaid, orderAmountMatches } from './mercadopago'
 import { sendTelegramNotification, esc } from './telegram'
 import { sendWhatsAppAdesaoConfirmada } from './citchat'
+import { sendEmail } from './email'
 import { absolute, vistoriaPath } from './links'
 
 // Orquestra o funil após a cotação:
@@ -62,6 +63,18 @@ async function onAdesaoPaga(lead: StoredLead): Promise<void> {
 
 ${vistoriaFeita ? '➡️ Cadastro completo (documentos, vistoria e adesão). Cadastre no Hinova SGA para gerar as mensalidades.' : '➡️ Os documentos ainda não foram enviados.'}`)
 
+  if (vistoriaFeita) {
+    await sendEmail({
+      para: lead.email,
+      nome: lead.nome,
+      assunto: 'Pagamento confirmado: cadastro completo',
+      titulo: 'Pagamento confirmado!',
+      paragrafos: [
+        `Recebemos o Pix da adesão (R$ ${(lead.pagamento?.valor ?? lead.ativacao).toFixed(2).replace('.', ',')}). Obrigado!`,
+        'Seu cadastro está completo. A 21Go envia os seus dados de acesso por e-mail e WhatsApp.',
+      ],
+    })
+  }
   const sent = await sendWhatsAppAdesaoConfirmada({
     telefone: lead.whatsapp,
     nome: lead.nome,
