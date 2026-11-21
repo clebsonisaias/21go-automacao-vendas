@@ -2,7 +2,7 @@ import { StoredLead, findLeadByRef, getStoredLeads, updateLead } from './db'
 import { sendWhatsAppAppVisto } from './citchat'
 import { esc, sendTelegramNotification } from './telegram'
 import { readVistoriaFile } from './vistoria-files'
-import { moverCard, getCardIdFromNegociacao } from './crm-phases'
+import { CRM_PHASES, CrmPhase, moverCard, getCardIdFromNegociacao } from './crm-phases'
 import { aprovarVistoria } from './vistoria-aprovacao'
 import sharp from 'sharp'
 
@@ -140,7 +140,9 @@ async function findNegociacao(lead: StoredLead): Promise<{ negId: string; cotaca
     .filter((x): x is { n: Neg; cot: { id: string } } => Boolean(x.cot))
     .sort((a, b) => new Date(b.n.createdAt || 0).getTime() - new Date(a.n.createdAt || 0).getTime())
   const hit = candidatas[0]
-  return hit ? { negId: hit.n.id, cotacaoId: hit.cot.id } : null
+  if (hit) return { negId: hit.n.id, cotacaoId: hit.cot.id }
+  // O nome do cadastro pode ter vindo da CNH enquanto o CRM ainda tem o nome provisório: tenta pelo WhatsApp.
+  return findPorWhatsapp(lead, list, placa)
 }
 
 async function ensureRequisitos(lead: StoredLead, negId: string, cotacaoId: string): Promise<void> {
@@ -173,6 +175,36 @@ async function ensureRequisitos(lead: StoredLead, negId: string, cotacaoId: stri
 }
 
 const DOC_TIPOS = { cnhOuRg: 'cnh', crlv: 'crlv', comprovanteResidencia: 'comprovante' } as const
+
+// Onde o documento e o card discordam, vale o documento, cada um só no que é dele:
+// pessoa da CNH/RG, endereço do comprovante, carro do CRLV (o carro pode estar no nome de terceiro).
+const CAMPOS_PESSOA = new Set(['nome', 'cpf', 'rg', 'rgOrgaoExpedidor', 'rgDataExpedicao', 'cnh', 'cnhCategoria', 'cnhPrimeiraHab', 'cnhValidade', 'dataNascimento', 'sexo', 'nomeMae', 'nomePai'])
+const CAMPOS_ENDERECO = new Set(['cep', 'endereco', 'numero', 'complemento', 'bairro', 'uf', 'cidade', 'estadoPowerId', 'cidadeId'])
+const CAMPOS_CONTATO = new Set(['telefone', 'telefone2', 'telefoneResidencial', 'telefoneComercial', 'email', 'whatsapp'])
+
+function campoDoDocumento(tipo: string, campo: string): boolean {
+  if (CAMPOS_CONTATO.has(campo)) return false
+  if (tipo === 'cnh') return CAMPOS_PESSOA.has(campo)
+  if (tipo === 'comprovante') return CAMPOS_ENDERECO.has(campo)
+  if (tipo === 'crlv') return !CAMPOS_PESSOA.has(campo) && !CAMPOS_ENDERECO.has(campo)
+  return false
+}
+
+type Linha = { campo?: string; situacao?: string; doDocumento?: unknown }
+
+/** Resolve as divergências da leitura a favor do documento (só os campos que aquele documento pode dizer). */
+async function aplicarDocumento(negId: string, cotacaoId: string, tipo: string, linhas: Linha[]): Promise<string[]> {
+  const escolhas: Record<string, unknown> = {}
+  for (const l of linhas) {
+    if (l.situacao !== 'diverge' || !l.campo || l.doDocumento == null || l.doDocumento === '') continue
+    if (campoDoDocumento(tipo, l.campo)) escolhas[l.campo] = l.doDocumento
+  }
+  const campos = Object.keys(escolhas)
+  if (!campos.length) return []
+  const r = await crm<any>('POST', `/documentos-ia/negociacao/${negId}/aplicar`, { escolhas, cotacaoId })
+  if (r.status >= 300) throw new Error(errMsg(r.data, `não aplicou os dados do documento (${tipo})`))
+  return campos
+}
 
 async function prepararArquivo(buf: Buffer, ext: string, mime: string): Promise<{ buf: Buffer; mime: string; ext: string } | null> {
   if (ext === 'pdf') return { buf, mime, ext }
@@ -213,6 +245,12 @@ async function enviarDocumentos(lead: StoredLead, negId: string, cotacaoId: stri
       avisos.push(`${slot}: ${errMsg(r.data, `HTTP ${r.status}`)}`)
       continue
     }
+    try {
+      const trocados = await aplicarDocumento(negId, cotacaoId, DOC_TIPOS[slot], r.data?.leitura?.linhas || [])
+      if (trocados.length) console.log(`[Vistoria CRM] ${lead.ref}: ${DOC_TIPOS[slot]} corrigiu no CRM: ${trocados.join(', ')}`)
+    } catch (err) {
+      avisos.push(`${slot}: ${err instanceof Error ? err.message : err}`)
+    }
     updateLead(lead.ref, (l) => {
       const c = l.crmVistoria || { tentativas: 0 }
       c.docs = Array.from(new Set([...(c.docs || []), slot]))
@@ -252,6 +290,22 @@ async function ensureCpfNoCard(lead: StoredLead, negId: string): Promise<void> {
   if (r.status >= 300) throw new Error(errMsg(r.data, `não salvou o CPF`))
 }
 
+/** Traz do card do CRM (já preenchido pela leitura dos documentos) o nome, o CPF e a cidade do titular. */
+async function trazerDadosDoCard(lead: StoredLead, negId: string): Promise<void> {
+  const neg = await crm<any>('GET', `/negociacoes/${negId}`)
+  if (!neg.data?.cardId) return
+  const card = await crm<any>('GET', `/pipes/cards/${neg.data.cardId}`)
+  const a = (card.data?.associado || {}) as Record<string, unknown>
+  const nome = typeof a.nome === 'string' && a.nome.trim() && !/^cliente 21go/i.test(a.nome) ? a.nome.trim() : ''
+  const cpf = String(a.cpf || '').replace(/\D/g, '')
+  const cidade = typeof a.cidade === 'string' ? a.cidade.trim() : ''
+  updateLead(lead.ref, (l) => {
+    if (nome) l.nome = nome
+    if (cpf.length === 11 && !l.cpf) l.cpf = cpf
+    if (cidade && !l.cidade) l.cidade = cidade
+  })
+}
+
 type Estado = { url?: string; aguardandoLink?: boolean; filaEstado?: string; ultimoErro?: string } | null
 
 async function estadoVistoria(negId: string, cotacaoId: string): Promise<Estado> {
@@ -263,17 +317,24 @@ async function estadoVistoria(negId: string, cotacaoId: string): Promise<Estado>
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-/** Move o card para a fase Vistorias no Kanban */
-async function moverParaVistorias(negId: string): Promise<void> {
+const ORDEM_FASES: CrmPhase[] = ['COTACOES_RECEBIDAS', 'EM_NEGOCIACAO', 'VISTORIAS', 'LIBERADAS_CADASTRO', 'VENDAS_CONCRETIZADAS']
+
+/** Avança o card no Kanban até a fase pedida; nunca volta (a equipe pode ter movido para a frente). */
+export async function avancarCard(negId: string, fase: CrmPhase): Promise<void> {
   try {
     const cardId = await getCardIdFromNegociacao(negId)
-    if (cardId) {
-      await moverCard(cardId, 'VISTORIAS')
-      console.log(`[Vistoria CRM] Card ${cardId} movido para Vistorias`)
-    }
+    if (!cardId) return
+    const card = await crm<any>('GET', `/pipes/cards/${cardId}`)
+    const atual = ORDEM_FASES.findIndex((f) => CRM_PHASES[f] === card.data?.currentPhaseId)
+    if (atual >= ORDEM_FASES.indexOf(fase)) return
+    if (await moverCard(cardId, fase)) console.log(`[Vistoria CRM] card ${cardId} → ${fase}`)
   } catch (err) {
-    console.warn('[Vistoria CRM] Não conseguiu mover para Vistorias:', err)
+    console.warn('[Vistoria CRM] não consegui mover o card:', err instanceof Error ? err.message : err)
   }
+}
+
+async function moverParaVistorias(negId: string): Promise<void> {
+  await avancarCard(negId, 'VISTORIAS')
 }
 
 async function gerarUmaVez(lead: StoredLead): Promise<string | null> {
@@ -290,8 +351,11 @@ async function gerarUmaVez(lead: StoredLead): Promise<string | null> {
   let v = await estadoVistoria(negId, cotacaoId)
   if (!v) {
     await enviarDocumentos(findLeadByRef(lead.ref) || lead, negId, cotacaoId)
+    await trazerDadosDoCard(lead, negId).catch(() => undefined)
     await ensureRequisitos(lead, negId, cotacaoId)
-    await ensureCpfNoCard(lead, negId)
+    await ensureCpfNoCard(findLeadByRef(lead.ref) || lead, negId)
+    // Dados completos: card avança para "Em negociação" antes de gerar o link.
+    await avancarCard(negId, 'EM_NEGOCIACAO')
     const r = await crm<any>('POST', `/vistoria-propria/${negId}`, { cotacaoId, zeroKm: false })
     if (r.status >= 300) throw new Error(errMsg(r.data, `CRM não gerou a vistoria`))
     v = r.data?.vistoria || r.data || null

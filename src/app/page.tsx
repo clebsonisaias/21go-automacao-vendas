@@ -272,11 +272,8 @@ export default function HomePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nome,
-          cpf,
           whatsapp,
           email,
-          cidade,
           veiculoTrabalho,
           placa: placa || quoteResult.vehicle.placa,
           planoEscolhidoId: selectedPlan.id,
@@ -859,35 +856,11 @@ export default function HomePage() {
                 </dl>
 
                 <form onSubmit={handleSubmitLead} className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label htmlFor="lead-nome" className={labelCls}>Nome completo do titular</label>
-                    <input
-                      id="lead-nome"
-                      type="text"
-                      required
-                      autoComplete="name"
-                      value={nome}
-                      onChange={(e) => setNome(e.target.value)}
-                      placeholder="Ex.: Carlos Silva"
-                      className={inputCls}
-                    />
-                  </div>
+                  <p className="m-0 text-sm text-muted">
+                    Só precisamos do seu contato. Nome, CPF e endereço saem dos documentos que você envia no próximo passo.
+                  </p>
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="flex flex-col gap-1.5">
-                      <label htmlFor="lead-cpf" className={labelCls}>CPF do titular</label>
-                      <input
-                        id="lead-cpf"
-                        type="text"
-                        inputMode="numeric"
-                        required
-                        maxLength={14}
-                        value={cpf}
-                        onChange={(e) => handleCpfChange(e.target.value)}
-                        placeholder="000.000.000-00"
-                        className={inputCls}
-                      />
-                    </div>
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="lead-whatsapp" className={labelCls}>WhatsApp com DDD</label>
                       <input
@@ -901,9 +874,6 @@ export default function HomePage() {
                         className={inputCls}
                       />
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="lead-email" className={labelCls}>E-mail</label>
                       <input
@@ -914,18 +884,6 @@ export default function HomePage() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="voce@exemplo.com"
-                        className={inputCls}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label htmlFor="lead-cidade" className={labelCls}>Cidade</label>
-                      <input
-                        id="lead-cidade"
-                        type="text"
-                        required
-                        value={cidade}
-                        onChange={(e) => setCidade(e.target.value)}
-                        placeholder="Ex.: Rio de Janeiro"
                         className={inputCls}
                       />
                     </div>

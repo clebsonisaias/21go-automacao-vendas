@@ -489,7 +489,7 @@ export function LeadsView() {
                         }}
                         className="rounded text-left font-semibold text-navy-600 underline-offset-2 group-hover:underline"
                       >
-                        {lead.nome}
+                        {lead.nome || <span className="text-muted">Aguardando documentos</span>}
                       </button>
                       <div className="text-xs text-muted">{lead.whatsapp}</div>
                     </td>
