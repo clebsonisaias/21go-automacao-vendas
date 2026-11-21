@@ -348,8 +348,15 @@ export function LeadDrawer({
             )}
             <form onSubmit={sendAppVisto} className="flex flex-col gap-2 pt-3">
               <label htmlFor="app-visto-url" className="text-sm font-medium text-navy-900">
-                Link do App Visto (gerado no CRM)
+                Link da vistoria
               </label>
+              <p className="m-0 text-xs text-muted">
+                {draft.appVistoUrl
+                  ? 'Link já entregue ao cliente.'
+                  : draft.crmVistoria?.ultimoErro
+                    ? `O site está tentando gerar sozinho no CRM 21Go (${draft.crmVistoria.tentativas} tentativas). Último motivo: ${draft.crmVistoria.ultimoErro}. Se preferir, gere no CRM e cole aqui.`
+                    : 'O site gera sozinho no CRM 21Go depois dos documentos. Só cole aqui se precisar mandar outro link.'}
+              </p>
               <input
                 id="app-visto-url"
                 type="url"

@@ -5,5 +5,6 @@ export async function register() {
     const node = await import('./instrumentation-node')
     if (process.env.MP_ACCESS_TOKEN) node.startPaymentReconciler()
     if (process.env.IG_USER_ID && process.env.IG_ACCESS_TOKEN) node.startSocialScheduler()
+    if (process.env.CRM_EMAIL && process.env.CRM_PASSWORD) node.startVistoriaLinkScheduler()
   }
 }
