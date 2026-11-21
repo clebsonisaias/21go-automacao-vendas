@@ -83,3 +83,27 @@ flowchart TD
 
 - Nenhuma chave de API ou credencial confidencial é versionada no repositório.
 - A comunicação entre o backend e os provedores utiliza variáveis de ambiente seguras (`.env`).
+
+---
+
+## 6. Pagamento da adesão via Pix (Mercado Pago)
+
+Fluxo: cotação → cadastro → **`/pagamento`** (Pix) → confirmação automática → link da vistoria por WhatsApp → vistoria → aprovação no `/admin`.
+
+- **Cobrança:** Orders API (`POST /v1/orders`, Pix). Código em `src/lib/mercadopago.ts`.
+- **Valor confiável:** a cotação devolve um token assinado (`QUOTE_SIGNING_SECRET`); no cadastro o servidor usa a adesão que ele mesmo calculou e ignora o valor enviado pelo navegador.
+- **Confirmação (3 camadas, todas idempotentes):** webhook `order` assinado (`/api/webhooks/mercadopago`), polling da página `/pagamento` e um reconciliador a cada 60 s (`src/instrumentation-node.ts`).
+- **Vistoria bloqueada até o Pix ser pago** (`402` na API e redirecionamento na página).
+
+### Configuração
+1. Em *Suas integrações* do Mercado Pago, copie o **Access Token** → `MP_ACCESS_TOKEN`.
+2. Em *Webhooks*, cadastre `https://SEU-DOMINIO/api/webhooks/mercadopago` com o evento **Order (Mercado Pago)** e copie a **assinatura secreta** → `MP_WEBHOOK_SECRET`.
+   Se a mesma aplicação já aponta o webhook para outro site, as notificações não chegam aqui — o polling/reconciliador cobre isso, mas o ideal é uma aplicação separada.
+3. Defina `QUOTE_SIGNING_SECRET`, `SESSION_SECRET` e `ADMIN_PASSWORD` (`openssl rand -hex 32`). Sem `ADMIN_PASSWORD` o painel fica bloqueado.
+4. Monte um volume persistente em `/app/data` (cadastros em `leads.json`) e defina `NEXT_PUBLIC_APP_URL`.
+
+Sem `MP_ACCESS_TOKEN` o site volta ao comportamento anterior (checkout do Power CRM, sem bloqueio de vistoria).
+Todas as variáveis estão em [`.env.example`](./.env.example).
+
+### Etapas que continuam manuais
+Gerar vistoria dentro do CRM da franqueadora e "Enviar ao Hinova SGA" dependem de endpoints internos do CRM 21Go (sem API oficial). O Telegram avisa cada marco e o `/admin` mostra o próximo passo.

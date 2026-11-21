@@ -6,20 +6,20 @@ export const config = {
   matcher: ['/admin', '/admin/:path*', '/api/admin/:path*'],
 }
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname
 
   // Permitir acesso livre à tela de login e à API de login
   if (pathname === '/admin/login' || pathname === '/api/admin/login') {
     // Se o usuário já estiver autenticado e tentar acessar /admin/login, redireciona para /admin
-    if (pathname === '/admin/login' && isRequestAuthenticated(req)) {
+    if (pathname === '/admin/login' && (await isRequestAuthenticated(req))) {
       return NextResponse.redirect(new URL('/admin', req.url))
     }
     return NextResponse.next()
   }
 
   // Verifica se está autenticado
-  const authenticated = isRequestAuthenticated(req)
+  const authenticated = await isRequestAuthenticated(req)
 
   if (!authenticated) {
     if (pathname.startsWith('/api/admin')) {

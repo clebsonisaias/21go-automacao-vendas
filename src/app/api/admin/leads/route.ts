@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
   // Defesa em profundidade: a rota se protege mesmo que o middleware seja ignorado.
-  const blocked = checkAdminAuth(req)
+  const blocked = await checkAdminAuth(req)
   if (blocked) return blocked
 
   try {

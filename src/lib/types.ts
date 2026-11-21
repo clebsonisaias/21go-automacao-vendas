@@ -37,6 +37,8 @@ export interface QuoteCalculationResult {
     percentualAdesivo: number
     percentualPontualidade: number
   }
+  /** Assinado pelo servidor; reenviado no cadastro para o servidor fixar os valores cobrados. */
+  quoteToken?: string
   error?: string
 }
 
@@ -56,6 +58,7 @@ export interface LeadSubmissionPayload {
   ativacao: number
   comAdesivo: boolean
   vehicle: VehicleInfo
+  quoteToken?: string
   powercrmMeta?: {
     brandId: number | string
     modelId: number | string

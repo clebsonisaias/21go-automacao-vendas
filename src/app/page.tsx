@@ -75,6 +75,7 @@ export default function HomePage() {
   const [isSubmittingLead, setIsSubmittingLead] = useState(false)
   const [submitSuccessData, setSubmitSuccessData] = useState<{
     vistoriaUrl: string
+    pagamentoUrl?: string
     quotationCode?: string
     clientPhone?: string
     checkoutUrl?: string
@@ -286,6 +287,7 @@ export default function HomePage() {
           comAdesivo,
           vehicle: quoteResult.vehicle,
           powercrmMeta: quoteResult.powercrmMeta,
+          quoteToken: quoteResult.quoteToken,
         }),
       })
 
@@ -293,6 +295,7 @@ export default function HomePage() {
       if (data.success) {
         setSubmitSuccessData({
           vistoriaUrl: data.vistoriaUrl || '/vistoria',
+          pagamentoUrl: data.pagamentoUrl,
           quotationCode: data.powerCrmQuotationCode,
           clientPhone: whatsapp,
           checkoutUrl: data.checkoutUrl,
@@ -770,7 +773,21 @@ export default function HomePage() {
                   ))}
                 </ol>
 
-                {submitSuccessData.checkoutUrl ? (
+                {submitSuccessData.pagamentoUrl ? (
+                  <div className="flex w-full flex-col gap-2 mt-2">
+                    <button
+                      type="button"
+                      onClick={() => router.push(submitSuccessData.pagamentoUrl!)}
+                      className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 text-base font-extrabold text-white shadow-lg transition hover:bg-emerald-700 hover:shadow-xl"
+                    >
+                      <span>💳 Pagar adesão via Pix e ativar</span>
+                    </button>
+                    <p className="m-0 mt-1 text-xs text-muted">
+                      Também enviamos o link de pagamento para o seu WhatsApp{' '}
+                      <strong>{submitSuccessData.clientPhone}</strong>. Após o Pix, a vistoria é liberada automaticamente.
+                    </p>
+                  </div>
+                ) : submitSuccessData.checkoutUrl ? (
                   <div className="flex w-full flex-col gap-2 mt-2">
                     <a
                       href={submitSuccessData.checkoutUrl}

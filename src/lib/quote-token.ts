@@ -1,0 +1,83 @@
+import crypto from 'node:crypto'
+import { PlanPricing } from './types'
+
+// Token assinado devolvido pela cotação. O navegador o reenvia no cadastro, e o servidor
+// usa os valores que ELE mesmo calculou (taxa de adesão, mensalidades). Sem isso, qualquer
+// pessoa poderia editar o JSON e pagar R$ 0,01 de adesão pelo Pix.
+
+const TTL_MS = 2 * 60 * 60 * 1000
+
+interface QuotePlanSnapshot {
+  /** monthly, mensalidadeComPontualidade, mensalidadeComAdesivo, ativacao */
+  m: number
+  p: number
+  a: number
+  ad: number
+  n: string
+}
+
+interface QuoteTokenPayload {
+  exp: number
+  fipe: string
+  plans: Record<string, QuotePlanSnapshot>
+}
+
+function secret(): string | null {
+  const s = process.env.QUOTE_SIGNING_SECRET || process.env.SESSION_SECRET || ''
+  if (s) return s
+  // Em desenvolvimento aceita um segredo fixo; em produção exige a variável.
+  return process.env.NODE_ENV !== 'production' ? 'dev-only-quote-secret' : null
+}
+
+function sign(data: string, key: string): string {
+  return crypto.createHmac('sha256', key).update(data).digest('base64url')
+}
+
+export function createQuoteToken(fipeCode: string, plans: PlanPricing[]): string | null {
+  const key = secret()
+  if (!key) {
+    console.error('[quote-token] Defina QUOTE_SIGNING_SECRET (ou SESSION_SECRET) em produção.')
+    return null
+  }
+  const payload: QuoteTokenPayload = {
+    exp: Date.now() + TTL_MS,
+    fipe: fipeCode,
+    plans: Object.fromEntries(
+      plans.map((p) => [
+        p.id,
+        { m: p.monthly, p: p.mensalidadeComPontualidade, a: p.mensalidadeComAdesivo, ad: p.ativacao, n: p.name },
+      ])
+    ),
+  }
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
+  return `${body}.${sign(body, key)}`
+}
+
+export interface VerifiedQuote {
+  fipe: string
+  plan: { id: string; name: string; monthly: number; pontualidade: number; adesivo: number; ativacao: number }
+}
+
+/** Valida assinatura e validade; devolve o plano escolhido com os valores do servidor. */
+export function verifyQuoteToken(token: unknown, planId: string): VerifiedQuote | null {
+  const key = secret()
+  if (!key || typeof token !== 'string') return null
+  const [body, sig] = token.split('.')
+  if (!body || !sig) return null
+  const expected = sign(body, key)
+  if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+    return null
+  }
+  try {
+    const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf-8')) as QuoteTokenPayload
+    if (typeof payload.exp !== 'number' || payload.exp < Date.now()) return null
+    const plan = payload.plans[planId]
+    if (!plan) return null
+    return {
+      fipe: payload.fipe,
+      plan: { id: planId, name: plan.n, monthly: plan.m, pontualidade: plan.p, adesivo: plan.a, ativacao: plan.ad },
+    }
+  } catch {
+    return null
+  }
+}

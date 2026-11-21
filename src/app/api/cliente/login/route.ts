@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { hinovaApi, HinovaAssociadoDados } from '@/lib/hinova-api'
-import { findCrmAssociadoByCpf } from '@/lib/crm'
+import { hinovaApi } from '@/lib/hinova-api'
+import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +12,13 @@ function formatCpf(raw: string): string {
 
 export async function POST(req: NextRequest) {
   try {
+    if (!rateLimit(req, 'cliente-login', 8, 10 * 60 * 1000)) {
+      return NextResponse.json(
+        { success: false, error: 'Muitas tentativas. Aguarde alguns minutos.' },
+        { status: 429 }
+      )
+    }
+
     const body = await req.json().catch(() => ({}))
     const { cpf, senha } = body
 
@@ -23,59 +30,14 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanCpf = String(cpf).replace(/\D/g, '')
-    if (cleanCpf.length !== 11 && cleanCpf !== '00000000000') {
+    if (cleanCpf.length !== 11) {
       return NextResponse.json(
         { success: false, error: 'CPF deve conter exatamente 11 dígitos numéricos.' },
         { status: 400 }
       )
     }
 
-    // 1. Tenta localizar o associado real no CRM 21 Go
-    try {
-      const crmAssoc = await findCrmAssociadoByCpf(cleanCpf)
-      if (crmAssoc) {
-        const placas = Array.isArray(crmAssoc.identificacao?.placas) && crmAssoc.identificacao.placas.length > 0
-          ? crmAssoc.identificacao.placas
-          : ['RGL9B19']
-
-        const realAssociado: HinovaAssociadoDados = {
-          codigoAssociado: crmAssoc.id?.slice(0, 8) || '21084',
-          nome: crmAssoc.fullName || `${crmAssoc.firstName} ${crmAssoc.lastName}`.trim(),
-          cpf: formatCpf(crmAssoc.cpf || cleanCpf),
-          email: crmAssoc.email || 'comercial@netgo.net.br',
-          telefone: crmAssoc.phone || crmAssoc.whatsapp || '(84) 99218-7662',
-          cidade: crmAssoc.city || 'Parnamirim',
-          uf: crmAssoc.state || 'RN',
-          situacao: 'Ativo',
-          dataFiliacao: crmAssoc.createdAt ? new Date(crmAssoc.createdAt).toLocaleDateString('pt-BR') : '15/02/2024',
-          veiculos: placas.map((p: string, idx: number) => ({
-            codigoVeiculo: idx + 1,
-            placa: p.toUpperCase(),
-            marca: 'Volkswagen',
-            modelo: 'Gol 1.0 Flex 12V 5p',
-            anoModelo: crmAssoc.identificacao?.anoModelo || 2023,
-            anoFabricacao: 2022,
-            chassi: '9BWAA05U8BP012345',
-            cor: 'Branca',
-            status: 'Ativo' as const,
-            numeroContrato: `21GO-8841${idx + 9}`,
-            categoria: crmAssoc.identificacao?.plano ? `Plano ${crmAssoc.identificacao.plano}` : 'Automóvel Particular',
-          })),
-        }
-
-        return NextResponse.json({
-          success: true,
-          token: `crm_jwt_associado_${cleanCpf}_${crmAssoc.id}_${Date.now()}`,
-          associado: realAssociado,
-          message: 'Autenticado com sucesso via CRM 21 Go!',
-          source: 'crm21go',
-        })
-      }
-    } catch (crmErr) {
-      console.warn('[Cliente Login] Erro ao buscar no CRM, usando fallback Hinova:', crmErr)
-    }
-
-    // 2. Se não estiver no CRM ou falhar, consulta via API Hinova SGA
+    // Autenticação SEMPRE com CPF + senha no Hinova SGA. (Antes, existir no CRM bastava para entrar.)
     const authResult = await hinovaApi.autenticar(cleanCpf, String(senha))
 
     if (!authResult.success) {

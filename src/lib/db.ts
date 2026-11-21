@@ -2,6 +2,25 @@ import fs from 'fs'
 import path from 'path'
 import { LeadSubmissionPayload } from './types'
 
+/** Cobrança Pix da taxa de adesão (Mercado Pago, Orders API). */
+export interface LeadPagamento {
+  provider: 'mercadopago'
+  orderId: string
+  paymentId?: string
+  /** Status bruto do MP: action_required, processed, canceled, expired, failed... */
+  status: string
+  statusDetail?: string
+  valor: number
+  qrCode?: string
+  qrCodeBase64?: string
+  ticketUrl?: string
+  expiresAt?: string
+  createdAt: string
+  paidAt?: string
+  /** Número da tentativa (nova cobrança se o Pix anterior expirar). */
+  attempt: number
+}
+
 export interface StoredLead {
   id: string
   ref: string
@@ -42,7 +61,10 @@ export interface StoredLead {
   crmNegociacaoId?: string
   diaVencimento?: number
   rawCrm?: Record<string, unknown>
+  pagamento?: LeadPagamento
   status:
+    | 'aguardando_pagamento'
+    | 'adesao_paga'
     | 'pendente_vistoria'
     | 'vistoria_enviada'
     | 'aprovado'
@@ -59,9 +81,8 @@ export interface StoredLead {
   }
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data')
+const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data')
 const LEADS_FILE = path.join(DATA_DIR, 'leads.json')
-const CONFIG_FILE = path.join(DATA_DIR, 'config.json')
 
 function ensureDataFile() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -72,44 +93,13 @@ function ensureDataFile() {
   }
 }
 
-export function getAdminPassword(): string {
-  try {
-    ensureDataFile()
-    if (fs.existsSync(CONFIG_FILE)) {
-      const content = fs.readFileSync(CONFIG_FILE, 'utf-8')
-      const cfg = JSON.parse(content)
-      if (cfg.adminPassword) return String(cfg.adminPassword)
-    }
-  } catch {}
-  return process.env.ADMIN_PASSWORD || 'Gael@1'
+/** Grava a lista inteira de forma atômica (arquivo temporário + rename). */
+export function writeLeads(leads: StoredLead[]): void {
+  ensureDataFile()
+  const tmp = `${LEADS_FILE}.${process.pid}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(leads, null, 2), 'utf-8')
+  fs.renameSync(tmp, LEADS_FILE)
 }
-
-export function saveAdminPassword(newPassword: string): boolean {
-  try {
-    ensureDataFile()
-    let cfg: Record<string, unknown> = {}
-    if (fs.existsSync(CONFIG_FILE)) {
-      try {
-        cfg = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'))
-      } catch {}
-    }
-    cfg.adminPassword = newPassword
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2), 'utf-8')
-    process.env.ADMIN_PASSWORD = newPassword
-    return true
-  } catch (err) {
-    console.error('Erro ao salvar nova senha:', err)
-    return false
-  }
-}
-
-// Inicializa a senha salva no process.env na inicialização
-try {
-  const initPass = getAdminPassword()
-  if (initPass && process.env) {
-    process.env.ADMIN_PASSWORD = initPass
-  }
-} catch {}
 
 export function getStoredLeads(): StoredLead[] {
   try {
@@ -122,11 +112,40 @@ export function getStoredLeads(): StoredLead[] {
   }
 }
 
+export function findLeadByOrderId(orderId: string): StoredLead | undefined {
+  return getStoredLeads().find((l) => l.pagamento?.orderId === orderId)
+}
+
+/** Leads com Pix emitido e ainda não pago (para conferência periódica). */
+export function getLeadsAwaitingPayment(): StoredLead[] {
+  return getStoredLeads().filter(
+    (l) => l.status === 'aguardando_pagamento' && l.pagamento?.orderId && !l.pagamento.paidAt
+  )
+}
+
+/** Aplica uma alteração a um lead (leitura+gravação síncronas: atômico dentro do processo). */
+export function updateLead(
+  ref: string,
+  mutate: (lead: StoredLead) => void
+): StoredLead | undefined {
+  const leads = getStoredLeads()
+  const lead = leads.find((l) => l.ref === ref)
+  if (!lead) return undefined
+  mutate(lead)
+  writeLeads(leads)
+  return lead
+}
+
 export function findLeadByRef(ref: string): StoredLead | undefined {
   return getStoredLeads().find((l) => l.ref === ref)
 }
 
-export function saveNewLead(payload: LeadSubmissionPayload, ref: string, powercrmCode?: string): StoredLead {
+export function saveNewLead(
+  payload: LeadSubmissionPayload,
+  ref: string,
+  powercrmCode?: string,
+  initialStatus: StoredLead['status'] = 'pendente_vistoria'
+): StoredLead {
   ensureDataFile()
   const leads = getStoredLeads()
 
@@ -155,11 +174,11 @@ export function saveNewLead(payload: LeadSubmissionPayload, ref: string, powercr
       placa: payload.placa || payload.vehicle.placa,
     },
     powercrmCode,
-    status: 'pendente_vistoria',
+    status: initialStatus,
   }
 
   leads.unshift(newLead)
-  fs.writeFileSync(LEADS_FILE, JSON.stringify(leads, null, 2), 'utf-8')
+  writeLeads(leads)
   return newLead
 }
 
@@ -183,7 +202,7 @@ export function updateLeadVistoria(
         ...vistoria,
         enviadoEm: new Date().toISOString(),
       }
-      fs.writeFileSync(LEADS_FILE, JSON.stringify(leads, null, 2), 'utf-8')
+      writeLeads(leads)
       return true
     }
     return false

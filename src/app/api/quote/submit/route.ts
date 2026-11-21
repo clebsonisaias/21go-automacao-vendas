@@ -5,6 +5,9 @@ import { sendTelegramNotification, esc } from '@/lib/telegram'
 import { rateLimit } from '@/lib/rate-limit'
 import { sendWhatsAppQuoteMessage } from '@/lib/citchat'
 import { saveNewLead } from '@/lib/db'
+import { verifyQuoteToken } from '@/lib/quote-token'
+import { mpEnabled } from '@/lib/mercadopago'
+import { pagamentoPath, vistoriaPath } from '@/lib/links'
 import { LeadSubmissionPayload } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -53,6 +56,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: invalid }, { status: 400 })
     }
 
+    // Valores (adesão, mensalidade) vêm do token assinado pelo servidor — nunca do navegador.
+    const verified = verifyQuoteToken(payload.quoteToken, payload.planoEscolhidoId)
+    if (!verified || verified.fipe !== payload.vehicle.fipeCode) {
+      return NextResponse.json(
+        { error: 'Sua cotação expirou. Refaça a simulação para continuar.' },
+        { status: 400 }
+      )
+    }
+    const allowedMensal = [verified.plan.monthly, verified.plan.pontualidade, verified.plan.adesivo]
+    if (!allowedMensal.some((v) => Math.abs(v - payload.mensalidadeFinal) < 0.005)) {
+      return NextResponse.json({ error: 'Valores do plano inválidos. Refaça a simulação.' }, { status: 400 })
+    }
+    payload.ativacao = verified.plan.ativacao
+    payload.planoEscolhidoNome = verified.plan.name
+    payload.mensalidadeOriginal = verified.plan.monthly
+
+    const cobrarPix = mpEnabled()
+
     // Referência imprevisível: é ela que autoriza o envio posterior da vistoria.
     const leadRef = `lead_${crypto.randomUUID()}`
 
@@ -63,7 +84,12 @@ export async function POST(req: NextRequest) {
     const crmResult = await sendLeadToCrm(payload)
 
     // 3. Salva no nosso banco de dados de backup local
-    const storedLead = saveNewLead(payload, leadRef, powerCrmResult.qttnCd)
+    const storedLead = saveNewLead(
+      payload,
+      leadRef,
+      powerCrmResult.qttnCd,
+      cobrarPix ? 'aguardando_pagamento' : 'pendente_vistoria'
+    )
 
     // 4. Formatações para notificação
     const fipeFormatted = payload.vehicle.fipeValue
@@ -82,15 +108,14 @@ export async function POST(req: NextRequest) {
       currency: 'BRL',
     }).format(payload.ativacao)
 
-    const vistoriaUrl = `/vistoria?ref=${leadRef}&nome=${encodeURIComponent(
-      payload.nome
-    )}&placa=${encodeURIComponent(payload.placa || payload.vehicle.placa || '')}&veiculo=${encodeURIComponent(
-      `${payload.vehicle.marca} ${payload.vehicle.modelo}`
-    )}`
+    const vistoriaUrl = vistoriaPath(storedLead)
+    const pagamentoUrl = cobrarPix ? pagamentoPath(leadRef) : undefined
 
-    const checkoutUrl = powerCrmResult.qttnCd
-      ? `https://checkout.cotacao.me/myplanquot?h=${powerCrmResult.qttnCd}`
-      : undefined
+    // Com Mercado Pago ativo, a adesão é paga no nosso Pix; o checkout externo só entra sem ele.
+    const checkoutUrl =
+      !cobrarPix && powerCrmResult.qttnCd
+        ? `https://checkout.cotacao.me/myplanquot?h=${powerCrmResult.qttnCd}`
+        : undefined
 
     // 5. Dispara Notificação Instantânea no Telegram para você
     const telegramMessage = `🚨 <b>NOVO CADASTRO NO SITE!</b> 🚨
@@ -107,7 +132,7 @@ ${payload.cpf ? `📄 <b>CPF:</b> ${esc(payload.cpf)}\n` : ''}${payload.email ? 
 ⚡ <b>Ativação:</b> ${ativacaoFormatted}
 
 ${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${esc(powerCrmResult.qttnCd)}</code>\n` : ''}${checkoutUrl ? `🔗 <b>Link Checkout:</b> ${esc(checkoutUrl)}\n` : ''}💾 <b>Backup Local:</b> Salvo no painel interno (ID: <code>${storedLead.id}</code>)
-✅ <b>Status:</b> Cadastrado e aguardando vistoria digital.`
+✅ <b>Status:</b> ${cobrarPix ? 'Cadastrado — aguardando pagamento do Pix da adesão.' : 'Cadastrado e aguardando vistoria digital.'}`
 
     await sendTelegramNotification(telegramMessage)
 
@@ -115,6 +140,7 @@ ${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${esc(powerCrmRes
     await sendWhatsAppQuoteMessage(payload, {
       quotationCode: powerCrmResult.qttnCd,
       vistoriaUrl,
+      pagamentoUrl,
     })
 
     return NextResponse.json({
@@ -125,7 +151,8 @@ ${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${esc(powerCrmRes
       checkoutUrl,
       crmSuccess: crmResult.success,
       cardId: crmResult.cardId,
-      vistoriaUrl,
+      vistoriaUrl: cobrarPix ? undefined : vistoriaUrl,
+      pagamentoUrl,
       message: 'Cadastro realizado e salvo com sucesso!',
     })
   } catch (err: any) {

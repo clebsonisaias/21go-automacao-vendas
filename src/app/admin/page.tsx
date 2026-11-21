@@ -40,6 +40,8 @@ const STATUS: Record<string, { label: string; cls: string; icon: LucideIcon }> =
   cotacoes_recebidas: { label: 'Cotação recebida', cls: 'bg-gray-100 text-gray-800 border border-gray-200', icon: Clock },
   vendas_concretizadas: { label: 'Venda concretizada', cls: 'bg-emerald-100 text-emerald-900 border border-emerald-200', icon: CheckCircle2 },
   vistoria_enviada: { label: 'Vistoria enviada', cls: 'bg-[#eef3b8] text-[#3d5200]', icon: CheckCircle2 },
+  aguardando_pagamento: { label: 'Aguardando Pix', cls: 'bg-[#fff3c4] text-[#7a5a00] border border-[#f0dc8a]', icon: Clock },
+  adesao_paga: { label: 'Adesão paga', cls: 'bg-[#d9f2e3] text-[#0f6a35]', icon: CheckCircle2 },
   pendente_vistoria: { label: 'Aguardando vistoria', cls: 'bg-[#fdebd0] text-[#8a4a00]', icon: Clock },
   aprovado: { label: 'Aprovado', cls: 'bg-[#d9f2e3] text-[#0f6a35]', icon: CheckCircle2 },
   cancelado: { label: 'Cancelado', cls: 'bg-[#fde2e2] text-[#a11d1d]', icon: XCircle },
@@ -322,8 +324,13 @@ Qualquer dúvida, estou à disposição!`
   const stats: { label: string; value: number; accent?: string }[] = [
     { label: 'Total de cadastros', value: leads.length },
     {
+      label: 'Aguardando Pix',
+      value: leads.filter((l) => l.status === 'aguardando_pagamento').length,
+      accent: 'text-go-orange-dark',
+    },
+    {
       label: 'Aguardando vistoria',
-      value: leads.filter((l) => l.status === 'pendente_vistoria').length,
+      value: leads.filter((l) => l.status === 'pendente_vistoria' || l.status === 'adesao_paga').length,
       accent: 'text-go-orange-dark',
     },
     {
@@ -723,6 +730,13 @@ Qualquer dúvida, estou à disposição!`
                 <Row label="Plano">{selectedLead.planoEscolhidoNome}</Row>
                 <Row label="Mensalidade">{brl(selectedLead.mensalidadeFinal)}/mês</Row>
                 <Row label="Ativação (Pix)">{brl(selectedLead.ativacao)}</Row>
+                {selectedLead.pagamento && (
+                  <Row label="Pagamento da adesão">
+                    {selectedLead.pagamento.paidAt
+                      ? `Pago em ${new Date(selectedLead.pagamento.paidAt).toLocaleString('pt-BR')}`
+                      : `Pendente (${selectedLead.pagamento.status})`}
+                  </Row>
+                )}
                 {selectedLead.diaVencimento && (
                   <Row label="Vencimento">Todo dia {selectedLead.diaVencimento}</Row>
                 )}
@@ -793,6 +807,33 @@ Qualquer dúvida, estou à disposição!`
                 <MessageCircle aria-hidden className="h-5 w-5" />
                 📲 Enviar Proposta Completa no WhatsApp
               </a>
+
+              {selectedLead.status === 'vistoria_enviada' && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/admin/aprovar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ref: selectedLead.ref }),
+                      })
+                      const data = await res.json().catch(() => ({}))
+                      setCopyFeedback(res.ok ? 'Vistoria aprovada e cliente avisado!' : data?.error || 'Não foi possível aprovar.')
+                      if (res.ok) {
+                        await fetchLeads()
+                        setSelectedLead({ ...selectedLead, status: 'aprovado' })
+                      }
+                    } catch {
+                      setCopyFeedback('Erro de conexão ao aprovar.')
+                    }
+                  }}
+                  className="flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-bold text-white transition hover:bg-emerald-700"
+                >
+                  <CheckCircle2 aria-hidden className="h-4 w-4" />
+                  Aprovar vistoria e avisar cliente
+                </button>
+              )}
 
               <div className="grid grid-cols-2 gap-2">
                 <button

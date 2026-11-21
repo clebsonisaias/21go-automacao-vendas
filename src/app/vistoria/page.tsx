@@ -1,7 +1,7 @@
 'use client'
 
-import React, { Suspense, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import React, { Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   ArrowRight,
   Camera,
@@ -108,8 +108,23 @@ function UploadSlot({
 }
 
 function VistoriaContent() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const ref = searchParams.get('ref') || ''
+
+  // Com cobrança online, a vistoria só abre depois da adesão paga: se ainda não pagou, volta ao Pix.
+  useEffect(() => {
+    if (!ref) return
+    fetch(`/api/pagamento/status?ref=${encodeURIComponent(ref)}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.status === 'none' || d?.status === 'pending' || d?.status === 'expired') {
+          router.replace(`/pagamento?ref=${encodeURIComponent(ref)}`)
+        }
+      })
+      .catch(() => {})
+  }, [ref, router])
+
   const nome = searchParams.get('nome') || 'Associado'
   const placa = searchParams.get('placa') || ''
   const veiculo = searchParams.get('veiculo') || 'Veículo'

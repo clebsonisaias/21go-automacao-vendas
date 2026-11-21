@@ -5,7 +5,7 @@ import { checkAdminAuth } from '@/lib/admin-auth'
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
-  const blocked = checkAdminAuth(req)
+  const blocked = await checkAdminAuth(req)
   if (blocked) return blocked
 
   try {

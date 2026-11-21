@@ -30,6 +30,14 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Com cobrança online, a vistoria só abre depois da adesão paga.
+    if (lead.status === 'aguardando_pagamento') {
+      return NextResponse.json(
+        { error: 'Pague a taxa de adesão (Pix) antes de enviar a vistoria.' },
+        { status: 402 }
+      )
+    }
+
     const cnhOuRgNome = text(body.cnhOuRgNome, 120)
     const crlvNome = text(body.crlvNome, 120)
     const comprovanteResidenciaNome = text(body.comprovanteResidenciaNome, 120)
