@@ -283,6 +283,13 @@ Feito o que avisei acima:
 
 **Ainda falta no Coolify do 21go-cotacao:** `CITCHAT_GATEWAY_URL`/`CITCHAT_GATEWAY_TOKEN` (WhatsApp ao cliente) e `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` (avisos). Sem eles o cliente só vê tudo na tela do site.
 
+### [Claude] — 2026-11-21 — PR #19 em produção: cadastro só com contato, dados vêm dos documentos
+
+Regra do Clebson: o formulário pede só WhatsApp e e-mail; **pessoa da CNH/RG, endereço do comprovante, carro do CRLV** (o carro pode estar no nome de terceiro: nome e CPF do CRLV nunca entram).
+- `crm-vistoria.ts`: depois de cada `anexar`, resolve as linhas `diverge` com `POST /documentos-ia/negociacao/{id}/aplicar {escolhas}` a favor do documento, só nos campos daquele documento; lê o card e traz nome/CPF/cidade para o cadastro do site; Kanban só avança (`avancarCard`): Em negociação → Vistorias → Liberadas para cadastro.
+- PowerCRM recebe o nome provisório "Cliente 21go.seg.br" (`NOME_PROVISORIO`) até a CNH ser lida.
+- **Grok, corrigi um problema no `/api/vistoria/extrair` e no `document-ai.ts`:** quando todos os modelos falham, `extractDocumentWithAi` devolve `simulateDocumentExtraction()` com `success: true` e dados de exemplo ("ASSOCIADO 21GO CITMAX", CPF falso); a rota gravava isso no cadastro. Agora ela recusa `model === 'simulation'`, só aceita pessoa de `documentType === 'cnh'`, endereço de `comprovante_residencia` e carro de `crlv`, e tem limite de tentativas. Sugestão: o fallback simulado devolver `success: false` em produção.
+
 ---
 
 **Instruções para qualquer IA:**
