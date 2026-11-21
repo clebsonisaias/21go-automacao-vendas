@@ -1,7 +1,7 @@
 import { DocumentAiResult, ExtractedDocType } from './types'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
-const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-6-luna'
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
 
@@ -162,7 +162,7 @@ function postProcess(parsed: any): DocumentAiResult {
 }
 
 /**
- * Processa a imagem ou PDF com OpenAI GPT-4o Vision (ou Gemini como alternativa)
+ * Processa a imagem ou PDF com OpenAI GPT-6 Luna (barato e com visão)
  */
 export async function extractDocumentWithAi(params: {
   imageBase64: string
@@ -172,7 +172,7 @@ export async function extractDocumentWithAi(params: {
   const { imageBase64, mimeType, docTypeHint } = params
   const rawBase64 = imageBase64.replace(/^data:[^;]+;base64,/, '')
 
-  // 1. Prioriza OpenAI GPT-4o (melhor para documentos)
+  // 1. Prioriza OpenAI GPT-6 Luna (25x mais barato que gpt-4o)
   if (OPENAI_API_KEY) {
     try {
       const dataUri = `data:${mimeType};base64,${rawBase64}`
