@@ -11,6 +11,7 @@ export interface StoredLead {
   whatsapp: string
   email?: string
   cidade?: string
+  uf?: string
   veiculoTrabalho?: boolean
   placa?: string
   planoEscolhidoId: string
@@ -25,8 +26,22 @@ export interface StoredLead {
     fipeValue: number
     fipeCode: string
     placa?: string
+    tipo?: 'Carro' | 'Moto' | 'Caminhão'
+    chassi?: string
+    renavam?: string
+    motor?: string
+    cor?: string
+    combustivel?: string
+    valorProtegido?: number
   }
   powercrmCode?: string
+  powerQuotationCode?: string
+  powerQuotationId?: number
+  powerNegotiationCode?: string
+  checkoutUrl?: string
+  crmNegociacaoId?: string
+  diaVencimento?: number
+  rawCrm?: Record<string, unknown>
   status:
     | 'pendente_vistoria'
     | 'vistoria_enviada'

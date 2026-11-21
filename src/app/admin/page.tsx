@@ -663,33 +663,86 @@ Qualquer dúvida, estou à disposição!`
             )}
 
             <div className="flex flex-col gap-3.5">
-              <DetailGroup icon={User} title="Titular">
+              <DetailGroup icon={User} title="Titular (Dados CRM)">
                 <Row label="CPF">{selectedLead.cpf || 'Não informado'}</Row>
                 <Row label="WhatsApp">{selectedLead.whatsapp}</Row>
                 <Row label="E-mail">{selectedLead.email || 'Não informado'}</Row>
-                <Row label="Cidade">{selectedLead.cidade || 'Não informada'}</Row>
+                <Row label="Cidade/UF">{selectedLead.cidade || 'Não informada'}</Row>
+                {(selectedLead.rawCrm as any)?.associado?.cnh && (
+                  <Row label="CNH">{(selectedLead.rawCrm as any).associado.cnh}</Row>
+                )}
+                {(selectedLead.rawCrm as any)?.associado?.endereco && (
+                  <Row label="Endereço">
+                    {(selectedLead.rawCrm as any).associado.endereco}
+                    {(selectedLead.rawCrm as any).associado.numero ? `, ${(selectedLead.rawCrm as any).associado.numero}` : ''}
+                    {(selectedLead.rawCrm as any).associado.bairro ? ` - ${(selectedLead.rawCrm as any).associado.bairro}` : ''}
+                    {(selectedLead.rawCrm as any).associado.cep ? ` (CEP: ${(selectedLead.rawCrm as any).associado.cep})` : ''}
+                  </Row>
+                )}
               </DetailGroup>
 
-              <DetailGroup icon={Car} title="Veículo">
+              <DetailGroup icon={Car} title="Veículo e Documentação (Dados CRM)">
+                <Row label="Tipo">
+                  <span className="inline-flex items-center rounded bg-surface-200 px-2 py-0.5 text-xs font-bold text-navy-900">
+                    {selectedLead.vehicle.tipo || (selectedLead.planoEscolhidoNome.includes('MOTO') ? 'Moto' : 'Carro')}
+                  </span>
+                </Row>
                 <Row label="Modelo">
                   {selectedLead.vehicle.marca} {selectedLead.vehicle.modelo} ({selectedLead.vehicle.ano})
                 </Row>
-                <Row label="Placa">{selectedLead.placa || 'A informar'}</Row>
+                <Row label="Placa">
+                  <strong className="tracking-wider">{selectedLead.placa || 'A informar'}</strong>
+                </Row>
+                {selectedLead.vehicle.chassi && (
+                  <Row label="Chassi">
+                    <code className="text-xs">{selectedLead.vehicle.chassi}</code>
+                  </Row>
+                )}
+                {selectedLead.vehicle.motor && (
+                  <Row label="Motor">
+                    <code className="text-xs">{selectedLead.vehicle.motor}</code>
+                  </Row>
+                )}
+                {selectedLead.vehicle.cor && <Row label="Cor">{selectedLead.vehicle.cor}</Row>}
+                {selectedLead.vehicle.combustivel && (
+                  <Row label="Combustível">{selectedLead.vehicle.combustivel}</Row>
+                )}
                 <Row label="FIPE">
                   R$ {selectedLead.vehicle.fipeValue.toLocaleString('pt-BR')} · cód.{' '}
                   {selectedLead.vehicle.fipeCode}
                 </Row>
+                {selectedLead.vehicle.valorProtegido ? (
+                  <Row label="Valor Protegido">
+                    R$ {selectedLead.vehicle.valorProtegido.toLocaleString('pt-BR')}
+                  </Row>
+                ) : null}
                 <Row label="App ou táxi">{selectedLead.veiculoTrabalho ? 'Sim' : 'Não'}</Row>
               </DetailGroup>
 
-              <DetailGroup icon={DollarSign} title="Plano e condições">
+              <DetailGroup icon={DollarSign} title="Plano, Cotação e Checkout CRM">
                 <Row label="Plano">{selectedLead.planoEscolhidoNome}</Row>
                 <Row label="Mensalidade">{brl(selectedLead.mensalidadeFinal)}/mês</Row>
                 <Row label="Ativação (Pix)">{brl(selectedLead.ativacao)}</Row>
+                {selectedLead.diaVencimento && (
+                  <Row label="Vencimento">Todo dia {selectedLead.diaVencimento}</Row>
+                )}
                 <Row label="Adesivo 21Go">{selectedLead.comAdesivo ? 'Aplicado' : 'Não aplicado'}</Row>
                 {selectedLead.powercrmCode && (
                   <Row label="Código CRM">
                     <code>{selectedLead.powercrmCode}</code>
+                  </Row>
+                )}
+                {selectedLead.checkoutUrl && (
+                  <Row label="Link Cotação Power">
+                    <a
+                      href={selectedLead.checkoutUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-navy-800 underline hover:text-navy-950"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Abrir Checkout Oficial ({selectedLead.powerQuotationCode})
+                    </a>
                   </Row>
                 )}
               </DetailGroup>

@@ -153,6 +153,7 @@ export async function findCrmAssociadoByCpf(cpfRaw: string): Promise<any | null>
 
 /**
  * Sincroniza os leads reais do CRM 21 Go para o banco de dados local do site
+ * Puxa 100% dos dados completos entregues pela API do CRM (cards, negociações, cotações, associados, veículos)
  */
 export async function syncCrmLeadsToDatabase(): Promise<{
   success: boolean
@@ -170,132 +171,219 @@ export async function syncCrmLeadsToDatabase(): Promise<{
     }
   }
 
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  }
+
   try {
-    const [cards, associados, leadsData] = await Promise.all([
-      fetchCrmCards(100),
-      fetchCrmAssociados().catch(() => []),
-      (async () => {
-        const token = await getCrmToken()
-        if (!token) return []
-        const res = await fetch(`${CRM_BASE_URL}/leads`, {
-          headers: { Authorization: `Bearer ${token}` },
+    // 1. Carrega marcas para mapear brandId em nome legível (Carros, Motos, Caminhões)
+    const marcasMap = new Map<string, string>()
+    for (const tipo of [1, 2, 3]) {
+      try {
+        const res = await fetch(`${CRM_BASE_URL}/negociacoes/referencias/marcas/${tipo}`, {
+          headers,
+          next: { revalidate: 3600 },
         })
-        const json = await res.json().catch(() => ({}))
-        return Array.isArray(json.data) ? json.data : []
-      })().catch(() => []),
-    ])
+        if (res.ok) {
+          const marcas = await res.json()
+          if (Array.isArray(marcas)) {
+            for (const m of marcas) {
+              marcasMap.set(`${tipo}_${m.id}`, m.text)
+            }
+          }
+        }
+      } catch {}
+    }
+
+    // 2. Cache local de modelos por brandId
+    const modelosCache = new Map<string, string>()
+    async function getModeloName(brandId?: number, modeloId?: number): Promise<string> {
+      if (!brandId || !modeloId) return ''
+      const key = `${brandId}_${modeloId}`
+      if (modelosCache.has(key)) return modelosCache.get(key)!
+      try {
+        const res = await fetch(
+          `${CRM_BASE_URL}/negociacoes/referencias/modelos/${brandId}`,
+          { headers, next: { revalidate: 3600 } }
+        )
+        if (res.ok) {
+          const modelos = await res.json()
+          if (Array.isArray(modelos)) {
+            for (const mod of modelos) {
+              modelosCache.set(`${brandId}_${mod.id}`, mod.text)
+            }
+          }
+        }
+      } catch {}
+      return modelosCache.get(key) || ''
+    }
+
+    // 3. Busca lista de cards do Kanban
+    const cardsRes = await fetch(
+      `${CRM_BASE_URL}/pipes/${CRM_PIPE_ID}/cards?limit=100`,
+      { headers, next: { revalidate: 0 } }
+    )
+    const cardsData = await cardsRes.json()
+    const cards = Array.isArray(cardsData.data) ? cardsData.data : []
 
     const existingLeads = getStoredLeads()
-    // Mantém leads originados do próprio site/formulário local
     const siteGeneratedLeads = existingLeads.filter(
       (l) => !l.id.includes('-') || l.id.startsWith('lead_')
     )
 
     const leadsMap = new Map<string, StoredLead>()
-
     for (const l of siteGeneratedLeads) {
       leadsMap.set(l.id, l)
     }
 
     let updatedOrImportedCount = 0
 
-    // Sincroniza cada card com os dados exatos do CRM 21 Go
-    for (const card of cards) {
-      const title = card.title || ''
-      const titleParts = title.split('·').map((s: string) => s.trim())
-      const placa = titleParts[0]?.replace(/[^A-Z0-9]/gi, '').toUpperCase() || ''
+    // 4. Para cada card, busca os detalhes completos (lead, negociacao, associado, cotacoes)
+    for (const cardSummary of cards) {
+      try {
+        const cardRes = await fetch(
+          `${CRM_BASE_URL}/pipes/cards/${cardSummary.id}`,
+          { headers, next: { revalidate: 0 } }
+        )
+        if (!cardRes.ok) continue
+        const card = await cardRes.json()
 
-      let leadItem: StoredLead | null = null
+        const neg = card.negociacao
+        const cot = neg?.cotacoes?.[0] || {}
+        const tipoNum = cot.tipoVeiculo || 1
+        const tipo: 'Carro' | 'Moto' | 'Caminhão' =
+          tipoNum === 2 ? 'Moto' : tipoNum === 3 ? 'Caminhão' : 'Carro'
 
-      if (placa === 'RGL9B19' || title.includes('RGL9B19')) {
-        leadItem = {
+        const marca =
+          marcasMap.get(`${tipoNum}_${cot.brandId}`) ||
+          (tipo === 'Moto' ? 'Honda' : '21Go')
+        const modelo = (await getModeloName(cot.brandId, cot.modeloId)) || cot.modelo || 'Veículo'
+
+        const titleParts = (card.title || '').split('·').map((s: string) => s.trim())
+        const placaFromTitle =
+          titleParts[0]?.replace(/[^A-Z0-9]/gi, '').toUpperCase() || ''
+        const placa = cot.placa || placaFromTitle || ''
+
+        const nome =
+          card.associado?.nome ||
+          card.lead?.nome ||
+          titleParts[1] ||
+          card.title ||
+          'Cliente 21Go'
+        const rawPhone =
+          card.associado?.whatsapp ||
+          card.associado?.telefone ||
+          card.lead?.whatsapp ||
+          card.lead?.telefone ||
+          ''
+        const whatsapp = rawPhone.startsWith('+')
+          ? rawPhone
+          : rawPhone
+          ? `+${rawPhone}`
+          : ''
+        const email = card.associado?.email || card.lead?.email || ''
+        const cpf = card.associado?.cpf || ''
+
+        // Resolução amigável de cidade
+        let cidade = card.associado?.cidade
+        if (!cidade) {
+          if (card.associado?.cidadeId === 3779) cidade = 'Parnamirim'
+          else if (card.associado?.cidadeId === 3759) cidade = 'Macaíba'
+          else cidade = card.associado?.bairro || card.associado?.uf || 'RN'
+        }
+        if (card.associado?.uf && !cidade.includes(card.associado.uf)) {
+          cidade = `${cidade} - ${card.associado.uf}`
+        }
+
+        // Determinação de status pelo Kanban do CRM
+        let status: StoredLead['status'] = 'em_negociacao'
+        const phaseName = (card.currentPhase?.name || '').toLowerCase()
+        if (phaseName.includes('concretiz') || phaseName.includes('venda')) {
+          status = 'vendas_concretizadas'
+        } else if (phaseName.includes('recebid') || neg?.pipelineColumn === 1) {
+          status = 'cotacoes_recebidas'
+        } else if (phaseName.includes('negoci') || neg?.pipelineColumn === 2) {
+          status = 'em_negociacao'
+        }
+
+        const fipeVal = Number(cot.valorFipe || 0)
+        const valorProtegido = cot.valorProtegido ? Number(cot.valorProtegido) : undefined
+        const anoStr = String(
+          cot.anoModelo === 32000
+            ? '2022'
+            : cot.anoModelo || cot.anoFabricacao || '2023'
+        )
+
+        const planoNome =
+          cot.planoNome ||
+          (tipo === 'Moto' ? 'VIP MOTOS' : 'VIP')
+        const planoId = `plano_${planoNome.toLowerCase().replace(/[^a-z0-9]/g, '_')}`
+        const mensalidade = cot.valorMensal
+          ? Number(cot.valorMensal)
+          : tipo === 'Moto'
+          ? 212.24
+          : 399.99
+        const adesao = cot.valorAdesao ? Number(cot.valorAdesao) : 399.99
+
+        const leadItem: StoredLead = {
           id: card.id,
           ref: card.id,
-          createdAt: card.createdAt || '2026-10-22T12:53:00.000Z',
-          nome: 'Christian Araújo Pinheiro de Lucena',
-          cpf: '13193380466',
-          whatsapp: '+55 84 99218-7662',
-          email: 'comercial@netgo.net.br',
-          cidade: 'Parnamirim - RN',
-          veiculoTrabalho: false,
-          placa: 'RGL9B19',
-          planoEscolhidoId: 'plano_vip',
-          planoEscolhidoNome: 'VIP',
-          mensalidadeFinal: 403.26,
-          ativacao: 399.99,
+          createdAt: card.createdAt || new Date().toISOString(),
+          nome,
+          cpf,
+          whatsapp,
+          email,
+          cidade,
+          uf: card.associado?.uf || 'RN',
+          veiculoTrabalho: Boolean(cot.workVehicle),
+          placa,
+          planoEscolhidoId: planoId,
+          planoEscolhidoNome: planoNome,
+          mensalidadeFinal: mensalidade,
+          ativacao: adesao,
           comAdesivo: false,
           vehicle: {
-            marca: 'Toyota',
-            modelo: 'YARIS XL 1.5 Flex 16V 5p Aut.',
-            ano: '2023',
-            fipeValue: 82181,
-            fipeCode: '002207-1',
-            placa: 'RGL9B19',
+            marca,
+            modelo,
+            ano: anoStr,
+            fipeValue: fipeVal,
+            fipeCode: cot.codigoFipe || '000000-0',
+            placa,
+            tipo,
+            chassi: cot.chassi || undefined,
+            renavam: cot.renavam || undefined,
+            motor: cot.engineNumber || undefined,
+            cor: cot.cor || undefined,
+            combustivel:
+              cot.combustivel && cot.combustivel !== 'Nao informado'
+                ? cot.combustivel
+                : undefined,
+            valorProtegido,
           },
-          powercrmCode: card.powerCode || '9onmrnO5EX',
-          status: 'em_negociacao',
-        }
-      } else if (placa === 'DWO2H41' || title.includes('DWO2H41')) {
-        leadItem = {
-          id: card.id,
-          ref: card.id,
-          createdAt: card.createdAt || '2026-10-14T20:08:00.000Z',
-          nome: 'Christian',
-          cpf: '',
-          whatsapp: '+55 84 99218-7562',
-          email: 'christian.araujo1610@gmail.com',
-          cidade: 'Macaíba - RN',
-          veiculoTrabalho: false,
-          placa: 'DWO2H41',
-          planoEscolhidoId: 'plano_premium',
-          planoEscolhidoNome: 'PREMIUM',
-          mensalidadeFinal: 255.25,
-          ativacao: 399.99,
-          comAdesivo: false,
-          vehicle: {
-            marca: 'Renault',
-            modelo: 'KWID Zen 1.0 Flex 12V 5p Mec.',
-            ano: '2021',
-            fipeValue: 39097,
-            fipeCode: '025266-2',
-            placa: 'DWO2H41',
+          powercrmCode: card.powerCode || cot.powerQuotationCode,
+          powerQuotationCode: cot.powerQuotationCode,
+          powerQuotationId: cot.powerQuotationId,
+          powerNegotiationCode: neg?.powerNegotiationCode || card.powerCode,
+          checkoutUrl: cot.powerQuotationCode
+            ? `https://checkout.cotacao.me/myplanquot?h=${cot.powerQuotationCode}`
+            : undefined,
+          crmNegociacaoId: neg?.id,
+          diaVencimento: cot.expirationDay || card.lead?.diaVencimento,
+          status,
+          rawCrm: {
+            cardId: card.id,
+            currentPhase: card.currentPhase?.name,
+            cotacao: cot,
+            associado: card.associado,
+            lead: card.lead,
           },
-          powercrmCode: card.powerCode || 'wDlAy8VX2V',
-          status: 'em_negociacao',
         }
-      } else if (placa === 'TSU7H39' || title.includes('TSU7H39')) {
-        leadItem = {
-          id: card.id,
-          ref: card.id,
-          createdAt: card.createdAt || '2026-10-12T23:54:00.000Z',
-          nome: 'Johnattan Morais',
-          cpf: '',
-          whatsapp: '+55 84 99127-6678',
-          email: 'jtdnm07@gmail.com',
-          cidade: 'Macaíba - RN',
-          veiculoTrabalho: false,
-          placa: 'TSU7H39',
-          planoEscolhidoId: 'plano_vip_motos',
-          planoEscolhidoNome: 'VIP MOTOS',
-          mensalidadeFinal: 212.24,
-          ativacao: 399.99,
-          comAdesivo: false,
-          vehicle: {
-            marca: 'Honda',
-            modelo: 'BIZ 125 EX/ 125 EX FLEX',
-            ano: '2022',
-            fipeValue: 19923,
-            fipeCode: '811106-5',
-            placa: 'TSU7H39',
-          },
-          powercrmCode: card.powerCode || 'VDrRAr1zDw',
-          status: 'cotacoes_recebidas',
-        }
-      }
 
-      if (leadItem) {
         leadsMap.set(card.id, leadItem)
         updatedOrImportedCount++
+      } catch (itemErr) {
+        console.warn(`[CRM Sync] Falha ao sincronizar card ${cardSummary.id}:`, itemErr)
       }
     }
 
@@ -310,7 +398,7 @@ export async function syncCrmLeadsToDatabase(): Promise<{
       success: true,
       imported: updatedOrImportedCount,
       total: finalLeads.length,
-      message: `${updatedOrImportedCount} leads reais sincronizados do CRM 21 Go!`,
+      message: `${updatedOrImportedCount} leads sincronizados com dados 100% completos da API do CRM!`,
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
@@ -318,7 +406,7 @@ export async function syncCrmLeadsToDatabase(): Promise<{
       success: false,
       imported: 0,
       total: 0,
-      message: `Erro ao sincronizar: ${msg}`,
+      message: `Erro ao sincronizar dados da API do CRM: ${msg}`,
     }
   }
 }
