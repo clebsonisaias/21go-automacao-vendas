@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { findLeadByRef, updateLead } from '@/lib/db'
 import { createPixOrder, getOrder, isOrderDead, mpEnabled } from '@/lib/mercadopago'
 import { refreshLeadPayment, syncPaymentFromOrder } from '@/lib/orchestrator'
-import { vistoriaPath } from '@/lib/links'
 import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
@@ -32,9 +31,9 @@ export async function POST(req: NextRequest) {
     if (lead.pagamento?.paidAt) {
       return NextResponse.json({ status: 'paid' })
     }
-    // Adesão por último: o Pix só abre depois de a vistoria ser enviada.
-    if (!lead.vistoriaData && lead.status !== 'aguardando_pagamento') {
-      return NextResponse.json({ status: 'vistoria', vistoriaUrl: vistoriaPath(lead) })
+    // Adesão por último: o Pix só abre depois de a equipe aprovar a vistoria (status aguardando_pagamento).
+    if (lead.status !== 'aguardando_pagamento' && !lead.pagamento) {
+      return NextResponse.json({ status: 'bloqueado' })
     }
 
     // Pix já emitido e ainda válido: confere no MP e reaproveita (não gera cobrança duplicada).

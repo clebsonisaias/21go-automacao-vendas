@@ -3,8 +3,6 @@ import { sendTelegramNotification, esc } from '@/lib/telegram'
 import { sendWhatsAppVistoriaConfirmation } from '@/lib/citchat'
 import { findLeadByRef, updateLeadVistoria } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
-import { mpEnabled } from '@/lib/mercadopago'
-import { pagamentoPath } from '@/lib/links'
 
 export const dynamic = 'force-dynamic'
 
@@ -61,7 +59,7 @@ export async function POST(req: NextRequest) {
 - Documento do Veículo (CRLV): ${crlvNome ? `✅ ${esc(crlvNome)}` : 'Pendente'}
 - Comprovante de Residência: ${comprovanteResidenciaNome ? `✅ ${esc(comprovanteResidenciaNome)}` : 'Pendente'}
 
-💡 <b>Próximo passo:</b> o cliente segue para o Pix da adesão. Depois, gere no CRM o link do App Visto e envie a ele.`
+💡 <b>Próximo passo:</b> gere no CRM o link do App Visto e envie ao cliente. Com a vistoria aprovada, clique no /admin em "Vistoria aprovada: enviar Pix" (a adesão é o último passo).`
 
     await sendTelegramNotification(telegramMessage)
 
@@ -71,15 +69,10 @@ export async function POST(req: NextRequest) {
       placa: lead.placa || 'Veículo',
     })
 
-    // Adesão por último: depois da vistoria, o cliente segue para o Pix (se ainda não pagou).
-    const pagamentoUrl = mpEnabled() && !lead.pagamento?.paidAt ? pagamentoPath(lead.ref) : undefined
-
+    // Adesão por último: o Pix só é liberado pela equipe depois da vistoria (App Visto) aprovada.
     return NextResponse.json({
       success: true,
-      pagamentoUrl,
-      message: pagamentoUrl
-        ? 'Documentos recebidos! Agora pague a adesão via Pix.'
-        : 'Vistoria e documentos recebidos com sucesso! Nossa equipe entrará em contato.',
+      message: 'Documentos recebidos! Nossa equipe envia o link da vistoria no seu WhatsApp.',
     })
   } catch (err) {
     console.error('Erro ao processar vistoria:', err)

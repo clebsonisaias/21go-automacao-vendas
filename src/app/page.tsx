@@ -753,12 +753,12 @@ export default function HomePage() {
                       `Envie CNH ou RG, documento do carro e comprovante de residência. O link também foi para o seu WhatsApp ${submitSuccessData.clientPhone || ''}.`,
                     ],
                     [
-                      'Adesão no Pix (último passo)',
-                      'Depois dos documentos, você paga a taxa de adesão por Pix, na mesma tela.',
+                      'Vistoria no App Visto',
+                      'Enviamos no seu WhatsApp o link da vistoria oficial da 21Go, para as fotos do veículo.',
                     ],
                     [
-                      'Vistoria no App Visto',
-                      'Enviamos no seu WhatsApp o link da vistoria oficial da 21Go, para as fotos do veículo. Aprovada, sua proteção é ativada.',
+                      'Adesão no Pix (último passo)',
+                      'Com a vistoria aprovada, enviamos no WhatsApp o Pix da taxa de adesão. Pago, sua proteção é ativada.',
                     ],
                   ].map(([title, text], i) => (
                     <li key={title} className="flex items-start gap-3">
