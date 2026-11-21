@@ -22,11 +22,19 @@ interface QuoteTokenPayload {
   plans: Record<string, QuotePlanSnapshot>
 }
 
-function secret(): string | null {
+// Reserva: se nenhuma variável foi definida, usa um segredo aleatório gerado na subida do servidor.
+// Assim o site não para de aceitar cadastros; só as cotações abertas antes de um restart expiram.
+const EPHEMERAL_SECRET = crypto.randomBytes(32).toString('hex')
+let warned = false
+
+function secret(): string {
   const s = process.env.QUOTE_SIGNING_SECRET || process.env.SESSION_SECRET || ''
   if (s) return s
-  // Em desenvolvimento aceita um segredo fixo; em produção exige a variável.
-  return process.env.NODE_ENV !== 'production' ? 'dev-only-quote-secret' : null
+  if (!warned && process.env.NODE_ENV === 'production') {
+    warned = true
+    console.warn('[quote-token] QUOTE_SIGNING_SECRET não definida: usando segredo temporário (defina no Coolify).')
+  }
+  return EPHEMERAL_SECRET
 }
 
 function sign(data: string, key: string): string {
@@ -35,10 +43,6 @@ function sign(data: string, key: string): string {
 
 export function createQuoteToken(fipeCode: string, plans: PlanPricing[]): string | null {
   const key = secret()
-  if (!key) {
-    console.error('[quote-token] Defina QUOTE_SIGNING_SECRET (ou SESSION_SECRET) em produção.')
-    return null
-  }
   const payload: QuoteTokenPayload = {
     exp: Date.now() + TTL_MS,
     fipe: fipeCode,
@@ -61,7 +65,7 @@ export interface VerifiedQuote {
 /** Valida assinatura e validade; devolve o plano escolhido com os valores do servidor. */
 export function verifyQuoteToken(token: unknown, planId: string): VerifiedQuote | null {
   const key = secret()
-  if (!key || typeof token !== 'string') return null
+  if (typeof token !== 'string') return null
   const [body, sig] = token.split('.')
   if (!body || !sig) return null
   const expected = sign(body, key)
