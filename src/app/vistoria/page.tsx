@@ -108,7 +108,21 @@ function UploadSlot({
   )
 }
 
-type Situacao = { documentos: boolean; appVistoUrl: string | null; pagamentoUrl: string | null; pago: boolean }
+type Situacao = {
+  documentos: boolean
+  appVistoUrl: string | null
+  vistoriaStatus?: string | null
+  pagamentoUrl: string | null
+  pago: boolean
+}
+
+// Etapas da vistoria no CRM 21Go, em palavras do cliente.
+const ETAPA_VISTORIA: Record<string, string> = {
+  criada: 'Aguardando as suas fotos.',
+  em_andamento: 'Recebendo as suas fotos.',
+  aguardando_revisao: 'Fotos recebidas. Nossa equipe está analisando a vistoria.',
+  aprovada: 'Vistoria aprovada!',
+}
 
 /** Próximos passos depois dos documentos: atualiza sozinho quando a equipe envia o link ou libera o Pix. */
 function ProximosPassos({ situacao }: { situacao: Situacao | null }) {
@@ -149,6 +163,11 @@ function ProximosPassos({ situacao }: { situacao: Situacao | null }) {
         >
           Fazer a vistoria no App Visto
         </a>
+        {situacao.vistoriaStatus && ETAPA_VISTORIA[situacao.vistoriaStatus] && (
+          <p aria-live="polite" className="m-0 text-sm font-semibold text-navy-800">
+            {ETAPA_VISTORIA[situacao.vistoriaStatus]}
+          </p>
+        )}
         <p className="m-0 text-xs text-muted">Com a vistoria aprovada, o Pix da adesão aparece aqui e no WhatsApp.</p>
       </div>
     )

@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
     {
       documentos: Boolean(lead.vistoriaData),
       appVistoUrl: lead.appVistoUrl || null,
+      vistoriaStatus: lead.crmVistoria?.vistoriaStatus || null,
       pagamentoUrl: pixLiberado ? pagamentoPath(lead.ref) : null,
       pago,
     },

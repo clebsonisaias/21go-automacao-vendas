@@ -1,6 +1,6 @@
 import { reconcilePendingPayments } from './lib/orchestrator'
 import { socialTick } from './lib/instagram'
-import { gerarLinksPendentes } from './lib/crm-vistoria'
+import { acompanharVistorias, gerarLinksPendentes } from './lib/crm-vistoria'
 
 function every(ms: number, label: string, job: () => Promise<unknown>) {
   let running = false
@@ -30,5 +30,8 @@ export function startSocialScheduler() {
 
 // Vistoria: a cada 1 min gera no CRM 21Go o link dos cadastros que já mandaram os documentos.
 export function startVistoriaLinkScheduler() {
-  every(60_000, 'Vistoria CRM', gerarLinksPendentes)
+  every(60_000, 'Vistoria CRM', async () => {
+    await gerarLinksPendentes()
+    await acompanharVistorias()
+  })
 }

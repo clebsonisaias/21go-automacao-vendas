@@ -3,6 +3,7 @@ import { sendWhatsAppAppVisto } from './citchat'
 import { esc, sendTelegramNotification } from './telegram'
 import { readVistoriaFile } from './vistoria-files'
 import { moverCard, getCardIdFromNegociacao } from './crm-phases'
+import { aprovarVistoria } from './vistoria-aprovacao'
 import sharp from 'sharp'
 
 // Gera sozinho o link da vistoria oficial (Vistoria 21Go) no CRM 21Go, depois que o cliente envia
@@ -104,12 +105,35 @@ function mesmoNome(a: unknown, b: unknown): boolean {
 
 type Neg = { id: string; createdAt?: string; arquivada?: boolean; cotacoes?: { id: string; placa?: string | null }[]; associado?: { nome?: string } }
 
+const telKey = (t: unknown) => String(t ?? '').replace(/\D/g, '').slice(-8)
+
+/** Cadastro sem nome (o nome ficou opcional): mesma placa e mesmo WhatsApp no card do CRM. */
+async function findPorWhatsapp(lead: StoredLead, list: Neg[], placa: string): Promise<{ negId: string; cotacaoId: string } | null> {
+  const alvo = telKey(lead.whatsapp)
+  if (alvo.length < 8) return null
+  const daPlaca = list
+    .filter((n) => !n.arquivada)
+    .map((n) => ({ n, cot: (n.cotacoes || []).find((c) => norm(c.placa) === placa) }))
+    .filter((x): x is { n: Neg; cot: { id: string } } => Boolean(x.cot))
+    .sort((a, b) => new Date(b.n.createdAt || 0).getTime() - new Date(a.n.createdAt || 0).getTime())
+    .slice(0, 5)
+  for (const { n, cot } of daPlaca) {
+    const neg = await crm<any>('GET', `/negociacoes/${n.id}`)
+    if (!neg.data?.cardId) continue
+    const card = await crm<any>('GET', `/pipes/cards/${neg.data.cardId}`)
+    const a = card.data?.associado || {}
+    if ([a.telefone, a.whatsapp, a.telefone2].some((t) => telKey(t) === alvo)) return { negId: n.id, cotacaoId: cot.id }
+  }
+  return null
+}
+
 async function findNegociacao(lead: StoredLead): Promise<{ negId: string; cotacaoId: string } | null> {
   const placa = norm(lead.placa || lead.vehicle?.placa)
   if (placa.length < 7) throw new Error('cadastro sem placa: não dá para achar a negociação no CRM')
   const { status, data } = await crm<any>('GET', `/negociacoes?search=${encodeURIComponent(placa)}`)
   if (status !== 200) throw new Error(errMsg(data, `lista de negociações falhou (HTTP ${status})`))
   const list: Neg[] = Array.isArray(data) ? data : data?.data || data?.items || []
+  if (!palavras(lead.nome).length) return findPorWhatsapp(lead, list, placa)
   const candidatas = list
     .filter((n) => !n.arquivada && mesmoNome(lead.nome, n.associado?.nome))
     .map((n) => ({ n, cot: (n.cotacoes || []).find((c) => norm(c.placa) === placa) }))
@@ -268,14 +292,11 @@ async function gerarUmaVez(lead: StoredLead): Promise<string | null> {
     await enviarDocumentos(findLeadByRef(lead.ref) || lead, negId, cotacaoId)
     await ensureRequisitos(lead, negId, cotacaoId)
     await ensureCpfNoCard(lead, negId)
-    // Move para Vistorias antes de gerar o link
-    await moverParaVistorias(negId)
     const r = await crm<any>('POST', `/vistoria-propria/${negId}`, { cotacaoId, zeroKm: false })
     if (r.status >= 300) throw new Error(errMsg(r.data, `CRM não gerou a vistoria`))
     v = r.data?.vistoria || r.data || null
   } else if (!v.url && v.filaEstado === 'travada') {
     await ensureCpfNoCard(lead, negId)
-    await moverParaVistorias(negId)
     await crm<any>('POST', `/vistoria-propria/${negId}`, { cotacaoId, zeroKm: false })
   }
 
@@ -321,6 +342,9 @@ export async function gerarLinkVistoria(ref: string): Promise<void> {
     const url = await gerarUmaVez(lead)
     if (url) {
       await entregarLinkVistoria(findLeadByRef(ref) || lead, url, 'auto')
+      // Link saiu: card vai para a fase "Vistorias" do Kanban (uma vez, só depois do sucesso).
+      const negId = findLeadByRef(ref)?.crmVistoria?.negId
+      if (negId) await moverParaVistorias(negId)
       return
     }
     registrarTentativa(ref, 'o CRM ainda está gerando o link')
@@ -361,4 +385,37 @@ export async function gerarLinksPendentes(): Promise<void> {
       Date.now() - new Date(l.createdAt).getTime() < 7 * 24 * 3600_000
   )
   for (const l of pendentes.slice(0, 5)) await gerarLinkVistoria(l.ref)
+}
+
+/**
+ * Acompanha no CRM a vistoria dos cadastros que já receberam o link:
+ * criada → em_andamento (fotos) → aguardando_revisao (time analisando) → aprovada.
+ * Guarda a etapa (a tela do cliente mostra) e, em "aprovada", libera o Pix da adesão sozinho.
+ */
+export async function acompanharVistorias(): Promise<void> {
+  if (!crmVistoriaEnabled()) return
+  const ativos = getStoredLeads().filter(
+    (l) => l.status === 'vistoria_enviada' && l.appVistoUrl && l.crmVistoria?.negId && l.crmVistoria?.cotacaoId
+  )
+  for (const l of ativos.slice(0, 10)) {
+    try {
+      const v = await estadoVistoria(l.crmVistoria!.negId!, l.crmVistoria!.cotacaoId!)
+      const st = (v as { status?: string } | null)?.status || ''
+      if (st && st !== l.crmVistoria?.vistoriaStatus) {
+        updateLead(l.ref, (x) => {
+          if (x.crmVistoria) {
+            x.crmVistoria.vistoriaStatus = st
+            x.crmVistoria.statusLidoEm = new Date().toISOString()
+          }
+        })
+        console.log(`[Vistoria CRM] ${l.ref}: vistoria ${st}`)
+      }
+      if (st === 'aprovada') {
+        const fresh = findLeadByRef(l.ref)
+        if (fresh) await aprovarVistoria(fresh, 'crm')
+      }
+    } catch (err) {
+      console.warn(`[Vistoria CRM] ${l.ref}: não li a situação da vistoria —`, err instanceof Error ? err.message : err)
+    }
+  }
 }
