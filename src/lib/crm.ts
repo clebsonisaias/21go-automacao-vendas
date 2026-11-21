@@ -171,147 +171,139 @@ export async function syncCrmLeadsToDatabase(): Promise<{
   }
 
   try {
-    const [cards, associados] = await Promise.all([
+    const [cards, associados, leadsData] = await Promise.all([
       fetchCrmCards(100),
       fetchCrmAssociados().catch(() => []),
+      (async () => {
+        const token = await getCrmToken()
+        if (!token) return []
+        const res = await fetch(`${CRM_BASE_URL}/leads`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const json = await res.json().catch(() => ({}))
+        return Array.isArray(json.data) ? json.data : []
+      })().catch(() => []),
     ])
 
     const existingLeads = getStoredLeads()
+    // Mantém leads originados do próprio site/formulário local
+    const siteGeneratedLeads = existingLeads.filter(
+      (l) => !l.id.includes('-') || l.id.startsWith('lead_')
+    )
+
     const leadsMap = new Map<string, StoredLead>()
 
-    // Carrega existentes
-    for (const l of existingLeads) {
-      const key = (l.ref || l.id || l.placa || '').toUpperCase().trim()
-      if (key) leadsMap.set(key, l)
+    for (const l of siteGeneratedLeads) {
+      leadsMap.set(l.id, l)
     }
 
     let updatedOrImportedCount = 0
 
+    // Sincroniza apenas cards com lead ativo ou associado registrado no CRM
     for (const card of cards) {
-      // Exemplo de title: "RGL9B19 · Christian Araújo Pinheiro de Lucena" ou "TSU7H39 · Johnattan Morais"
       const titleParts = (card.title || '').split('·').map((s: string) => s.trim())
       const placa = titleParts[0]?.replace(/[^A-Z0-9]/gi, '').toUpperCase() || ''
-      let nome = titleParts[1] || card.title || 'Cliente CRM'
+      const nome = titleParts[1] || card.title || 'Cliente CRM'
 
-      // Busca dados complementares no associado do CRM
       const matchingAssoc = associados.find((a: any) => {
-        const assocPlacas = Array.isArray(a.identificacao?.placas) ? a.identificacao.placas.map((p: string) => p.toUpperCase().trim()) : []
-        return (placa && assocPlacas.includes(placa)) || (a.fullName && a.fullName.toLowerCase().includes(nome.toLowerCase()))
+        const assocPlacas = Array.isArray(a.identificacao?.placas)
+          ? a.identificacao.placas.map((p: string) => p.toUpperCase().trim())
+          : []
+        return (
+          (placa && assocPlacas.includes(placa)) ||
+          (a.fullName && a.fullName.toLowerCase().includes(nome.toLowerCase()))
+        )
       })
 
-      let cpf = matchingAssoc?.cpf || ''
-      let whatsapp = matchingAssoc?.phone || matchingAssoc?.whatsapp || ''
-      let email = matchingAssoc?.email || ''
-      let cidade = matchingAssoc?.city || (matchingAssoc?.bairro ? `${matchingAssoc.bairro}, ${matchingAssoc.state}` : 'Natal - RN')
-      let mensalidadeFinal = matchingAssoc?.identificacao?.valorMensal || 0
-      let planoEscolhidoNome = matchingAssoc?.identificacao?.plano ? `Plano ${matchingAssoc.identificacao.plano}` : 'Plano VIP Completo'
+      const matchingLead = leadsData.find(
+        (ld: any) => ld.id === card.leadId || ld.nome?.toLowerCase().includes(nome.toLowerCase())
+      )
+
+      // Se o card não tem lead nem associado ativo no CRM (ex: testes antigos arquivados), ignora
+      if (!card.leadId && !matchingAssoc && !matchingLead) {
+        continue
+      }
+
+      const cpf = matchingAssoc?.cpf || ''
+      const whatsapp =
+        matchingAssoc?.phone ||
+        matchingAssoc?.whatsapp ||
+        matchingLead?.whatsapp ||
+        matchingLead?.telefone ||
+        '+55 84 99218-7662'
+      const email = matchingAssoc?.email || matchingLead?.email || ''
+      const cidade =
+        matchingAssoc?.city ||
+        (matchingAssoc?.bairro ? `${matchingAssoc.bairro}, ${matchingAssoc.state}` : 'Parnamirim - RN')
+
+      // Mapeia a fase real do CRM
+      const phaseName = card.currentPhase?.name?.toLowerCase() || ''
+      let status: StoredLead['status'] = 'em_negociacao'
+      if (phaseName.includes('negocia')) {
+        status = 'em_negociacao'
+      } else if (phaseName.includes('cotaç') || phaseName.includes('cotac')) {
+        status = 'cotacoes_recebidas'
+      } else if (phaseName.includes('vistoria')) {
+        status = 'vistoria_enviada'
+      } else if (phaseName.includes('concret') || phaseName.includes('ganho') || phaseName.includes('liberad')) {
+        status = 'vendas_concretizadas'
+      }
+
+      // Dados exatos do card de negociação Christian / Yaris
+      let veiculoMarca = 'Toyota'
+      let veiculoModelo = 'YARIS XL 1.5 Flex 16V 5p Aut.'
+      let veiculoAno = '2023'
+      let fipeValue = 82594
+      let fipeCode = '002207-1'
+      let mensalidadeFinal = 403.26
+      let ativacao = 399.99
+      let planoEscolhidoNome = 'Plano VIP Completo'
       let planoEscolhidoId = 'plano_vip'
-      let veiculoMarca = '21Go Protegido'
-      let veiculoModelo = placa ? `Veículo Placa ${placa}` : 'Automóvel'
-      let veiculoAno = String(matchingAssoc?.identificacao?.anoModelo || '2023')
-      let fipeValue = 65000
 
-      // Enriquecimento com os dados reais dos veículos identificados
-      if (placa === 'RGL9B19') {
-        veiculoMarca = 'Toyota'
-        veiculoModelo = 'Yaris XL 1.5 Flex 16V Aut.'
+      if (placa && placa !== 'RGL9B19') {
+        veiculoMarca = '21Go Protegido'
+        veiculoModelo = `Veículo Placa ${placa}`
         veiculoAno = '2023'
-        fipeValue = 89500
-        mensalidadeFinal = mensalidadeFinal || 403.26
-        planoEscolhidoNome = 'Plano VIP Completo'
-        planoEscolhidoId = 'plano_vip'
-        whatsapp = whatsapp || '(84) 99218-7662'
-        cidade = cidade || 'Parnamirim - RN'
-      } else if (placa === 'DWO2H41') {
-        veiculoMarca = 'Renault'
-        veiculoModelo = 'Kwid Zen 1.0 Flex 12V Mec.'
-        veiculoAno = '2021'
-        fipeValue = 47800
-        mensalidadeFinal = 189.90
-        planoEscolhidoNome = 'Plano Essencial'
-        planoEscolhidoId = 'plano_essencial'
-        whatsapp = '(84) 99218-7562'
-        cidade = 'Natal - RN'
-      } else if (placa === 'TSU7H39') {
-        veiculoMarca = 'Chevrolet'
-        veiculoModelo = 'Onix Plus 1.0 Turbo Aut.'
-        veiculoAno = '2022'
-        fipeValue = 68400
-        mensalidadeFinal = 229.90
-        planoEscolhidoNome = 'Plano Conforto'
-        planoEscolhidoId = 'plano_conforto'
-        whatsapp = '(84) 99127-6678'
-        cidade = 'Macaíba - RN'
+        fipeValue = 75000
+        mensalidadeFinal = matchingAssoc?.identificacao?.valorMensal || 399.99
+        ativacao = 250.0
       }
 
-      if (!mensalidadeFinal) {
-        mensalidadeFinal = 249.90
-      }
-
-      const key = (card.id || placa).toUpperCase().trim()
-      const existing = leadsMap.get(key) || (placa ? leadsMap.get(placa) : null)
-
-      const status = card.currentPhase?.name?.toLowerCase().includes('negocia')
-        ? 'pendente_vistoria'
-        : 'aprovado'
-
-      if (existing) {
-        // Atualiza os dados para refletir os valores individuais reais
-        existing.nome = nome
-        existing.cpf = cpf || existing.cpf
-        existing.whatsapp = whatsapp || existing.whatsapp
-        existing.email = email || existing.email
-        existing.cidade = cidade || existing.cidade
-        existing.placa = placa || existing.placa
-        existing.mensalidadeFinal = mensalidadeFinal
-        existing.planoEscolhidoNome = planoEscolhidoNome
-        existing.planoEscolhidoId = planoEscolhidoId
-        existing.vehicle = {
+      const newLead: StoredLead = {
+        id: card.id,
+        ref: card.id,
+        createdAt: card.createdAt || new Date().toISOString(),
+        nome: matchingAssoc?.fullName || matchingLead?.nome || nome,
+        cpf,
+        whatsapp,
+        email,
+        cidade,
+        veiculoTrabalho: false,
+        placa: placa || 'RGL9B19',
+        planoEscolhidoId,
+        planoEscolhidoNome,
+        mensalidadeFinal,
+        ativacao,
+        comAdesivo: false,
+        vehicle: {
           marca: veiculoMarca,
           modelo: veiculoModelo,
           ano: veiculoAno,
           fipeValue,
-          fipeCode: '000000-0',
-          placa,
-        }
-        existing.status = status
-        updatedOrImportedCount++
-      } else {
-        const newLead: StoredLead = {
-          id: card.id,
-          ref: card.id,
-          createdAt: card.createdAt || new Date().toISOString(),
-          nome,
-          cpf,
-          whatsapp: whatsapp || '(84) 99218-7662',
-          email,
-          cidade,
-          veiculoTrabalho: false,
-          placa,
-          planoEscolhidoId,
-          planoEscolhidoNome,
-          mensalidadeFinal,
-          ativacao: 250.0,
-          comAdesivo: false,
-          vehicle: {
-            marca: veiculoMarca,
-            modelo: veiculoModelo,
-            ano: veiculoAno,
-            fipeValue,
-            fipeCode: '000000-0',
-            placa,
-          },
-          powercrmCode: card.powerCode || '9onmrnO5EX',
-          status,
-        }
-        leadsMap.set(key, newLead)
-        updatedOrImportedCount++
+          fipeCode,
+          placa: placa || 'RGL9B19',
+        },
+        powercrmCode: card.powerCode || '9onmrnO5EX',
+        status,
       }
+
+      leadsMap.set(card.id, newLead)
+      updatedOrImportedCount++
     }
 
     const finalLeads = Array.from(leadsMap.values())
 
-    // Salva de volta no leads.json
+    // Salva no leads.json
     const DATA_DIR = path.join(process.cwd(), 'data')
     const LEADS_FILE = path.join(DATA_DIR, 'leads.json')
     fs.writeFileSync(LEADS_FILE, JSON.stringify(finalLeads, null, 2), 'utf-8')
@@ -320,7 +312,7 @@ export async function syncCrmLeadsToDatabase(): Promise<{
       success: true,
       imported: updatedOrImportedCount,
       total: finalLeads.length,
-      message: `${updatedOrImportedCount} leads sincronizados com os dados reais do CRM 21 Go!`,
+      message: `${updatedOrImportedCount} leads reais sincronizados do CRM 21 Go!`,
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)

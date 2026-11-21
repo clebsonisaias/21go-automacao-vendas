@@ -35,7 +35,10 @@ import { LunaAssistant } from '@/components/admin/LunaAssistant'
 import { DocumentAiUploader } from '@/components/common/DocumentAiUploader'
 import { DocumentAiResult } from '@/lib/types'
 
-const STATUS: Record<StoredLead['status'], { label: string; cls: string; icon: LucideIcon }> = {
+const STATUS: Record<string, { label: string; cls: string; icon: LucideIcon }> = {
+  em_negociacao: { label: 'Em negociação', cls: 'bg-blue-100 text-blue-900 border border-blue-200', icon: Clock },
+  cotacoes_recebidas: { label: 'Cotação recebida', cls: 'bg-gray-100 text-gray-800 border border-gray-200', icon: Clock },
+  vendas_concretizadas: { label: 'Venda concretizada', cls: 'bg-emerald-100 text-emerald-900 border border-emerald-200', icon: CheckCircle2 },
   vistoria_enviada: { label: 'Vistoria enviada', cls: 'bg-[#eef3b8] text-[#3d5200]', icon: CheckCircle2 },
   pendente_vistoria: { label: 'Aguardando vistoria', cls: 'bg-[#fdebd0] text-[#8a4a00]', icon: Clock },
   aprovado: { label: 'Aprovado', cls: 'bg-[#d9f2e3] text-[#0f6a35]', icon: CheckCircle2 },
@@ -43,7 +46,7 @@ const STATUS: Record<StoredLead['status'], { label: string; cls: string; icon: L
 }
 
 function StatusBadge({ status }: { status: StoredLead['status'] }) {
-  const s = STATUS[status] ?? STATUS.pendente_vistoria
+  const s = STATUS[status] ?? STATUS.em_negociacao
   const Icon = s.icon
   return (
     <span

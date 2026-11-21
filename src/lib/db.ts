@@ -27,7 +27,14 @@ export interface StoredLead {
     placa?: string
   }
   powercrmCode?: string
-  status: 'pendente_vistoria' | 'vistoria_enviada' | 'aprovado' | 'cancelado'
+  status:
+    | 'pendente_vistoria'
+    | 'vistoria_enviada'
+    | 'aprovado'
+    | 'cancelado'
+    | 'em_negociacao'
+    | 'cotacoes_recebidas'
+    | 'vendas_concretizadas'
   vistoriaData?: {
     cnhOuRgNome?: string
     crlvNome?: string
