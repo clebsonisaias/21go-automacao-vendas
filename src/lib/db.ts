@@ -65,6 +65,8 @@ export interface StoredLead {
   /** Link da vistoria oficial (App Visto), gerado no CRM e colado no /admin. */
   appVistoUrl?: string
   appVistoEnviadoEm?: string
+  /** Geração automática do link no CRM 21Go (ver crm-vistoria.ts). */
+  crmVistoria?: { negId?: string; cotacaoId?: string; tentativas: number; ultimoErro?: string; lockAt?: string }
   status:
     | 'aguardando_pagamento'
     | 'adesao_paga'

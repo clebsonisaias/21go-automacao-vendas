@@ -3,6 +3,7 @@ import { sendTelegramNotification, esc } from '@/lib/telegram'
 import { sendWhatsAppVistoriaConfirmation } from '@/lib/citchat'
 import { findLeadByRef, updateLeadVistoria } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
+import { gerarLinkVistoria } from '@/lib/crm-vistoria'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
 - Documento do Veículo (CRLV): ${crlvNome ? `✅ ${esc(crlvNome)}` : 'Pendente'}
 - Comprovante de Residência: ${comprovanteResidenciaNome ? `✅ ${esc(comprovanteResidenciaNome)}` : 'Pendente'}
 
-💡 <b>Próximo passo:</b> gere no CRM o link do App Visto e envie ao cliente. Com a vistoria aprovada, clique no /admin em "Vistoria aprovada: enviar Pix" (a adesão é o último passo).`
+💡 <b>Próximo passo:</b> o site gera sozinho o link da vistoria no CRM 21Go e manda ao cliente (aviso aqui quando sair). Com a vistoria aprovada, clique no /admin em "Vistoria aprovada: enviar Pix" (a adesão é o último passo).`
 
     await sendTelegramNotification(telegramMessage)
 
@@ -69,7 +70,10 @@ export async function POST(req: NextRequest) {
       placa: lead.placa || 'Veículo',
     })
 
-    // Adesão por último: o Pix só é liberado pela equipe depois da vistoria (App Visto) aprovada.
+    // Gera o link da vistoria no CRM 21Go em segundo plano; a tela do cliente mostra quando sair.
+    void gerarLinkVistoria(lead.ref)
+
+    // Adesão por último: o Pix só é liberado pela equipe depois da vistoria aprovada.
     return NextResponse.json({
       success: true,
       message: 'Documentos recebidos! Nossa equipe envia o link da vistoria no seu WhatsApp.',

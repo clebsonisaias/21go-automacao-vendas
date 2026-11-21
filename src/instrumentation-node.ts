@@ -1,5 +1,6 @@
 import { reconcilePendingPayments } from './lib/orchestrator'
 import { socialTick } from './lib/instagram'
+import { gerarLinksPendentes } from './lib/crm-vistoria'
 
 function every(ms: number, label: string, job: () => Promise<unknown>) {
   let running = false
@@ -25,4 +26,9 @@ export function startPaymentReconciler() {
 // Instagram: a cada 5 min confere se já é hora do post do dia.
 export function startSocialScheduler() {
   every(5 * 60_000, 'Instagram', socialTick)
+}
+
+// Vistoria: a cada 1 min gera no CRM 21Go o link dos cadastros que já mandaram os documentos.
+export function startVistoriaLinkScheduler() {
+  every(60_000, 'Vistoria CRM', gerarLinksPendentes)
 }

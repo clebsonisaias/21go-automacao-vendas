@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { checkAdminAuth } from '@/lib/admin-auth'
-import { findLeadByRef, updateLead } from '@/lib/db'
-import { sendWhatsAppAppVisto } from '@/lib/citchat'
-import { esc, sendTelegramNotification } from '@/lib/telegram'
+import { findLeadByRef } from '@/lib/db'
+import { entregarLinkVistoria } from '@/lib/crm-vistoria'
 
 export const dynamic = 'force-dynamic'
 
@@ -36,17 +35,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Cole o link completo do App Visto (começa com https://).' }, { status: 400 })
   }
 
-  const updated = updateLead(lead.ref, (l) => {
-    l.appVistoUrl = url
-    l.appVistoEnviadoEm = new Date().toISOString()
-  })
-
-  const wa = await sendWhatsAppAppVisto({ telefone: lead.whatsapp, nome: lead.nome, url })
-  await sendTelegramNotification(
-    `📸 <b>Link do App Visto enviado</b> — ${esc(lead.nome)} (${esc(lead.placa || 'sem placa')}). ${
-      wa.success ? 'Cliente recebeu no WhatsApp e vê o link no site.' : 'WhatsApp falhou; o link está no site do cliente.'
-    }`
-  )
+  const { lead: updated, whatsappEnviado } = await entregarLinkVistoria(lead, url, 'manual')
+  const wa = { success: whatsappEnviado }
 
   return NextResponse.json({
     success: true,
