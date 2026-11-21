@@ -8,6 +8,7 @@ import { DocumentAiUploader } from '@/components/common/DocumentAiUploader'
 import type { DocumentAiResult } from '@/lib/types'
 import { StatusLabel } from './lead-status'
 import { Tooltip } from './Tooltip'
+import { VISTORIA_SLOTS, type VistoriaSlot } from '@/lib/vistoria-slots'
 
 const SITE = 'https://21go.seg.br'
 
@@ -182,6 +183,7 @@ export function LeadDrawer({
     ? [assoc.endereco, assoc.numero, assoc.bairro, assoc.cep ? `CEP ${assoc.cep}` : ''].filter(Boolean).join(', ')
     : ''
   const pago = draft.pagamento?.paidAt
+  const arquivos = Object.entries(draft.vistoriaArquivos || {})
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
@@ -289,21 +291,32 @@ export function LeadDrawer({
           </Section>
 
           <Section title="Vistoria e documentos">
-            {draft.vistoriaData ? (
+            {arquivos.length > 0 ? (
               <>
-                <Field label="CNH / RG">{draft.vistoriaData.cnhOuRgNome || '—'}</Field>
-                <Field label="CRLV">{draft.vistoriaData.crlvNome || '—'}</Field>
-                <Field label="Residência">{draft.vistoriaData.comprovanteResidenciaNome || '—'}</Field>
-                <Field label="Fotos">{draft.vistoriaData.totalFotos || 0}</Field>
-                {draft.vistoriaData.enviadoEm && (
-                  <Field label="Enviada em">
-                    {new Date(draft.vistoriaData.enviadoEm).toLocaleString('pt-BR', {
-                      dateStyle: 'short',
-                      timeStyle: 'short',
-                    })}
+                {arquivos.map(([slot, meta]) => (
+                  <Field key={slot} label={VISTORIA_SLOTS[slot as VistoriaSlot]?.label || slot}>
+                    <a
+                      href={`/api/admin/vistoria/arquivo?ref=${encodeURIComponent(draft.ref)}&slot=${slot}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-[32px] items-center gap-1 font-semibold text-navy-600 underline-offset-2 hover:underline"
+                    >
+                      Abrir {meta.ext.toUpperCase()}
+                      <ExternalLink aria-hidden className="h-3.5 w-3.5" />
+                    </a>
+                    <span className="text-muted"> · {(meta.size / 1024 / 1024).toFixed(1).replace('.', ',')} MB</span>
+                  </Field>
+                ))}
+                {draft.vistoriaData?.enviadoEm && (
+                  <Field label="Concluída em">
+                    {new Date(draft.vistoriaData.enviadoEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
                   </Field>
                 )}
               </>
+            ) : draft.vistoriaData ? (
+              <p className="m-0 py-2 text-sm text-muted">
+                Vistoria antiga: o site ainda não guardava os arquivos. Peça os documentos ao cliente pelo WhatsApp.
+              </p>
             ) : (
               <p className="m-0 py-2 text-sm text-muted">O cliente ainda não enviou a vistoria.</p>
             )}

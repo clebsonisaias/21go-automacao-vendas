@@ -143,6 +143,7 @@ function VistoriaContent() {
   const [showMissing, setShowMissing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [progress, setProgress] = useState('')
   const [aiSummary, setAiSummary] = useState<string | null>(null)
 
   const handleDocExtracted = (result: DocumentAiResult) => {
@@ -180,22 +181,32 @@ function VistoriaContent() {
     setIsSubmitting(true)
     setError('')
 
-    const totalFotos = FOTOS.filter((s) => files[s.key]).length
-
     try {
+      // 1) Envia cada documento/foto de verdade (um por vez, para funcionar em conexão fraca).
+      const entries = (Object.entries(files) as [SlotKey, File | null][]).filter(([, f]) => f)
+      let done = 0
+      for (const [slot, file] of entries) {
+        setProgress(`Enviando arquivo ${done + 1} de ${entries.length}…`)
+        const fd = new FormData()
+        fd.append('ref', ref)
+        fd.append('slot', slot)
+        fd.append('file', file as File)
+        const up = await fetch('/api/vistoria/upload', { method: 'POST', body: fd })
+        if (!up.ok) {
+          const data = await up.json().catch(() => ({}))
+          const titulo = [...DOCUMENTOS, ...FOTOS].find((x) => x.key === slot)?.title || 'arquivo'
+          setError(`${titulo}: ${data?.error || 'não foi possível enviar. Tente de novo.'}`)
+          return
+        }
+        done++
+      }
+
+      // 2) Conclui a vistoria.
+      setProgress('Concluindo…')
       const res = await fetch('/api/vistoria/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ref,
-          nome,
-          placa,
-          veiculo,
-          cnhOuRgNome: files.cnhOuRg.name,
-          crlvNome: files.crlv.name,
-          comprovanteResidenciaNome: files.comprovanteResidencia.name,
-          totalFotos,
-        }),
+        body: JSON.stringify({ ref }),
       })
 
       if (res.ok) {
@@ -208,6 +219,7 @@ function VistoriaContent() {
       setError('Sem conexão com o servidor. Verifique sua internet e tente novamente.')
     } finally {
       setIsSubmitting(false)
+      setProgress('')
     }
   }
 
@@ -366,7 +378,7 @@ function VistoriaContent() {
                 disabled={isSubmitting}
                 className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-lg bg-go-orange text-[17px] font-extrabold text-navy-950 transition hover:-translate-y-px hover:shadow-cta disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
               >
-                {isSubmitting ? 'Enviando…' : 'Enviar documentos e concluir vistoria'}
+                {isSubmitting ? progress || 'Enviando…' : 'Enviar documentos e concluir vistoria'}
                 {!isSubmitting && <ArrowRight aria-hidden className="h-5 w-5" />}
               </button>
             </form>

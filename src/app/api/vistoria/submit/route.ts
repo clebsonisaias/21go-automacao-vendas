@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic'
 
 const text = (v: unknown, max: number) => (typeof v === 'string' ? v.slice(0, max) : undefined)
 
+
 export async function POST(req: NextRequest) {
   try {
     if (!rateLimit(req, 'vistoria-submit', 10, 10 * 60 * 1000)) {
@@ -38,10 +39,18 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const cnhOuRgNome = text(body.cnhOuRgNome, 120)
-    const crlvNome = text(body.crlvNome, 120)
-    const comprovanteResidenciaNome = text(body.comprovanteResidenciaNome, 120)
-    const totalFotos = Math.min(Math.max(Number(body.totalFotos) || 0, 0), 20)
+    // Só conclui com os documentos realmente gravados no servidor (enviados por /api/vistoria/upload).
+    const arq = lead.vistoriaArquivos || {}
+    if (!arq.cnhOuRg || !arq.crlv || !arq.comprovanteResidencia) {
+      return NextResponse.json(
+        { error: 'Faltam documentos: envie CNH ou RG, CRLV e comprovante de residência.' },
+        { status: 400 }
+      )
+    }
+    const cnhOuRgNome = arq.cnhOuRg.originalName
+    const crlvNome = arq.crlv.originalName
+    const comprovanteResidenciaNome = arq.comprovanteResidencia.originalName
+    const totalFotos = Object.keys(arq).filter((k) => k.startsWith('foto')).length
 
     updateLeadVistoria(lead.ref, { cnhOuRgNome, crlvNome, comprovanteResidenciaNome, totalFotos })
 
@@ -59,7 +68,7 @@ export async function POST(req: NextRequest) {
 - Comprovante de Residência: ${comprovanteResidenciaNome ? `✅ ${esc(comprovanteResidenciaNome)}` : 'Pendente'}
 - Fotos do Veículo: ✅ ${totalFotos} fotos enviadas
 
-💡 <b>Ação Recomendada:</b> Acesse o Power CRM e aprove a vistoria para ativação imediata!`
+💡 <b>Próximo passo:</b> abra o cadastro no painel /admin para ver os arquivos e aprovar a vistoria.`
 
     await sendTelegramNotification(telegramMessage)
 
