@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { findLeadByRef, updateLead } from '@/lib/db'
 import { DocumentAiResult } from '@/lib/types'
+import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,6 +15,15 @@ export async function POST(req: NextRequest) {
     if (!ref || !extracted?.success) {
       return NextResponse.json({ error: 'Dados inválidos.' }, { status: 400 })
     }
+    // Leitura que falhou volta como "simulation" (dados de exemplo): nunca grava no cadastro.
+    if (extracted.model === 'simulation') {
+      return NextResponse.json({ success: false, error: 'Leitura não confiável; nada foi gravado.' }, { status: 422 })
+    }
+    if (!rateLimit(req, 'vistoria-extrair', 30, 10 * 60 * 1000)) {
+      return NextResponse.json({ error: 'Muitas tentativas.' }, { status: 429 })
+    }
+    // Pessoa só da CNH; endereço só do comprovante; carro só do CRLV (o carro pode ser de terceiro).
+    const tipo = extracted.documentType
 
     const lead = findLeadByRef(ref)
     if (!lead) {
@@ -22,12 +32,17 @@ export async function POST(req: NextRequest) {
 
     const updated = updateLead(ref, (l) => {
       // Dados pessoais da CNH
-      if (extracted.personal?.nome && !l.nome) l.nome = extracted.personal.nome
-      if (extracted.personal?.cpf && !l.cpf) l.cpf = extracted.personal.cpf
+      if (tipo === 'cnh') {
+        if (extracted.personal?.nome && !l.nome) l.nome = extracted.personal.nome
+        if (extracted.personal?.cpf && !l.cpf) l.cpf = extracted.personal.cpf
+      }
 
       // Endereço do comprovante
-      if (extracted.address?.cidade && !l.cidade) l.cidade = extracted.address.cidade
-      if (extracted.address?.uf && !l.uf) l.uf = extracted.address.uf
+      if (tipo === 'comprovante_residencia') {
+        if (extracted.address?.cidade && !l.cidade) l.cidade = extracted.address.cidade
+        if (extracted.address?.uf && !l.uf) l.uf = extracted.address.uf
+      }
+      if (tipo !== 'crlv') return
 
       // Dados do veículo do CRLV
       if (extracted.vehicle?.placa && !l.placa) l.placa = extracted.vehicle.placa

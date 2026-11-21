@@ -23,6 +23,14 @@ const ATENDEHUB_CANAL_ID = process.env.ATENDEHUB_CANAL_ID || ''
 /**
  * Envia mensagem direta pelo Gateway do CITchat / AtendeHub (WhatsApp Oficial CITmax)
  */
+/** "Olá Maria" (primeiro nome) ou só "Olá" quando o nome ainda não veio dos documentos. */
+function ola(nome?: string, negrito = false): string {
+  const primeiro = String(nome || '').trim().split(/\s+/)[0]
+  if (!primeiro || primeiro === 'Cliente') return 'Olá'
+  const n = primeiro.charAt(0).toUpperCase() + primeiro.slice(1).toLowerCase()
+  return negrito ? `Olá *${n}*` : `Olá ${n}`
+}
+
 export async function sendCitchatMessage(
   recipientRaw: string,
   body: string
@@ -104,11 +112,11 @@ export async function sendWhatsAppQuoteMessage(
 
   const vistoriaUrl = options?.vistoriaUrl
     ? absolute(options.vistoriaUrl)
-    : `${absolute('/vistoria')}?placa=${encodeURIComponent(lead.placa || lead.vehicle.placa || '')}&nome=${encodeURIComponent(lead.nome)}`
+    : `${absolute('/vistoria')}?placa=${encodeURIComponent(lead.placa || lead.vehicle.placa || '')}&nome=${encodeURIComponent(lead.nome || '')}`
   const pagamentoUrl = options?.pagamentoUrl ? absolute(options.pagamentoUrl) : null
 
   const message = [
-    `🚗 *Olá ${lead.nome}! Tudo bem?*`,
+    `🚗 *${ola(lead.nome)}! Tudo bem?*`,
     `Aqui é da equipe *CITmax Proteção Veicular* (Franquia Oficial 21Go).`,
     ``,
     `Recebemos a sua simulação oficial para o veículo:`,
@@ -173,7 +181,7 @@ export async function sendWhatsAppVistoriaConfirmation(params: {
   const message = [
     `✅ *Documentos recebidos!*`,
     ``,
-    `Olá *${params.nome}*, recebemos seus documentos para a placa *${params.placa}*.`,
+    `${ola(params.nome, true)}, recebemos seus documentos para a placa *${params.placa}*.`,
     ``,
     `Próximo passo: em breve enviamos aqui o link da vistoria oficial da 21Go (App Visto), para as fotos do veículo.`,
     `A taxa de adesão (Pix) é o último passo, depois da vistoria aprovada.`,
@@ -196,7 +204,7 @@ export async function sendWhatsAppAdesaoConfirmada(params: {
   const message = [
     `✅ *Pagamento confirmado!*`,
     ``,
-    `Olá *${params.nome}*, recebemos o Pix da taxa de adesão (R$ ${params.valor.toFixed(2)}). Obrigado!`,
+    `${ola(params.nome, true)}, recebemos o Pix da taxa de adesão (R$ ${params.valor.toFixed(2)}). Obrigado!`,
     ``,
     ...(params.vistoriaUrl
       ? [
@@ -220,7 +228,7 @@ export async function sendWhatsAppAppVisto(params: {
   const message = [
     `📸 *Sua vistoria está liberada!*`,
     ``,
-    `Olá *${params.nome}*, faça agora a vistoria oficial da 21Go no App Visto (fotos do veículo pelo celular, com câmera ao vivo e GPS):`,
+    `${ola(params.nome, true)}, faça agora a vistoria oficial da 21Go no App Visto (fotos do veículo pelo celular, com câmera ao vivo e GPS):`,
     `👉 ${params.url}`,
     ``,
     `Com a vistoria aprovada, enviamos aqui o Pix da adesão, que é o último passo.`,
@@ -240,7 +248,7 @@ export async function sendWhatsAppAdesaoLiberada(params: {
   const message = [
     `🎉 *Vistoria aprovada!*`,
     ``,
-    `Olá *${params.nome}*, a vistoria do veículo de placa *${params.placa}* foi aprovada.`,
+    `${ola(params.nome, true)}, a vistoria do veículo de placa *${params.placa}* foi aprovada.`,
     ``,
     `💳 *Último passo: pague a taxa de adesão (R$ ${params.valor.toFixed(2)}) via Pix.*`,
     `Abra o link, copie o código ou leia o QR Code. A confirmação é automática:`,
@@ -259,7 +267,7 @@ export async function sendWhatsAppVistoriaAprovada(params: {
   const message = [
     `🎉 *Vistoria aprovada!*`,
     ``,
-    `Olá *${params.nome}*, a vistoria do veículo de placa *${params.placa}* foi aprovada pela nossa equipe.`,
+    `${ola(params.nome, true)}, a vistoria do veículo de placa *${params.placa}* foi aprovada pela nossa equipe.`,
     ``,
     `Estamos concluindo o seu cadastro como associado. Em seguida você receberá aqui os dados de acesso e as mensalidades. 🤝`,
   ].join('\n')

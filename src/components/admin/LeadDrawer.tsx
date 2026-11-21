@@ -14,7 +14,7 @@ const SITE = 'https://21go.seg.br'
 
 export function vistoriaUrlFor(lead: StoredLead): string {
   return `${SITE}/vistoria?ref=${encodeURIComponent(lead.ref || lead.id)}&nome=${encodeURIComponent(
-    lead.nome
+    lead.nome || ''
   )}&placa=${encodeURIComponent(lead.placa || '')}&veiculo=${encodeURIComponent(
     `${lead.vehicle.marca} ${lead.vehicle.modelo}`
   )}`
@@ -22,7 +22,7 @@ export function vistoriaUrlFor(lead: StoredLead): string {
 
 // Texto enviado ao cliente pelo WhatsApp (conteúdo da mensagem, não UI).
 export function proposalText(lead: StoredLead): string {
-  return `Olá, ${lead.nome}! Tudo bem? Aqui é o Clebson da 21Go Proteção Veicular. 🚗
+  return `Olá${lead.nome ? `, ${lead.nome.split(" ")[0]}` : ""}! Tudo bem? Aqui é o Clebson da 21Go Proteção Veicular. 🚗
 
 Segue a proposta para o seu veículo:
 🚘 *${lead.vehicle.marca} ${lead.vehicle.modelo} (${lead.vehicle.ano})*
@@ -224,7 +224,7 @@ export function LeadDrawer({
         <header className="flex items-start justify-between gap-4 border-b border-line px-6 py-4">
           <div className="min-w-0">
             <h2 id="lead-drawer-title" className="m-0 truncate text-lg font-semibold text-navy-900">
-              {draft.nome}
+              {draft.nome || "Aguardando documentos"}
             </h2>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
               <StatusLabel status={draft.status} />

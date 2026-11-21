@@ -15,6 +15,9 @@ const POWERCRM_CONSULTANT_CODE = process.env.POWERCRM_CONSULTANT_CODE || 'vrXbXy
 /** UF usada quando o cliente informa só o nome da cidade. */
 const DEFAULT_UF = (process.env.POWERCRM_DEFAULT_UF || 'RN').toUpperCase()
 
+/** Nome usado no PowerCRM até a CNH ser lida (o CRM 21Go troca pelo nome do documento). */
+export const NOME_PROVISORIO = 'Cliente 21go.seg.br'
+
 export interface PowerCrmSubmitResponse {
   success: boolean
   qttnCd?: string
@@ -124,7 +127,7 @@ export async function buildPowerCrmBody(payload: LeadSubmissionPayload): Promise
     ...(form.pipelineColumn ? { pipelineColumn: String(form.pipelineColumn) } : {}),
     ...(form.funnelStage ? { funnelStage: form.funnelStage } : {}),
     companyUserCode: POWERCRM_CONSULTANT_CODE,
-    clientName: payload.nome,
+    clientName: (payload.nome || '').trim() || NOME_PROVISORIO,
     clientPhone: maskPhone(payload.whatsapp),
     ...(payload.email ? { clientEmail: payload.email } : {}),
     ...(cityId ? { clientCity: String(cityId) } : {}),
