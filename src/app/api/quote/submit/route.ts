@@ -69,6 +69,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Valores do plano inválidos. Refaça a simulação.' }, { status: 400 })
     }
     payload.ativacao = verified.plan.ativacao
+    // Dados oficiais do veículo e IDs do Power CRM vêm da cotação assinada (não do navegador).
+    if (verified.vehicle) {
+      payload.vehicle = { ...verified.vehicle, placa: payload.vehicle.placa }
+    }
+    if (verified.meta) payload.powercrmMeta = verified.meta
     payload.planoEscolhidoNome = verified.plan.name
     payload.mensalidadeOriginal = verified.plan.monthly
 

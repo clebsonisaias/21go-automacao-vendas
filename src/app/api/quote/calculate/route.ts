@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     })
 
     if (result.success && result.plans.length) {
-      result.quoteToken = createQuoteToken(result.vehicle.fipeCode, result.plans) || undefined
+      result.quoteToken = createQuoteToken(result.vehicle, result.plans, result.powercrmMeta) || undefined
     }
 
     return NextResponse.json(result)
