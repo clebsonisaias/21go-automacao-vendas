@@ -354,13 +354,16 @@ async function gerarUmaVez(lead: StoredLead): Promise<string | null> {
     await trazerDadosDoCard(lead, negId).catch(() => undefined)
     await ensureRequisitos(lead, negId, cotacaoId)
     await ensureCpfNoCard(findLeadByRef(lead.ref) || lead, negId)
-    // Dados completos: card avança para "Em negociação" antes de gerar o link.
+    // Dados completos: o card anda no Kanban até "Vistorias" e só então o link é gerado
+    // (mesma ordem da equipe no CRM). Só avança, nunca volta: tentar de novo não mexe no card.
     await avancarCard(negId, 'EM_NEGOCIACAO')
+    await avancarCard(negId, 'VISTORIAS')
     const r = await crm<any>('POST', `/vistoria-propria/${negId}`, { cotacaoId, zeroKm: false })
     if (r.status >= 300) throw new Error(errMsg(r.data, `CRM não gerou a vistoria`))
     v = r.data?.vistoria || r.data || null
   } else if (!v.url && v.filaEstado === 'travada') {
     await ensureCpfNoCard(lead, negId)
+    await avancarCard(negId, 'VISTORIAS')
     await crm<any>('POST', `/vistoria-propria/${negId}`, { cotacaoId, zeroKm: false })
   }
 
