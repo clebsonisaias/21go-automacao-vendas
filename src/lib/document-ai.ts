@@ -1,7 +1,7 @@
 import { DocumentAiResult, ExtractedDocType } from './types'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
-const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini'
+const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o'
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
 
@@ -31,57 +31,138 @@ export function formatCep(raw: string): string {
 }
 
 /**
- * Prompt especialista em documentos automotivos e cadastrais brasileiros
+ * Valida CPF (algoritmo dos dígitos verificadores)
  */
-const SYSTEM_PROMPT = `Você é um motor de IA especialista em OCR e extração estruturada de documentos brasileiros de trânsito e identificação para cotação e vistoria veicular da 21Go Proteção Veicular (Franquia CITmax).
+function isValidCpf(cpf: string): boolean {
+  const digits = cpf.replace(/\D/g, '')
+  if (digits.length !== 11 || /^(\d)\1+$/.test(digits)) return false
+  let sum = 0
+  for (let i = 0; i < 9; i++) sum += parseInt(digits[i]) * (10 - i)
+  let rest = (sum * 10) % 11
+  if (rest === 10 || rest === 11) rest = 0
+  if (rest !== parseInt(digits[9])) return false
+  sum = 0
+  for (let i = 0; i < 10; i++) sum += parseInt(digits[i]) * (11 - i)
+  rest = (sum * 10) % 11
+  if (rest === 10 || rest === 11) rest = 0
+  return rest === parseInt(digits[10])
+}
 
-Analise a imagem ou PDF fornecido e identifique se o documento é:
-1. "cnh" (Carteira Nacional de Habilitação física ou digital, ou RG/CIN)
-2. "crlv" (Certificado de Registro e Licenciamento de Veículo / CRLV-e / Documento do carro ou moto)
-3. "comprovante_residencia" (Conta de luz, água, gás, telefone, internet ou fatura de cartão com endereço)
-4. "desconhecido" (Não foi possível identificar com clareza)
+/**
+ * Valida placa Mercosul ou antiga
+ */
+function isValidPlaca(placa: string): boolean {
+  const p = placa.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  return /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/.test(p) || /^[A-Z]{3}[0-9]{4}$/.test(p)
+}
 
-Retorne ESTRITAMENTE um objeto JSON válido, sem formatação markdown ou texto extra, no seguinte formato:
+/**
+ * Prompt avançado para documentos brasileiros
+ */
+const SYSTEM_PROMPT = `Você é um especialista em OCR de documentos brasileiros para proteção veicular.
+
+Analise a imagem com máxima precisão e extraia os dados estruturados.
+
+Tipos de documento:
+- "cnh": Carteira Nacional de Habilitação (física ou digital) ou RG/CIN
+- "crlv": Certificado de Registro e Licenciamento de Veículo (CRLV-e)
+- "comprovante_residencia": Conta de luz, água, gás, telefone ou internet
+- "desconhecido": Não identificado
+
+Regras importantes:
+1. Extraia APENAS o que está visível e legível
+2. Para CPF, extraia os 11 dígitos sem pontuação
+3. Para placa, extraia no formato ABC1D23 ou ABC1234
+4. Para datas, use DD/MM/AAAA
+5. Se não tiver certeza de um campo, omita-o (não invente)
+6. Retorne APENAS JSON válido, sem markdown
+
+Formato de resposta:
 {
   "documentType": "cnh" | "crlv" | "comprovante_residencia" | "desconhecido",
-  "confidence": 0.95,
+  "confidence": 0.0 a 1.0,
   "personal": {
-    "nome": "NOME COMPLETO EM MAIÚSCULAS",
+    "nome": "NOME COMPLETO",
     "cpf": "00000000000",
-    "rg": "NÚMERO DO RG",
+    "rg": "NÚMERO",
     "orgaoExpedidor": "SSP/UF",
     "dataNascimento": "DD/MM/AAAA",
-    "numeroCnh": "NÚMERO DE REGISTRO",
-    "categoriaCnh": "B ou AB ou A etc",
+    "numeroCnh": "REGISTRO",
+    "categoriaCnh": "B",
     "validadeCnh": "DD/MM/AAAA",
     "primeiraHabilitacao": "DD/MM/AAAA"
   },
   "vehicle": {
     "placa": "ABC1D23",
-    "chassi": "17 CARACTERES DO CHASSI",
-    "renavam": "NÚMERO RENAVAM",
-    "marcaModelo": "MARCA/MODELO CONFORME CRLV",
+    "chassi": "17 CARACTERES",
+    "renavam": "11 DÍGITOS",
+    "marcaModelo": "MARCA/MODELO",
+    "marca": "MARCA",
+    "modelo": "MODELO",
     "anoFabricacao": 2022,
     "anoModelo": 2023,
-    "cor": "COR PREDOMINANTE",
-    "combustivel": "ALCOOL/GASOLINA/FLEX",
-    "nomeProprietario": "NOME DO PROPRIETÁRIO NO CRLV",
-    "cpfCnpjProprietario": "CPF OU CNPJ DO PROPRIETÁRIO"
+    "cor": "COR",
+    "combustivel": "FLEX",
+    "nomeProprietario": "NOME",
+    "cpfCnpjProprietario": "00000000000"
   },
   "address": {
     "cep": "00000000",
-    "logradouro": "RUA OU AVENIDA",
+    "logradouro": "RUA/AVENIDA",
     "numero": "123",
-    "complemento": "APTO 101",
+    "complemento": "APTO",
     "bairro": "BAIRRO",
     "cidade": "CIDADE",
-    "uf": "RN"
+    "uf": "UF"
   }
-}
-Se algum campo não constar no documento, omita ou use null. Extraia apenas o que tiver certeza.`
+}`
 
 /**
- * Processa a imagem ou PDF com OpenAI GPT-4o-mini Vision (ou Gemini como alternativa)
+ * Pós-processamento e validação dos dados extraídos
+ */
+function postProcess(parsed: any): DocumentAiResult {
+  const result: DocumentAiResult = {
+    success: true,
+    documentType: parsed.documentType || 'desconhecido',
+    confidence: parsed.confidence || 0.8,
+    personal: parsed.personal,
+    vehicle: parsed.vehicle,
+    address: parsed.address,
+  }
+
+  // Formata e valida CPF
+  if (result.personal?.cpf) {
+    result.personal.cpf = formatCpf(result.personal.cpf)
+    if (!isValidCpf(result.personal.cpf)) {
+      delete result.personal.cpf
+      result.confidence = Math.max(0.5, (result.confidence || 0.8) - 0.1)
+    }
+  }
+
+  // Formata e valida placa
+  if (result.vehicle?.placa) {
+    result.vehicle.placa = formatPlaca(result.vehicle.placa)
+    if (!isValidPlaca(result.vehicle.placa)) {
+      delete result.vehicle.placa
+      result.confidence = Math.max(0.5, (result.confidence || 0.8) - 0.1)
+    }
+  }
+
+  // Formata CEP
+  if (result.address?.cep) {
+    result.address.cep = formatCep(result.address.cep)
+  }
+
+  // Normaliza UF para 2 letras maiúsculas
+  if (result.address?.uf) {
+    result.address.uf = result.address.uf.toUpperCase().slice(0, 2)
+  }
+
+  return result
+}
+
+/**
+ * Processa a imagem ou PDF com OpenAI GPT-4o Vision (ou Gemini como alternativa)
  */
 export async function extractDocumentWithAi(params: {
   imageBase64: string
@@ -91,7 +172,7 @@ export async function extractDocumentWithAi(params: {
   const { imageBase64, mimeType, docTypeHint } = params
   const rawBase64 = imageBase64.replace(/^data:[^;]+;base64,/, '')
 
-  // 1. Prioriza OpenAI GPT (Luna IA Engine)
+  // 1. Prioriza OpenAI GPT-4o (melhor para documentos)
   if (OPENAI_API_KEY) {
     try {
       const dataUri = `data:${mimeType};base64,${rawBase64}`
@@ -111,17 +192,17 @@ export async function extractDocumentWithAi(params: {
               content: [
                 {
                   type: 'text',
-                  text: `Extraia os dados estruturados deste documento brasileiro.${docTypeHint ? ` Dica de tipo provável: ${docTypeHint}` : ''}`,
+                  text: `Extraia os dados deste documento brasileiro com máxima precisão.${docTypeHint ? ` Tipo esperado: ${docTypeHint}` : ''}`,
                 },
                 {
                   type: 'image_url',
-                  image_url: { url: dataUri },
+                  image_url: { url: dataUri, detail: 'high' },
                 },
               ],
             },
           ],
-          max_tokens: 1500,
-          temperature: 0.1,
+          max_tokens: 2000,
+          temperature: 0.05,
         }),
       })
 
@@ -130,29 +211,17 @@ export async function extractDocumentWithAi(params: {
         const content = data.choices?.[0]?.message?.content
         if (content) {
           const parsed = JSON.parse(content)
-          if (parsed.personal?.cpf) parsed.personal.cpf = formatCpf(parsed.personal.cpf)
-          if (parsed.vehicle?.placa) parsed.vehicle.placa = formatPlaca(parsed.vehicle.placa)
-          if (parsed.address?.cep) parsed.address.cep = formatCep(parsed.address.cep)
-
-          return {
-            success: true,
-            documentType: parsed.documentType || 'desconhecido',
-            confidence: parsed.confidence || 0.95,
-            personal: parsed.personal,
-            vehicle: parsed.vehicle,
-            address: parsed.address,
-            rawText: content,
-          }
+          return postProcess(parsed)
         }
       } else {
-        console.warn('[Document AI] Falha na OpenAI API:', response.status, await response.text())
+        console.warn('[Document AI] Falha na OpenAI API:', response.status)
       }
     } catch (err) {
       console.error('[Document AI] Erro ao extrair com OpenAI:', err)
     }
   }
 
-  // 2. Fallback para Google Gemini se configurado
+  // 2. Fallback para Google Gemini
   if (GEMINI_API_KEY) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`
@@ -170,7 +239,7 @@ export async function extractDocumentWithAi(params: {
             },
           ],
           generationConfig: {
-            temperature: 0.1,
+            temperature: 0.05,
             responseMimeType: 'application/json',
           },
         }),
@@ -181,19 +250,7 @@ export async function extractDocumentWithAi(params: {
         const content = data?.candidates?.[0]?.content?.parts?.[0]?.text
         if (content) {
           const parsed = JSON.parse(content)
-          if (parsed.personal?.cpf) parsed.personal.cpf = formatCpf(parsed.personal.cpf)
-          if (parsed.vehicle?.placa) parsed.vehicle.placa = formatPlaca(parsed.vehicle.placa)
-          if (parsed.address?.cep) parsed.address.cep = formatCep(parsed.address.cep)
-
-          return {
-            success: true,
-            documentType: parsed.documentType || 'desconhecido',
-            confidence: parsed.confidence || 0.9,
-            personal: parsed.personal,
-            vehicle: parsed.vehicle,
-            address: parsed.address,
-            rawText: content,
-          }
+          return postProcess(parsed)
         }
       }
     } catch (err) {
@@ -201,7 +258,7 @@ export async function extractDocumentWithAi(params: {
     }
   }
 
-  // 3. Fallback inteligente de simulação
+  // 3. Fallback
   return simulateDocumentExtraction(docTypeHint)
 }
 
