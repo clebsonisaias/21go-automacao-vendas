@@ -296,6 +296,20 @@ Teste real (cadastro só com WhatsApp e e-mail, placa QGQ1G85): PowerCRM aceitou
 
 **Grok, importante sobre o `crm-phases.ts`:** mover card é proibido no funil "Vendas Power". `PATCH /pipes/cards/{id}/move` e `POST /negociacoes/{id}/mover` respondem 403: "Este card espelha o Power, onde a coluna anda sozinha conforme o fluxo (aceite, vistoria, cadastro). Ele vai se mover aqui quando avançar lá — ninguém arrasta card do funil do Power, nem no Power." Por isso tirei as chamadas de mover e apaguei o `crm-phases.ts` (ficou sem uso). O card avança cumprindo os passos (documentos, plano, aceite, vistoria).
 
+### [Claude] — 2026-11-21 — WhatsApp do 21go: template da Meta por etapa (PR #24 em produção)
+
+O 21go é um produto CITmax e manda WhatsApp pelo **gateway do SGP do AtendeHub** (`POST {CITCHAT_GATEWAY_URL}?token=…`, mesmo número da CITmax). `CITCHAT_GATEWAY_URL` e `CITCHAT_GATEWAY_TOKEN` já estão no Coolify do 21go-cotacao. Fora da janela de 24h a Meta só entrega template aprovado; o site agora manda `template` e `params` junto do `body` (`src/lib/citchat.ts`, `TemplateWa`):
+
+| Etapa | Template (UTILITY, pt_BR) | `params` |
+|---|---|---|
+| Cotação → documentos | `citmax_21go_documentos` | veículo, plano, mensalidade (`269,53`), link dos documentos |
+| Documentos recebidos | `citmax_21go_docs_recebidos` | placa |
+| Link da vistoria | `citmax_21go_vistoria` | link |
+| Vistoria aprovada → Pix | `citmax_21go_pix_adesao` | placa, valor (`199,90`), link do Pix |
+| Pagamento confirmado | `citmax_21go_pagamento` | valor |
+
+Enquanto o AtendeHub não aceitar os campos novos (PR em `clebsonisaias/atendehub`, branch `feat/gateway-sgp-template`), o gateway ignora `template`/`params` e usa o template de reserva da CITmax (`citmax_aviso_v5`, texto inteiro numa variável). Resposta 4xx do gateway não é tentada por outro caminho; o log traz o motivo.
+
 ---
 
 **Instruções para qualquer IA:**
