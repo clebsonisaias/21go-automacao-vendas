@@ -28,6 +28,9 @@ export async function POST(req: NextRequest) {
     if (!lead) {
       return NextResponse.json({ error: 'Link de vistoria inválido ou expirado. Faça uma nova cotação.' }, { status: 404 })
     }
+    if (lead.status === 'cancelado') {
+      return NextResponse.json({ error: 'Este cadastro foi encerrado. Faça uma nova cotação ou fale com a nossa equipe.' }, { status: 410 })
+    }
     if (lead.status === 'aprovado') {
       return NextResponse.json({ error: 'Esta vistoria já foi aprovada. Fale com a nossa equipe para alterar.' }, { status: 409 })
     }

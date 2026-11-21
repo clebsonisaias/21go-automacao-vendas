@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendLeadToPowerCrm } from '@/lib/powercrm-lead'
-import { sendLeadToCrm } from '@/lib/crm'
 import { sendTelegramNotification, esc } from '@/lib/telegram'
 import { rateLimit } from '@/lib/rate-limit'
 import { sendWhatsAppQuoteMessage } from '@/lib/citchat'
@@ -82,7 +81,7 @@ export async function POST(req: NextRequest) {
     const leadRef = `lead_${crypto.randomUUID()}`
 
     const powerCrmResult = await sendLeadToPowerCrm(payload)
-    const crmResult = await sendLeadToCrm(payload)
+    // O card do CRM 21Go chega pela sincronização do PowerCRM; o site não cria outro (ficava duplicado no Kanban).
 
     const storedLead = saveNewLead(
       payload,
@@ -129,8 +128,6 @@ export async function POST(req: NextRequest) {
       powerCrmSuccess: powerCrmResult.success,
       powerCrmQuotationCode: powerCrmResult.qttnCd,
       checkoutUrl,
-      crmSuccess: crmResult.success,
-      cardId: crmResult.cardId,
       vistoriaUrl,
       message: 'Cadastro realizado! Envie os documentos para completar.',
     })
