@@ -2,7 +2,6 @@ import { StoredLead, findLeadByRef, getStoredLeads, updateLead } from './db'
 import { sendWhatsAppAppVisto } from './citchat'
 import { esc, sendTelegramNotification } from './telegram'
 import { readVistoriaFile } from './vistoria-files'
-import { CRM_PHASES, CrmPhase, moverCard, getCardIdFromNegociacao } from './crm-phases'
 import { aprovarVistoria } from './vistoria-aprovacao'
 import sharp from 'sharp'
 
@@ -11,8 +10,7 @@ import sharp from 'sharp'
 //   1. acha a negociação pela placa (ela chega do PowerCRM alguns minutos depois do cadastro);
 //   2. marca no CRM o plano que o cliente escolheu no site e o aceite da simulação (requisitos do CRM);
 //   3. POST /vistoria-propria/{negociação} e espera o link (o CRM tenta de novo sozinho se demorar);
-//   4. move o card para a fase "Vistorias" no Kanban;
-//   5. guarda o link no cadastro: aparece na tela do cliente e vai no WhatsApp.
+//   4. guarda o link no cadastro: aparece na tela do cliente e vai no WhatsApp.
 
 const CRM = (process.env.CRM_BASE_URL || 'https://www.crm21go.site/api').replace(/\/+$/, '')
 const MAX_TENTATIVAS = 30
@@ -317,25 +315,9 @@ async function estadoVistoria(negId: string, cotacaoId: string): Promise<Estado>
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-const ORDEM_FASES: CrmPhase[] = ['COTACOES_RECEBIDAS', 'EM_NEGOCIACAO', 'VISTORIAS', 'LIBERADAS_CADASTRO', 'VENDAS_CONCRETIZADAS']
-
-/** Avança o card no Kanban até a fase pedida; nunca volta (a equipe pode ter movido para a frente). */
-export async function avancarCard(negId: string, fase: CrmPhase): Promise<void> {
-  try {
-    const cardId = await getCardIdFromNegociacao(negId)
-    if (!cardId) return
-    const card = await crm<any>('GET', `/pipes/cards/${cardId}`)
-    const atual = ORDEM_FASES.findIndex((f) => CRM_PHASES[f] === card.data?.currentPhaseId)
-    if (atual >= ORDEM_FASES.indexOf(fase)) return
-    if (await moverCard(cardId, fase)) console.log(`[Vistoria CRM] card ${cardId} → ${fase}`)
-  } catch (err) {
-    console.warn('[Vistoria CRM] não consegui mover o card:', err instanceof Error ? err.message : err)
-  }
-}
-
-async function moverParaVistorias(negId: string): Promise<void> {
-  await avancarCard(negId, 'VISTORIAS')
-}
+// Kanban: o card do funil "Vendas Power" espelha o PowerCRM e anda sozinho conforme o fluxo
+// (aceite → vistoria → cadastro). O CRM recusa mover à mão (403 "ninguém arrasta card do funil do Power"),
+// então o site não move: cumprir os passos (documentos, plano, aceite, vistoria) é o que faz o card avançar.
 
 async function gerarUmaVez(lead: StoredLead): Promise<string | null> {
   let { negId, cotacaoId } = lead.crmVistoria || {}
@@ -354,16 +336,11 @@ async function gerarUmaVez(lead: StoredLead): Promise<string | null> {
     await trazerDadosDoCard(lead, negId).catch(() => undefined)
     await ensureRequisitos(lead, negId, cotacaoId)
     await ensureCpfNoCard(findLeadByRef(lead.ref) || lead, negId)
-    // Dados completos: o card anda no Kanban até "Vistorias" e só então o link é gerado
-    // (mesma ordem da equipe no CRM). Só avança, nunca volta: tentar de novo não mexe no card.
-    await avancarCard(negId, 'EM_NEGOCIACAO')
-    await avancarCard(negId, 'VISTORIAS')
     const r = await crm<any>('POST', `/vistoria-propria/${negId}`, { cotacaoId, zeroKm: false })
     if (r.status >= 300) throw new Error(errMsg(r.data, `CRM não gerou a vistoria`))
     v = r.data?.vistoria || r.data || null
   } else if (!v.url && v.filaEstado === 'travada') {
     await ensureCpfNoCard(lead, negId)
-    await avancarCard(negId, 'VISTORIAS')
     await crm<any>('POST', `/vistoria-propria/${negId}`, { cotacaoId, zeroKm: false })
   }
 
@@ -409,9 +386,6 @@ export async function gerarLinkVistoria(ref: string): Promise<void> {
     const url = await gerarUmaVez(lead)
     if (url) {
       await entregarLinkVistoria(findLeadByRef(ref) || lead, url, 'auto')
-      // Link saiu: card vai para a fase "Vistorias" do Kanban (uma vez, só depois do sucesso).
-      const negId = findLeadByRef(ref)?.crmVistoria?.negId
-      if (negId) await moverParaVistorias(negId)
       return
     }
     registrarTentativa(ref, 'o CRM ainda está gerando o link')
