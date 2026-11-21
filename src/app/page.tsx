@@ -749,16 +749,16 @@ export default function HomePage() {
                 <ol className="m-0 flex w-full list-none flex-col gap-3 rounded-xl bg-navy-950 p-4 text-left text-sm text-white">
                   {[
                     [
-                      'Vistoria pelo celular',
-                      `Envie os documentos e as fotos do veículo. O link também foi para o seu WhatsApp ${submitSuccessData.clientPhone || ''}.`,
+                      'Documentos',
+                      `Envie CNH ou RG, documento do carro e comprovante de residência. O link também foi para o seu WhatsApp ${submitSuccessData.clientPhone || ''}.`,
                     ],
                     [
                       'Adesão no Pix (último passo)',
-                      'Depois da vistoria, você paga a taxa de adesão por Pix, na mesma tela.',
+                      'Depois dos documentos, você paga a taxa de adesão por Pix, na mesma tela.',
                     ],
                     [
-                      'Aprovação e ativação',
-                      'Nossa equipe confere a vistoria e avisa pelo WhatsApp quando a proteção estiver ativa.',
+                      'Vistoria no App Visto',
+                      'Enviamos no seu WhatsApp o link da vistoria oficial da 21Go, para as fotos do veículo. Aprovada, sua proteção é ativada.',
                     ],
                   ].map(([title, text], i) => (
                     <li key={title} className="flex items-start gap-3">
@@ -821,7 +821,7 @@ export default function HomePage() {
                       className={`${ctaCls} mt-1`}
                     >
                       <Camera aria-hidden className="h-4 w-4" />
-                      Fazer Vistoria Digital Agora
+                      Enviar meus documentos
                     </button>
                     <p className="m-0 text-xs text-muted">
                       Enviamos a confirmação para o seu WhatsApp{' '}

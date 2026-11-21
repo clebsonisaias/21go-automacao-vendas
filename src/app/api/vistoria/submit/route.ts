@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     updateLeadVistoria(lead.ref, { cnhOuRgNome, crlvNome, comprovanteResidenciaNome, totalFotos })
 
     const veiculo = `${lead.vehicle.marca} ${lead.vehicle.modelo}`
-    const telegramMessage = `📸 <b>VISTORIA DIGITAL RECEBIDA!</b> 📸
+    const telegramMessage = `📄 <b>DOCUMENTOS RECEBIDOS!</b> 📄
 
 👤 <b>Cliente:</b> ${esc(lead.nome)}
 🚗 <b>Veículo:</b> ${esc(veiculo)}
@@ -60,9 +60,8 @@ export async function POST(req: NextRequest) {
 - CNH ou RG: ${cnhOuRgNome ? `✅ ${esc(cnhOuRgNome)}` : 'Pendente'}
 - Documento do Veículo (CRLV): ${crlvNome ? `✅ ${esc(crlvNome)}` : 'Pendente'}
 - Comprovante de Residência: ${comprovanteResidenciaNome ? `✅ ${esc(comprovanteResidenciaNome)}` : 'Pendente'}
-- Fotos do Veículo: ✅ ${totalFotos} fotos enviadas
 
-💡 <b>Próximo passo:</b> abra o cadastro no painel /admin para ver os arquivos e aprovar a vistoria.`
+💡 <b>Próximo passo:</b> o cliente segue para o Pix da adesão. Depois, gere no CRM o link do App Visto e envie a ele.`
 
     await sendTelegramNotification(telegramMessage)
 
@@ -79,7 +78,7 @@ export async function POST(req: NextRequest) {
       success: true,
       pagamentoUrl,
       message: pagamentoUrl
-        ? 'Vistoria recebida! Último passo: pague a adesão via Pix.'
+        ? 'Documentos recebidos! Agora pague a adesão via Pix.'
         : 'Vistoria e documentos recebidos com sucesso! Nossa equipe entrará em contato.',
     })
   } catch (err) {

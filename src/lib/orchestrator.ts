@@ -59,7 +59,7 @@ async function onAdesaoPaga(lead: StoredLead): Promise<void> {
 💵 <b>Adesão recebida:</b> ${brl(lead.pagamento?.valor ?? lead.ativacao)}
 🧾 <b>Order MP:</b> <code>${esc(lead.pagamento?.orderId)}</code>
 
-${vistoriaFeita ? '✅ Vistoria já enviada: cadastro completo. Confira os arquivos e aprove no painel /admin.' : '➡️ A vistoria ainda não foi enviada.'}`)
+${vistoriaFeita ? '➡️ Documentos já enviados. Gere no CRM o link do App Visto e envie ao cliente; depois aprove no /admin.' : '➡️ Os documentos ainda não foram enviados.'}`)
 
   const sent = await sendWhatsAppAdesaoConfirmada({
     telefone: lead.whatsapp,

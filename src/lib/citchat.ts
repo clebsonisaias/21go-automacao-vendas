@@ -144,8 +144,8 @@ export async function sendWhatsAppQuoteMessage(
     ...(pagamentoUrl
       ? []
       : [
-          `📸 *Próximo passo: vistoria digital no celular*`,
-          `Abra o link, envie os documentos e as fotos do veículo. Depois, o último passo é o Pix da adesão:`,
+          `📄 *Próximo passo: envie seus documentos*`,
+          `Abra o link e envie CNH ou RG, documento do carro e comprovante de residência. Depois, o Pix da adesão:`,
           `👉 ${vistoriaUrl}`,
           ``,
         ]),
@@ -171,12 +171,11 @@ export async function sendWhatsAppVistoriaConfirmation(params: {
   const phone = params.telefone.replace(/\D/g, '')
 
   const message = [
-    `✅ *Vistoria Recebida com Sucesso!*`,
+    `✅ *Documentos recebidos!*`,
     ``,
-    `Olá *${params.nome}*, recebemos seus documentos e fotos de vistoria para a placa *${params.placa}*.`,
+    `Olá *${params.nome}*, recebemos seus documentos para a placa *${params.placa}*.`,
     ``,
-    `🔍 Nossa equipe já está realizando a conferência técnica da proposta.`,
-    `Em breve você receberá a confirmação de ativação da sua proteção veicular.`,
+    `Depois do Pix da adesão, enviamos aqui o link da vistoria oficial da 21Go (App Visto), para as fotos do veículo.`,
     ``,
     `Obrigado por escolher a *CITmax & 21Go*!`,
   ].join('\n')
@@ -200,12 +199,12 @@ export async function sendWhatsAppAdesaoConfirmada(params: {
     ``,
     ...(params.vistoriaUrl
       ? [
-          `📸 *Falta só a vistoria digital:*`,
+          `📄 *Falta enviar seus documentos:*`,
           `👉 ${params.vistoriaUrl}`,
         ]
       : [
-          `🔍 Seu cadastro está completo e nossa equipe já está conferindo a vistoria.`,
-          `Assim que for aprovada, você recebe aqui a confirmação da sua proteção. 🤝`,
+          `📸 Próximo passo: em breve enviamos aqui o link da vistoria oficial da 21Go (App Visto), para as fotos do veículo.`,
+          `Depois da vistoria aprovada, você recebe a confirmação da sua proteção. 🤝`,
         ]),
   ].join('\n')
 
