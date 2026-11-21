@@ -8,31 +8,93 @@ interface AtendeHubMessagePayload {
   texto: string;
 }
 
+const CITCHAT_GATEWAY_URL =
+  process.env.CITCHAT_GATEWAY_URL ||
+  'https://atendehub.170.82.252.195.sslip.io/gateway/sms'
+const CITCHAT_GATEWAY_TOKEN =
+  process.env.CITCHAT_GATEWAY_TOKEN || 'ImQq5Lek2czuha3IPmPdXJ8EnBejCXpe'
+
 const ATENDEHUB_URL =
-  process.env.ATENDEHUB_URL || "https://atendai.citmax.com.br";
-const ATENDEHUB_API_KEY = process.env.ATENDEHUB_API_KEY || "";
-const ATENDEHUB_CANAL_ID = process.env.ATENDEHUB_CANAL_ID || "";
+  process.env.ATENDEHUB_URL || 'https://atendai.citmax.com.br'
+const ATENDEHUB_API_KEY = process.env.ATENDEHUB_API_KEY || ''
+const ATENDEHUB_CANAL_ID = process.env.ATENDEHUB_CANAL_ID || ''
 const APP_BASE_URL =
-  process.env.NEXT_PUBLIC_APP_URL || "https://21go.seg.br";
+  process.env.NEXT_PUBLIC_APP_URL || 'https://21go.seg.br'
+
+/**
+ * Envia mensagem direta pelo Gateway do CITchat / AtendeHub (WhatsApp Oficial CITmax)
+ */
+export async function sendCitchatMessage(
+  recipientRaw: string,
+  body: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  let recipient = recipientRaw.replace(/\D/g, '')
+  if (!recipient) return { success: false, error: 'Telefone vazio' }
+  if (!recipient.startsWith('55')) recipient = `55${recipient}`
+
+  // 1. Tenta envio pelo Gateway rápido do CITchat
+  if (CITCHAT_GATEWAY_TOKEN) {
+    try {
+      const url = `${CITCHAT_GATEWAY_URL}?token=${encodeURIComponent(CITCHAT_GATEWAY_TOKEN)}`
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipient, body }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        console.log('[CITchat Gateway] Mensagem enviada com sucesso:', data)
+        return { success: true, data }
+      }
+      const errTxt = await res.text()
+      console.warn('[CITchat Gateway] Falha no envio via gateway:', res.status, errTxt)
+    } catch (e: any) {
+      console.error('[CITchat Gateway] Erro de rede no gateway:', e.message)
+    }
+  }
+
+  // 2. Fallback para AtendeHub Chat Externo
+  if (ATENDEHUB_API_KEY) {
+    try {
+      const res = await fetch(`${ATENDEHUB_URL}/api/chat-externo/atendimentos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${ATENDEHUB_API_KEY}`,
+        },
+        body: JSON.stringify({
+          ...(ATENDEHUB_CANAL_ID ? { canalId: ATENDEHUB_CANAL_ID } : {}),
+          telefone: recipient,
+          nomeContato: 'Associado 21Go',
+          deIdExterno: '21go-bot',
+          texto: body,
+        }),
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        return { success: true, data }
+      }
+    } catch (err: any) {
+      console.error('[CITchat Fallback] Erro:', err.message)
+    }
+  }
+
+  return { success: false, error: 'Não foi possível enviar mensagem pelo CITchat' }
+}
 
 /**
  * Envia mensagem automática pelo WhatsApp oficial da CITmax via AtendeHub / CITchat
  * quando um novo cliente realiza uma cotação.
  */
 export async function sendWhatsAppQuoteMessage(lead: LeadSubmissionPayload): Promise<{
-  success: boolean;
-  error?: string;
-  data?: any;
+  success: boolean
+  error?: string
+  data?: any
 }> {
-  if (!ATENDEHUB_API_KEY) {
-    console.log(
-      "[CITchat/AtendeHub] ATENDEHUB_API_KEY não configurada. Notificação WhatsApp ignorada."
-    );
-    return { success: false, error: "API key not configured" };
-  }
-
-  const phone = (lead.whatsapp || (lead as any).telefone || "").replace(/\D/g, "");
-  const vistoriaUrl = `${APP_BASE_URL}/vistoria?leadId=${(lead as any).id || ""}`;
+  const phone = (lead.whatsapp || (lead as any).telefone || '').replace(/\D/g, '')
+  if (!phone) return { success: false, error: 'Telefone ausente' }
 
   const message = [
     `🚗 *Olá ${lead.nome}! Tudo bem?*`,
@@ -52,46 +114,10 @@ export async function sendWhatsAppQuoteMessage(lead: LeadSubmissionPayload): Pro
     `📸 *Próximo Passo — Vistoria Oficial 21Go (App Visto):*`,
     `Para validar sua adesão com cobertura imediata, a 21Go exige a vistoria digital com câmera ao vivo e GPS.`,
     ``,
-    `💡 *Instruções rápidas:*`,
-    `1. Você receberá o link oficial do App Visto por aqui no WhatsApp;`,
-    `2. Abra o link no celular e autorize o uso da câmera e GPS;`,
-    `3. Tenha em mãos sua CNH (ou RG) e documento do veículo (CRLV);`,
-    `4. Tire as fotos em local aberto e iluminado.`,
-    ``,
     `Nossa equipe da CITmax já está acompanhando seu atendimento! Se tiver qualquer dúvida, é só responder esta mensagem.`,
-  ].join("\n");
+  ].join('\n')
 
-  try {
-    const payload: AtendeHubMessagePayload = {
-      ...(ATENDEHUB_CANAL_ID ? { canalId: ATENDEHUB_CANAL_ID } : {}),
-      telefone: phone,
-      nomeContato: lead.nome,
-      deIdExterno: "21go-bot",
-      texto: message,
-    };
-
-    const res = await fetch(`${ATENDEHUB_URL}/api/chat-externo/atendimentos`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${ATENDEHUB_API_KEY}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error("[CITchat/AtendeHub] Erro ao enviar mensagem:", res.status, errText);
-      return { success: false, error: `HTTP ${res.status}: ${errText}` };
-    }
-
-    const data = await res.json();
-    console.log("[CITchat/AtendeHub] Mensagem de cotação enviada com sucesso:", data);
-    return { success: true, data };
-  } catch (err: any) {
-    console.error("[CITchat/AtendeHub] Falha na requisição:", err.message);
-    return { success: false, error: err.message };
-  }
+  return sendCitchatMessage(phone, message)
 }
 
 /**
@@ -99,19 +125,15 @@ export async function sendWhatsAppQuoteMessage(lead: LeadSubmissionPayload): Pro
  * confirmando o recebimento da vistoria digital com documentos e fotos.
  */
 export async function sendWhatsAppVistoriaConfirmation(params: {
-  telefone: string;
-  nome: string;
-  placa: string;
+  telefone: string
+  nome: string
+  placa: string
 }): Promise<{
-  success: boolean;
-  error?: string;
-  data?: any;
+  success: boolean
+  error?: string
+  data?: any
 }> {
-  if (!ATENDEHUB_API_KEY) {
-    return { success: false, error: "API key not configured" };
-  }
-
-  const phone = params.telefone.replace(/\D/g, "");
+  const phone = params.telefone.replace(/\D/g, '')
 
   const message = [
     `✅ *Vistoria Recebida com Sucesso!*`,
@@ -122,36 +144,7 @@ export async function sendWhatsAppVistoriaConfirmation(params: {
     `Em breve você receberá a confirmação de ativação da sua proteção veicular.`,
     ``,
     `Obrigado por escolher a *CITmax & 21Go*!`,
-  ].join("\n");
+  ].join('\n')
 
-  try {
-    const payload: AtendeHubMessagePayload = {
-      ...(ATENDEHUB_CANAL_ID ? { canalId: ATENDEHUB_CANAL_ID } : {}),
-      telefone: phone,
-      nomeContato: params.nome,
-      deIdExterno: "21go-bot",
-      texto: message,
-    };
-
-    const res = await fetch(`${ATENDEHUB_URL}/api/chat-externo/atendimentos`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${ATENDEHUB_API_KEY}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error("[CITchat/AtendeHub] Erro ao enviar confirmação de vistoria:", res.status, errText);
-      return { success: false, error: `HTTP ${res.status}: ${errText}` };
-    }
-
-    const data = await res.json();
-    return { success: true, data };
-  } catch (err: any) {
-    console.error("[CITchat/AtendeHub] Falha ao enviar confirmação de vistoria:", err.message);
-    return { success: false, error: err.message };
-  }
+  return sendCitchatMessage(phone, message)
 }
