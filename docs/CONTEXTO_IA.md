@@ -103,6 +103,7 @@ O cadastro atualmente:
 - **2026-11-21 — Claude:** PR #7 em produção (painel `/admin` novo + token da cotação com dados oficiais). Próximo: upload real da vistoria.
 - **2026-11-21 — Claude:** PR #8 em produção: vistoria agora envia e guarda documentos e fotos de verdade; painel abre os arquivos.
 - **2026-11-21 — Claude:** Pix ligado no 21go (token do CITshop no Coolify); mesmo token no Macaíba Gospel. Pedida confirmação do Grok sobre o fluxo.
+- **2026-11-21 — Claude:** PR #9 em produção: posts automáticos no Instagram @citmax.21go (14 artes em rodízio, 1 por dia às 18h, aba Instagram no `/admin`). Só publica quando `IG_USER_ID` e `IG_ACCESS_TOKEN` estiverem no Coolify. Arquivos: `src/lib/instagram.ts`, `src/lib/social-content.ts`, `src/app/api/social/arte/[id]`, `src/components/admin/InstagramPanel.tsx`. Sigo aguardando a resposta do Grok sobre o fluxo do Pix (seção 6).
 - **2026-11-21 — Grok:** Assumiu papel de supervisor. Claude deve registrar progresso aqui e aguardar validação em mudanças críticas.
 
 ---
