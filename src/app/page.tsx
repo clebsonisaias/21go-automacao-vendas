@@ -9,6 +9,7 @@ import {
   Car,
   Check,
   CheckCircle2,
+  ExternalLink,
   Search,
   X,
 } from 'lucide-react'
@@ -76,6 +77,7 @@ export default function HomePage() {
     vistoriaUrl: string
     quotationCode?: string
     clientPhone?: string
+    checkoutUrl?: string
   } | null>(null)
 
   // FAQ Accordion
@@ -293,6 +295,7 @@ export default function HomePage() {
           vistoriaUrl: data.vistoriaUrl || '/vistoria',
           quotationCode: data.powerCrmQuotationCode,
           clientPhone: whatsapp,
+          checkoutUrl: data.checkoutUrl,
         })
       } else {
         alert(data.error || 'Erro ao processar cadastro.')
@@ -767,16 +770,55 @@ export default function HomePage() {
                   ))}
                 </ol>
 
-                <button type="button" onClick={closeModal} className={`${ctaCls} mt-1`}>
-                  Entendido! Aguardando link no WhatsApp
-                  <CheckCircle2 aria-hidden className="h-4 w-4" />
-                </button>
+                {submitSuccessData.checkoutUrl ? (
+                  <div className="flex w-full flex-col gap-2 mt-2">
+                    <a
+                      href={submitSuccessData.checkoutUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 text-base font-extrabold text-white no-underline shadow-lg transition hover:bg-emerald-700 hover:shadow-xl"
+                    >
+                      <span>✍️ Assinar Termo e Ativar Agora (Pix)</span>
+                      <ExternalLink aria-hidden className="h-4 w-4" />
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => router.push(submitSuccessData.vistoriaUrl)}
+                      className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-navy-900 px-4 text-sm font-bold text-white transition hover:bg-navy-800"
+                    >
+                      <Camera aria-hidden className="h-4 w-4 text-go-lime" />
+                      <span>📷 Fazer Auto-Vistoria no Celular</span>
+                    </button>
+
+                    <p className="m-0 mt-1 text-xs text-muted">
+                      Também enviamos os links oficiais de assinatura e vistoria para o seu WhatsApp{' '}
+                      <strong>{submitSuccessData.clientPhone}</strong>.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => router.push(submitSuccessData.vistoriaUrl)}
+                      className={`${ctaCls} mt-1`}
+                    >
+                      <Camera aria-hidden className="h-4 w-4" />
+                      Fazer Vistoria Digital Agora
+                    </button>
+                    <p className="m-0 text-xs text-muted">
+                      Enviamos a confirmação para o seu WhatsApp{' '}
+                      <strong>{submitSuccessData.clientPhone}</strong>.
+                    </p>
+                  </>
+                )}
+
                 <button
                   type="button"
-                  onClick={() => router.push(submitSuccessData.vistoriaUrl)}
-                  className="min-h-[44px] text-sm text-muted underline hover:text-navy-800"
+                  onClick={closeModal}
+                  className="mt-2 text-xs font-semibold text-muted hover:text-navy-800"
                 >
-                  Prefere adiantar os documentos manualmente agora? Clique aqui
+                  Fechar janela
                 </button>
               </div>
             ) : (

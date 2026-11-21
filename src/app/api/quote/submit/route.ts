@@ -88,6 +88,10 @@ export async function POST(req: NextRequest) {
       `${payload.vehicle.marca} ${payload.vehicle.modelo}`
     )}`
 
+    const checkoutUrl = powerCrmResult.qttnCd
+      ? `https://checkout.cotacao.me/myplanquot?h=${powerCrmResult.qttnCd}`
+      : undefined
+
     // 5. Dispara Notificação Instantânea no Telegram para você
     const telegramMessage = `🚨 <b>NOVO CADASTRO NO SITE!</b> 🚨
 
@@ -102,19 +106,23 @@ ${payload.cpf ? `📄 <b>CPF:</b> ${esc(payload.cpf)}\n` : ''}${payload.email ? 
 💵 <b>Mensalidade:</b> ${mensalidadeFormatted}/mês ${payload.comAdesivo ? '(com adesivo)' : ''}
 ⚡ <b>Ativação:</b> ${ativacaoFormatted}
 
-${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${esc(powerCrmResult.qttnCd)}</code>\n` : ''}💾 <b>Backup Local:</b> Salvo no painel interno (ID: <code>${storedLead.id}</code>)
+${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${esc(powerCrmResult.qttnCd)}</code>\n` : ''}${checkoutUrl ? `🔗 <b>Link Checkout:</b> ${esc(checkoutUrl)}\n` : ''}💾 <b>Backup Local:</b> Salvo no painel interno (ID: <code>${storedLead.id}</code>)
 ✅ <b>Status:</b> Cadastrado e aguardando vistoria digital.`
 
     await sendTelegramNotification(telegramMessage)
 
-    // 6. Dispara WhatsApp automático via AtendeHub / CITchat para o cliente
-    await sendWhatsAppQuoteMessage(payload)
+    // 6. Dispara WhatsApp automático via AtendeHub / CITchat para o cliente (com link de checkout e vistoria)
+    await sendWhatsAppQuoteMessage(payload, {
+      quotationCode: powerCrmResult.qttnCd,
+      vistoriaUrl,
+    })
 
     return NextResponse.json({
       success: true,
       leadId: storedLead.id,
       powerCrmSuccess: powerCrmResult.success,
       powerCrmQuotationCode: powerCrmResult.qttnCd,
+      checkoutUrl,
       crmSuccess: crmResult.success,
       cardId: crmResult.cardId,
       vistoriaUrl,

@@ -88,7 +88,10 @@ export async function sendCitchatMessage(
  * Envia mensagem automática pelo WhatsApp oficial da CITmax via AtendeHub / CITchat
  * quando um novo cliente realiza uma cotação.
  */
-export async function sendWhatsAppQuoteMessage(lead: LeadSubmissionPayload): Promise<{
+export async function sendWhatsAppQuoteMessage(
+  lead: LeadSubmissionPayload,
+  options?: { quotationCode?: string; vistoriaUrl?: string }
+): Promise<{
   success: boolean
   error?: string
   data?: any
@@ -96,25 +99,45 @@ export async function sendWhatsAppQuoteMessage(lead: LeadSubmissionPayload): Pro
   const phone = (lead.whatsapp || (lead as any).telefone || '').replace(/\D/g, '')
   if (!phone) return { success: false, error: 'Telefone ausente' }
 
+  const checkoutUrl = options?.quotationCode
+    ? `https://checkout.cotacao.me/myplanquot?h=${options.quotationCode}`
+    : null
+
+  const vistoriaUrl = options?.vistoriaUrl
+    ? (options.vistoriaUrl.startsWith('http')
+        ? options.vistoriaUrl
+        : `${APP_BASE_URL}${options.vistoriaUrl}`)
+    : `${APP_BASE_URL}/vistoria?placa=${encodeURIComponent(lead.placa || lead.vehicle.placa || '')}&nome=${encodeURIComponent(lead.nome)}`
+
   const message = [
     `🚗 *Olá ${lead.nome}! Tudo bem?*`,
     `Aqui é da equipe *CITmax Proteção Veicular* (Franquia Oficial 21Go).`,
     ``,
-    `Recebemos a sua simulação para o veículo:`,
+    `Recebemos a sua simulação oficial para o veículo:`,
     `🚘 *${lead.vehicle.marca} ${lead.vehicle.modelo} (${lead.vehicle.ano})*`,
     `📋 *Plano Selecionado:* ${lead.planoEscolhidoNome}`,
-    `💰 *Mensalidade estimada:* R$ ${lead.mensalidadeFinal.toFixed(2)}/mês`,
+    `💰 *Mensalidade:* R$ ${lead.mensalidadeFinal.toFixed(2)}/mês`,
+    `⚡ *Taxa de Ativação (Pix único):* R$ ${lead.ativacao.toFixed(2)}`,
     ``,
     `🛡️ *Seus Benefícios Inclusos:*`,
     `• Roubo, Furto e Perda Total 100% FIPE`,
     `• Assistência 24h em todo o Brasil (Guincho, Chaveiro, Pneu)`,
     `• Sem Análise de Perfil de Condutor`,
-    `• 5% de Desconto Pontualidade no boleto`,
+    `• 5% de Desconto Pontualidade na mensalidade`,
     ``,
-    `📸 *Próximo Passo — Vistoria Oficial 21Go (App Visto):*`,
-    `Para validar sua adesão com cobertura imediata, a 21Go exige a vistoria digital com câmera ao vivo e GPS.`,
+    ...(checkoutUrl
+      ? [
+          `✍️ *1. Assinar e Ativar Imediatamente Online:*`,
+          `Você pode assinar o termo de adesão e pagar o Pix de ativação agora mesmo no link seguro oficial:`,
+          `👉 ${checkoutUrl}`,
+          ``,
+        ]
+      : []),
+    `📸 *2. Vistoria Digital Rápida no Celular:*`,
+    `Para validar a sua cobertura com ativação imediata, basta abrir o link de auto-vistoria e fotografar o veículo:`,
+    `👉 ${vistoriaUrl}`,
     ``,
-    `Nossa equipe da CITmax já está acompanhando seu atendimento! Se tiver qualquer dúvida, é só responder esta mensagem.`,
+    `Qualquer dúvida, é só responder esta mensagem diretamente aqui no WhatsApp! 🤝`,
   ].join('\n')
 
   return sendCitchatMessage(phone, message)
