@@ -28,16 +28,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Link inválido ou expirado. Faça uma nova cotação.' }, { status: 404 })
     }
 
-    // Já pago: segue para a vistoria.
-    if (lead.pagamento?.paidAt || (lead.status !== 'aguardando_pagamento' && !lead.pagamento)) {
-      return NextResponse.json({ status: 'paid', vistoriaUrl: vistoriaPath(lead) })
+    // Já pago: nada a fazer.
+    if (lead.pagamento?.paidAt) {
+      return NextResponse.json({ status: 'paid' })
+    }
+    // Adesão por último: o Pix só abre depois de a vistoria ser enviada.
+    if (!lead.vistoriaData && lead.status !== 'aguardando_pagamento') {
+      return NextResponse.json({ status: 'vistoria', vistoriaUrl: vistoriaPath(lead) })
     }
 
     // Pix já emitido e ainda válido: confere no MP e reaproveita (não gera cobrança duplicada).
     if (lead.pagamento) {
       lead = await refreshLeadPayment(lead)
       if (lead.pagamento?.paidAt) {
-        return NextResponse.json({ status: 'paid', vistoriaUrl: vistoriaPath(lead) })
+        return NextResponse.json({ status: 'paid' })
       }
       const current = lead.pagamento && (await getOrder(lead.pagamento.orderId))
       if (current && !isOrderDead(current) && lead.pagamento?.qrCode) {
@@ -53,7 +57,6 @@ export async function POST(req: NextRequest) {
     const pagamento = await createPixOrder(lead, attempt)
     const updated = updateLead(lead.ref, (l) => {
       l.pagamento = pagamento
-      l.status = 'aguardando_pagamento'
     })
     if (!updated?.pagamento) throw new Error('Falha ao salvar cobrança')
 

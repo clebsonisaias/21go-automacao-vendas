@@ -7,7 +7,7 @@ import { sendWhatsAppQuoteMessage } from '@/lib/citchat'
 import { saveNewLead } from '@/lib/db'
 import { verifyQuoteToken } from '@/lib/quote-token'
 import { mpEnabled } from '@/lib/mercadopago'
-import { pagamentoPath, vistoriaPath } from '@/lib/links'
+import { vistoriaPath } from '@/lib/links'
 import { LeadSubmissionPayload } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
       payload,
       leadRef,
       powerCrmResult.qttnCd,
-      cobrarPix ? 'aguardando_pagamento' : 'pendente_vistoria'
+      'pendente_vistoria'
     )
 
     // 4. Formatações para notificação
@@ -114,7 +114,6 @@ export async function POST(req: NextRequest) {
     }).format(payload.ativacao)
 
     const vistoriaUrl = vistoriaPath(storedLead)
-    const pagamentoUrl = cobrarPix ? pagamentoPath(leadRef) : undefined
 
     // Com Mercado Pago ativo, a adesão é paga no nosso Pix; o checkout externo só entra sem ele.
     const checkoutUrl =
@@ -137,7 +136,7 @@ ${payload.cpf ? `📄 <b>CPF:</b> ${esc(payload.cpf)}\n` : ''}${payload.email ? 
 ⚡ <b>Ativação:</b> ${ativacaoFormatted}
 
 ${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${esc(powerCrmResult.qttnCd)}</code>\n` : ''}${checkoutUrl ? `🔗 <b>Link Checkout:</b> ${esc(checkoutUrl)}\n` : ''}💾 <b>Backup Local:</b> Salvo no painel interno (ID: <code>${storedLead.id}</code>)
-✅ <b>Status:</b> ${cobrarPix ? 'Cadastrado — aguardando pagamento do Pix da adesão.' : 'Cadastrado e aguardando vistoria digital.'}`
+✅ <b>Status:</b> Cadastrado e aguardando a vistoria digital${cobrarPix ? ' (a adesão por Pix é o último passo)' : ''}.`
 
     await sendTelegramNotification(telegramMessage)
 
@@ -145,7 +144,6 @@ ${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${esc(powerCrmRes
     await sendWhatsAppQuoteMessage(payload, {
       quotationCode: powerCrmResult.qttnCd,
       vistoriaUrl,
-      pagamentoUrl,
     })
 
     return NextResponse.json({
@@ -156,8 +154,7 @@ ${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${esc(powerCrmRes
       checkoutUrl,
       crmSuccess: crmResult.success,
       cardId: crmResult.cardId,
-      vistoriaUrl: cobrarPix ? undefined : vistoriaUrl,
-      pagamentoUrl,
+      vistoriaUrl,
       message: 'Cadastro realizado e salvo com sucesso!',
     })
   } catch (err: any) {

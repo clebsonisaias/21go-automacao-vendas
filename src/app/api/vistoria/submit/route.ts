@@ -3,6 +3,8 @@ import { sendTelegramNotification, esc } from '@/lib/telegram'
 import { sendWhatsAppVistoriaConfirmation } from '@/lib/citchat'
 import { findLeadByRef, updateLeadVistoria } from '@/lib/db'
 import { rateLimit } from '@/lib/rate-limit'
+import { mpEnabled } from '@/lib/mercadopago'
+import { pagamentoPath } from '@/lib/links'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,14 +30,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'Link de vistoria inválido ou expirado. Faça uma nova cotação.' },
         { status: 404 }
-      )
-    }
-
-    // Com cobrança online, a vistoria só abre depois da adesão paga.
-    if (lead.status === 'aguardando_pagamento') {
-      return NextResponse.json(
-        { error: 'Pague a taxa de adesão (Pix) antes de enviar a vistoria.' },
-        { status: 402 }
       )
     }
 
@@ -78,9 +72,15 @@ export async function POST(req: NextRequest) {
       placa: lead.placa || 'Veículo',
     })
 
+    // Adesão por último: depois da vistoria, o cliente segue para o Pix (se ainda não pagou).
+    const pagamentoUrl = mpEnabled() && !lead.pagamento?.paidAt ? pagamentoPath(lead.ref) : undefined
+
     return NextResponse.json({
       success: true,
-      message: 'Vistoria e documentos recebidos com sucesso! Nossa equipe entrará em contato.',
+      pagamentoUrl,
+      message: pagamentoUrl
+        ? 'Vistoria recebida! Último passo: pague a adesão via Pix.'
+        : 'Vistoria e documentos recebidos com sucesso! Nossa equipe entrará em contato.',
     })
   } catch (err) {
     console.error('Erro ao processar vistoria:', err)

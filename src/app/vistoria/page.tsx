@@ -112,18 +112,6 @@ function VistoriaContent() {
   const searchParams = useSearchParams()
   const ref = searchParams.get('ref') || ''
 
-  // Com cobrança online, a vistoria só abre depois da adesão paga: se ainda não pagou, volta ao Pix.
-  useEffect(() => {
-    if (!ref) return
-    fetch(`/api/pagamento/status?ref=${encodeURIComponent(ref)}`, { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d?.status === 'none' || d?.status === 'pending' || d?.status === 'expired') {
-          router.replace(`/pagamento?ref=${encodeURIComponent(ref)}`)
-        }
-      })
-      .catch(() => {})
-  }, [ref, router])
 
   const nome = searchParams.get('nome') || 'Associado'
   const placa = searchParams.get('placa') || ''
@@ -210,6 +198,12 @@ function VistoriaContent() {
       })
 
       if (res.ok) {
+        const data = await res.json().catch(() => ({}))
+        // Adesão por último: vistoria enviada, segue para o Pix.
+        if (data?.pagamentoUrl) {
+          router.push(data.pagamentoUrl)
+          return
+        }
         setIsSubmitted(true)
       } else {
         const data = await res.json().catch(() => ({}))

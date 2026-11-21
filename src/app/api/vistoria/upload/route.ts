@@ -28,9 +28,6 @@ export async function POST(req: NextRequest) {
     if (!lead) {
       return NextResponse.json({ error: 'Link de vistoria inválido ou expirado. Faça uma nova cotação.' }, { status: 404 })
     }
-    if (lead.status === 'aguardando_pagamento') {
-      return NextResponse.json({ error: 'Pague a taxa de adesão (Pix) antes de enviar a vistoria.' }, { status: 402 })
-    }
     if (lead.status === 'aprovado') {
       return NextResponse.json({ error: 'Esta vistoria já foi aprovada. Fale com a nossa equipe para alterar.' }, { status: 409 })
     }

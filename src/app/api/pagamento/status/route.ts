@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { findLeadByRef } from '@/lib/db'
 import { refreshLeadPayment } from '@/lib/orchestrator'
-import { vistoriaPath } from '@/lib/links'
 import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
@@ -19,14 +18,11 @@ export async function GET(req: NextRequest) {
   if (!lead) return NextResponse.json({ error: 'Cadastro não encontrado.' }, { status: 404 })
 
   if (lead.pagamento?.paidAt) {
-    return NextResponse.json({ status: 'paid', vistoriaUrl: vistoriaPath(lead) })
+    return NextResponse.json({ status: 'paid' })
   }
   if (!lead.pagamento) {
     // Cadastro antigo (sem cobrança no site): quem não está aguardando pagamento segue direto.
-    return NextResponse.json({
-      status: lead.status === 'aguardando_pagamento' ? 'none' : 'paid',
-      ...(lead.status === 'aguardando_pagamento' ? {} : { vistoriaUrl: vistoriaPath(lead) }),
-    })
+    return NextResponse.json({ status: 'none' })
   }
 
   const now = Date.now()
@@ -37,7 +33,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (lead.pagamento?.paidAt) {
-    return NextResponse.json({ status: 'paid', vistoriaUrl: vistoriaPath(lead) })
+    return NextResponse.json({ status: 'paid' })
   }
   const dead = ['canceled', 'cancelled', 'expired', 'failed'].includes(lead.pagamento?.status || '')
   return NextResponse.json({ status: dead ? 'expired' : 'pending' })

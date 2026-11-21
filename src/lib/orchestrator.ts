@@ -46,6 +46,7 @@ export async function syncPaymentFromOrder(ref: string, order: MpOrder): Promise
 }
 
 async function onAdesaoPaga(lead: StoredLead): Promise<void> {
+  const vistoriaFeita = Boolean(lead.vistoriaData)
   const vistoriaUrl = absolute(vistoriaPath(lead))
 
   await sendTelegramNotification(`💰 <b>ADESÃO PAGA (Pix)!</b> 💰
@@ -58,18 +59,18 @@ async function onAdesaoPaga(lead: StoredLead): Promise<void> {
 💵 <b>Adesão recebida:</b> ${brl(lead.pagamento?.valor ?? lead.ativacao)}
 🧾 <b>Order MP:</b> <code>${esc(lead.pagamento?.orderId)}</code>
 
-➡️ Link da vistoria enviado ao cliente por WhatsApp.`)
+${vistoriaFeita ? '✅ Vistoria já enviada: cadastro completo. Confira os arquivos e aprove no painel /admin.' : '➡️ A vistoria ainda não foi enviada.'}`)
 
   const sent = await sendWhatsAppAdesaoConfirmada({
     telefone: lead.whatsapp,
     nome: lead.nome,
-    vistoriaUrl,
+    vistoriaUrl: vistoriaFeita ? undefined : vistoriaUrl,
     valor: lead.pagamento?.valor ?? lead.ativacao,
   })
   if (!sent.success) {
     console.warn('[Pagamento] WhatsApp de confirmação não enviado:', sent.error)
     await sendTelegramNotification(
-      `⚠️ Não consegui enviar o WhatsApp da vistoria para ${esc(lead.nome)} (${esc(lead.whatsapp)}). Envie manualmente: ${esc(vistoriaUrl)}`
+      `⚠️ Não consegui avisar ${esc(lead.nome)} (${esc(lead.whatsapp)}) no WhatsApp sobre o pagamento confirmado.`
     )
   }
 }

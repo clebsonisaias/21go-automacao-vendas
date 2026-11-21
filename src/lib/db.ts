@@ -121,7 +121,7 @@ export function findLeadByOrderId(orderId: string): StoredLead | undefined {
 /** Leads com Pix emitido e ainda não pago (para conferência periódica). */
 export function getLeadsAwaitingPayment(): StoredLead[] {
   return getStoredLeads().filter(
-    (l) => l.status === 'aguardando_pagamento' && l.pagamento?.orderId && !l.pagamento.paidAt
+    (l) => Boolean(l.pagamento?.orderId && !l.pagamento.paidAt) && l.status !== 'cancelado'
   )
 }
 

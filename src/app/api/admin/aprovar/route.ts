@@ -3,6 +3,7 @@ import { checkAdminAuth } from '@/lib/admin-auth'
 import { findLeadByRef, updateLead } from '@/lib/db'
 import { sendWhatsAppVistoriaAprovada } from '@/lib/citchat'
 import { esc, sendTelegramNotification } from '@/lib/telegram'
+import { mpEnabled } from '@/lib/mercadopago'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
       { status: 409 }
     )
   }
-  if (lead.pagamento && !lead.pagamento.paidAt) {
+  if ((lead.pagamento || mpEnabled()) && !lead.pagamento?.paidAt) {
     return NextResponse.json({ success: false, error: 'A adesão ainda não foi paga.' }, { status: 409 })
   }
 
