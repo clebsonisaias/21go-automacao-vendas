@@ -23,7 +23,15 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url)
-    const cpf = searchParams.get('cpf') || undefined
+    let cpf = searchParams.get('cpf') || undefined
+
+    if (!cpf && token.startsWith('crm_jwt_associado_')) {
+      const parts = token.split('_')
+      // token format: crm_jwt_associado_{cleanCpf}_{assocId}_{timestamp}
+      if (parts[3] && parts[3].length === 11) {
+        cpf = parts[3]
+      }
+    }
 
     if (cpf) {
       const crmAssoc = await findCrmAssociadoByCpf(cpf)

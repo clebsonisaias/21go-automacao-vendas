@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({
           success: true,
-          token: `crm_jwt_associado_${crmAssoc.id}_${Date.now()}`,
+          token: `crm_jwt_associado_${cleanCpf}_${crmAssoc.id}_${Date.now()}`,
           associado: realAssociado,
           message: 'Autenticado com sucesso via CRM 21 Go!',
           source: 'crm21go',
