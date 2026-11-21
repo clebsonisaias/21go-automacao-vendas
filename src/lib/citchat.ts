@@ -54,6 +54,13 @@ export async function sendCitchatMessage(
   if (!recipient) return { success: false, error: 'Telefone vazio' }
   if (!recipient.startsWith('55')) recipient = `55${recipient}`
 
+  // Valor vazio o gateway recusa (400) e a mensagem se perderia: sem template, vai a
+  // reserva do produto 21Go com o texto inteiro.
+  if (tpl && tpl.params.some((v) => !String(v ?? '').trim())) {
+    console.warn(`[CITchat Gateway] ${tpl.template}: valor vazio, vai sem template`)
+    tpl = undefined
+  }
+
   // 1. Tenta envio pelo Gateway rápido do CITchat
   if (CITCHAT_GATEWAY_TOKEN) {
     try {

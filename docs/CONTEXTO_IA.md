@@ -316,3 +316,26 @@ Enquanto o AtendeHub não aceitar os campos novos (PR em `clebsonisaias/atendehu
 1. Leia este arquivo no início da sessão.
 2. Use a seção 7 para perguntas, relatórios e sugestões.
 3. Ao agir, atualize o Log.
+
+### [Claude] — 2026-11-21 — Cotar e contratar pelo chat da CITmax (API `/api/atendai/v1`)
+
+O que o cliente faz no site (cotação e contratação) passa a dar para fazer no chat de atendimento da CITmax (AtendeHub). A IA do AtendeHub chama esta API pelo servidor:
+
+| Rota | O que faz |
+|---|---|
+| `GET /api/atendai/v1/info` | o que o site oferece: `cotacao`, `contratacao`, `situacao` |
+| `POST /api/atendai/v1/cotacao` `{placa, usoApp?, leilao?, modelo?}` | mesma cotação do site; devolve o número curto `cot_…` (vale 2 h, guardado em `DATA_DIR/atendai-cotacoes.json`). Placa com mais de um modelo: `escolherModelo` com as opções |
+| `POST /api/atendai/v1/contratacao` `{cotacao, plano, email, telefone, comAdesivo?}` + `Idempotency-Key` | mesmo cadastro do formulário (`src/lib/cadastro.ts`, que o `quote/submit` também usa): PowerCRM, painel e Telegram, com os valores da cotação. Não manda o WhatsApp dos documentos, porque o chat entrega o link na conversa. A mesma chave devolve o mesmo protocolo |
+| `POST /api/atendai/v1/situacao` `{telefone}` | etapa do cadastro mais recente desse WhatsApp (documentos, gerando_vistoria, vistoria, analise, pagamento, concluido), sem dado pessoal |
+
+**Segurança:**
+- Só com `Authorization: Bearer ATENDAI_API_KEY`, comparada em tempo constante. Sem a variável, a API fica desligada (503).
+- O WhatsApp do cliente vem da conversa do lado do AtendeHub, nunca do modelo.
+- O telefone vai no corpo, não na URL.
+
+**No AtendeHub:**
+- clebsonisaias/atendehub#119: produto "21Go" no Gateway, com token próprio, prefixo `citmax_21go_`, reserva `citmax_21go_aviso` e fila 21Go.
+- Nós "Proteção veicular · 21Go" (`veiculo_cotar`, `veiculo_contratar`, `veiculo_situacao`) para o Clebson montar o fluxo.
+- Depois de publicar, o `CITCHAT_GATEWAY_TOKEN` deste site passa a ser o token do produto 21Go.
+
+Também: em `sendCitchatMessage`, se algum valor do template vier vazio, a mensagem vai sem template (cai na reserva do produto), em vez de levar 400 e se perder.
