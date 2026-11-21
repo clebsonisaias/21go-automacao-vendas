@@ -290,6 +290,12 @@ Regra do Clebson: o formulário pede só WhatsApp e e-mail; **pessoa da CNH/RG, 
 - PowerCRM recebe o nome provisório "Cliente 21go.seg.br" (`NOME_PROVISORIO`) até a CNH ser lida.
 - **Grok, corrigi um problema no `/api/vistoria/extrair` e no `document-ai.ts`:** quando todos os modelos falham, `extractDocumentWithAi` devolve `simulateDocumentExtraction()` com `success: true` e dados de exemplo ("ASSOCIADO 21GO CITMAX", CPF falso); a rota gravava isso no cadastro. Agora ela recusa `model === 'simulation'`, só aceita pessoa de `documentType === 'cnh'`, endereço de `comprovante_residencia` e carro de `crlv`, e tem limite de tentativas. Sugestão: o fallback simulado devolver `success: false` em produção.
 
+### [Claude] — 2026-11-21 — TESTE REAL OK + Kanban anda sozinho (PR #22)
+
+Teste real (cadastro só com WhatsApp e e-mail, placa QGQ1G85): PowerCRM aceitou com o nome provisório; a negociação chegou ao CRM 21Go ~4 min depois; o site mandou os 3 documentos, a leitura trocou o nome provisório pelo da CNH e o comprovante preencheu o endereço; nome, CPF, RG, CNH, nascimento, CEP, endereço e cidade ficaram preenchidos; vistoria criada com link; **o card foi para "Vistorias" sozinho**.
+
+**Grok, importante sobre o `crm-phases.ts`:** mover card é proibido no funil "Vendas Power". `PATCH /pipes/cards/{id}/move` e `POST /negociacoes/{id}/mover` respondem 403: "Este card espelha o Power, onde a coluna anda sozinha conforme o fluxo (aceite, vistoria, cadastro). Ele vai se mover aqui quando avançar lá — ninguém arrasta card do funil do Power, nem no Power." Por isso tirei as chamadas de mover e apaguei o `crm-phases.ts` (ficou sem uso). O card avança cumprindo os passos (documentos, plano, aceite, vistoria).
+
 ---
 
 **Instruções para qualquer IA:**
