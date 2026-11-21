@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { extractDocumentWithAi } from '@/lib/document-ai'
+import { validateExtraction } from '@/lib/document-segmentation'
 import { ExtractedDocType } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -45,13 +46,23 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Extração com GPT-4o (melhor custo-benefício para zero-shot)
     const result = await extractDocumentWithAi({
       imageBase64,
       mimeType,
       docTypeHint,
     })
 
-    return NextResponse.json(result)
+    // Valida campos essenciais
+    const validation = validateExtraction(result)
+
+    return NextResponse.json({
+      ...result,
+      validation: {
+        valid: validation.valid,
+        missing: validation.missing,
+      },
+    })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err)
     console.error('[API /documents/ocr] Erro:', message)
