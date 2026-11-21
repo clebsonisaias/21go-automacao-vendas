@@ -6,6 +6,34 @@ const BACKUP_MODEL = 'gpt-6-sol'
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
 
+// Métricas de latência (em memória, resetam a cada deploy)
+const latencyStats: Record<string, { total: number; count: number; min: number; max: number }> = {}
+
+function recordLatency(model: string, ms: number) {
+  if (!latencyStats[model]) {
+    latencyStats[model] = { total: 0, count: 0, min: Infinity, max: 0 }
+  }
+  const s = latencyStats[model]
+  s.total += ms
+  s.count++
+  s.min = Math.min(s.min, ms)
+  s.max = Math.max(s.max, ms)
+  console.log(`[Latency] ${model}: ${ms}ms (avg: ${Math.round(s.total / s.count)}ms, min: ${s.min}ms, max: ${s.max}ms, n: ${s.count})`)
+}
+
+export function getLatencyStats() {
+  const result: Record<string, { avg: number; min: number; max: number; count: number }> = {}
+  for (const [model, s] of Object.entries(latencyStats)) {
+    result[model] = {
+      avg: Math.round(s.total / s.count),
+      min: s.min === Infinity ? 0 : s.min,
+      max: s.max,
+      count: s.count,
+    }
+  }
+  return result
+}
+
 /**
  * Normaliza e formata CPF brasileiro (XXX.XXX.XXX-XX)
  */
@@ -121,7 +149,7 @@ Formato de resposta:
 /**
  * Pós-processamento e validação dos dados extraídos
  */
-function postProcess(parsed: any): DocumentAiResult {
+function postProcess(parsed: any, model?: string, latencyMs?: number): DocumentAiResult {
   const result: DocumentAiResult = {
     success: true,
     documentType: parsed.documentType || 'desconhecido',
@@ -129,6 +157,8 @@ function postProcess(parsed: any): DocumentAiResult {
     personal: parsed.personal,
     vehicle: parsed.vehicle,
     address: parsed.address,
+    model,
+    latencyMs,
   }
 
   if (result.personal?.cpf) {
@@ -159,13 +189,14 @@ function postProcess(parsed: any): DocumentAiResult {
 }
 
 /**
- * Tenta extrair com um modelo específico da OpenAI
+ * Tenta extrair com um modelo específico da OpenAI (com medição de latência)
  */
 async function tryOpenAIModel(
   model: string,
   dataUri: string,
   docTypeHint?: ExtractedDocType
 ): Promise<DocumentAiResult | null> {
+  const start = Date.now()
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -197,19 +228,22 @@ async function tryOpenAIModel(
       }),
     })
 
+    const latencyMs = Date.now() - start
+
     if (response.ok) {
       const data = await response.json()
       const content = data.choices?.[0]?.message?.content
       if (content) {
+        recordLatency(model, latencyMs)
         const parsed = JSON.parse(content)
-        console.log(`[Document AI] Sucesso com ${model}`)
-        return postProcess(parsed)
+        return postProcess(parsed, model, latencyMs)
       }
     } else {
-      console.warn(`[Document AI] ${model} falhou:`, response.status)
+      console.warn(`[Document AI] ${model} falhou em ${latencyMs}ms:`, response.status)
     }
   } catch (err) {
-    console.error(`[Document AI] Erro com ${model}:`, err)
+    const latencyMs = Date.now() - start
+    console.error(`[Document AI] Erro com ${model} em ${latencyMs}ms:`, err)
   }
   return null
 }
@@ -240,6 +274,7 @@ export async function extractDocumentWithAi(params: {
 
   // 3. Fallback para Google Gemini
   if (GEMINI_API_KEY) {
+    const start = Date.now()
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`
       const res = await fetch(url, {
@@ -262,13 +297,15 @@ export async function extractDocumentWithAi(params: {
         }),
       })
 
+      const latencyMs = Date.now() - start
+
       if (res.ok) {
         const data = await res.json()
         const content = data?.candidates?.[0]?.content?.parts?.[0]?.text
         if (content) {
+          recordLatency('gemini', latencyMs)
           const parsed = JSON.parse(content)
-          console.log('[Document AI] Sucesso com Gemini')
-          return postProcess(parsed)
+          return postProcess(parsed, 'gemini', latencyMs)
         }
       }
     } catch (err) {
@@ -286,6 +323,8 @@ function simulateDocumentExtraction(hint?: ExtractedDocType): DocumentAiResult {
       success: true,
       documentType: 'crlv',
       confidence: 0.96,
+      model: 'simulation',
+      latencyMs: 0,
       vehicle: {
         placa: 'RGL9B19',
         chassi: '9BWAA05U8BP012345',
@@ -306,6 +345,8 @@ function simulateDocumentExtraction(hint?: ExtractedDocType): DocumentAiResult {
     success: true,
     documentType: 'cnh',
     confidence: 0.94,
+    model: 'simulation',
+    latencyMs: 0,
     personal: {
       nome: 'ASSOCIADO 21GO CITMAX',
       cpf: '084.123.456-78',
