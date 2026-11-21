@@ -76,6 +76,7 @@ export function LeadDrawer({
   const panelRef = useRef<HTMLDivElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const [approving, setApproving] = useState(false)
+  const [closing, setClosing] = useState<'idle' | 'confirm' | 'busy'>('idle')
   const [appVisto, setAppVisto] = useState(lead.appVistoUrl || '')
   const [sendingVisto, setSendingVisto] = useState(false)
   const [generating, setGenerating] = useState(false)
@@ -149,6 +150,33 @@ export function LeadDrawer({
       notify('Sem conexão. Tente de novo.', 'error')
     } finally {
       setApproving(false)
+    }
+  }
+
+  const encerrar = async () => {
+    if (closing === 'idle') {
+      setClosing('confirm')
+      return
+    }
+    setClosing('busy')
+    try {
+      const res = await fetch('/api/admin/encerrar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ref: lead.ref }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        if (data.lead) setDraft(data.lead)
+        notify(data.message || 'Cadastro encerrado.')
+        await onApproved()
+      } else {
+        notify(data?.error || 'Não foi possível encerrar. Tente de novo.', 'error')
+      }
+    } catch {
+      notify('Sem conexão. Tente de novo.', 'error')
+    } finally {
+      setClosing('idle')
     }
   }
 
@@ -426,7 +454,34 @@ export function LeadDrawer({
               {generating ? 'Gerando…' : 'Gerar proposta com IA'}
             </button>
           </div>
-        </footer>
+                  {draft.status !== 'cancelado' && !pago && (
+            <div className="flex flex-col gap-1 pt-1">
+              <button
+                type="button"
+                onClick={encerrar}
+                disabled={closing === 'busy'}
+                className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors disabled:cursor-wait ${
+                  closing === 'idle'
+                    ? 'text-red-700 hover:bg-red-50'
+                    : 'bg-red-700 text-white hover:bg-red-800'
+                }`}
+              >
+                {closing === 'busy' && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
+                {closing === 'idle'
+                  ? 'Encerrar cadastro'
+                  : `Confirmar: encerrar o cadastro de ${draft.nome || 'cliente sem nome'}`}
+              </button>
+              {closing === 'confirm' && (
+                <p className="m-0 text-center text-xs text-muted">
+                  Para a vistoria, o acompanhamento no CRM e o Pix deste cadastro. O histórico continua aqui.{' '}
+                  <button type="button" onClick={() => setClosing('idle')} className="font-semibold text-navy-700 underline">
+                    Manter cadastro
+                  </button>
+                </p>
+              )}
+            </div>
+          )}
+</footer>
       </div>
     </div>
   )

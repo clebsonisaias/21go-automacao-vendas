@@ -31,6 +31,9 @@ export async function POST(req: NextRequest) {
         { status: 404 }
       )
     }
+    if (lead.status === 'cancelado') {
+      return NextResponse.json({ error: 'Este cadastro foi encerrado. Faça uma nova cotação ou fale com a nossa equipe.' }, { status: 410 })
+    }
 
     // Só conclui com os documentos realmente gravados no servidor (enviados por /api/vistoria/upload).
     const arq = lead.vistoriaArquivos || {}
