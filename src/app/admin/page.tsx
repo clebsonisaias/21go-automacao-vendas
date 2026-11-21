@@ -23,6 +23,7 @@ import {
   KeyRound,
   LogOut,
   Bot,
+  RefreshCw,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { StoredLead } from '@/lib/db'
@@ -212,9 +213,43 @@ Qualquer dúvida, estou à disposição!`
     }
   }, [])
 
+  const [isSyncingCrm, setIsSyncingCrm] = useState(false)
+  const [syncFeedback, setSyncFeedback] = useState<{ text: string; isError?: boolean } | null>(null)
+
+  const handleSyncCrm = useCallback(async (quiet = false) => {
+    setIsSyncingCrm(true)
+    if (!quiet) setSyncFeedback(null)
+    try {
+      const res = await fetch('/api/admin/crm-sync', { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        if (!quiet) {
+          setSyncFeedback({
+            text: data.message || `Sincronizado! ${data.imported} leads importados do CRM.`,
+          })
+        }
+        await fetchLeads()
+      } else {
+        if (!quiet) {
+          setSyncFeedback({ text: data.error || 'Erro ao sincronizar com CRM.', isError: true })
+        }
+      }
+    } catch {
+      if (!quiet) {
+        setSyncFeedback({ text: 'Erro de conexão ao sincronizar com CRM.', isError: true })
+      }
+    } finally {
+      setIsSyncingCrm(false)
+      if (!quiet) {
+        setTimeout(() => setSyncFeedback(null), 5000)
+      }
+    }
+  }, [fetchLeads])
+
   useEffect(() => {
     fetchLeads()
-  }, [fetchLeads])
+    handleSyncCrm(true)
+  }, [fetchLeads, handleSyncCrm])
 
   useEffect(() => {
     if (!selectedLead) return
@@ -388,6 +423,17 @@ Qualquer dúvida, estou à disposição!`
             )}
             <button
               type="button"
+              onClick={() => handleSyncCrm(false)}
+              disabled={isSyncingCrm}
+              className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-go-lime/40 bg-navy-900/90 px-3.5 text-xs font-bold text-go-lime transition hover:bg-navy-800 disabled:opacity-50"
+              title="Sincronizar cadastros e associados com o CRM 21Go"
+            >
+              <RefreshCw className={`h-4 w-4 ${isSyncingCrm ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">{isSyncingCrm ? 'Sincronizando...' : 'Sincronizar CRM'}</span>
+              <span className="sm:hidden">{isSyncingCrm ? '...' : 'CRM'}</span>
+            </button>
+            <button
+              type="button"
               onClick={() => {
                 setIsPasswordModalOpen(true)
                 setPasswordMsg({ text: '', isError: false })
@@ -418,6 +464,24 @@ Qualquer dúvida, estou à disposição!`
       </header>
 
       <main className="mx-auto flex max-w-[1200px] flex-col gap-6 px-6 pb-16 pt-10">
+        {syncFeedback && (
+          <div
+            className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-semibold shadow transition ${
+              syncFeedback.isError
+                ? 'bg-red-500/10 border border-red-500/30 text-red-600'
+                : 'bg-go-lime/20 border border-go-lime/40 text-navy-950'
+            }`}
+          >
+            <span>{syncFeedback.text}</span>
+            <button
+              type="button"
+              onClick={() => setSyncFeedback(null)}
+              className="text-xs uppercase font-bold opacity-75 hover:opacity-100"
+            >
+              Fechar
+            </button>
+          </div>
+        )}
         {activeTab === 'luna' ? (
           <LunaAssistant />
         ) : activeTab === 'lucro' ? (
