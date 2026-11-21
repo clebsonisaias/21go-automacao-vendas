@@ -858,6 +858,7 @@ export default function HomePage() {
                 <form onSubmit={handleSubmitLead} className="flex flex-col gap-4">
                   <p className="m-0 text-sm text-muted">
                     Só precisamos do seu contato. Nome, CPF e endereço saem dos documentos que você envia no próximo passo.
+                    Você vai receber as mensagens deste cadastro no WhatsApp da CITmax.
                   </p>
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
