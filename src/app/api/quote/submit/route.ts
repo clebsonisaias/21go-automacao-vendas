@@ -18,18 +18,21 @@ const num = (v: unknown) => typeof v === 'number' && Number.isFinite(v) && v >= 
 /** Valida o corpo vindo do navegador (endpoint público) antes de usá-lo em CRM, Telegram e WhatsApp. */
 function validatePayload(p: any): string | null {
   if (!p || typeof p !== 'object') return 'Dados inválidos.'
-  if (typeof p.nome !== 'string' || !/^[\p{L}\p{M}' .-]{2,100}$/u.test(p.nome.trim())) {
-    return 'Informe o nome completo (apenas letras).'
+  // Nome é opcional (vem do documento)
+  if (p.nome && (typeof p.nome !== 'string' || !/^[\p{L}\p{M}' .-]{2,100}$/u.test(p.nome.trim()))) {
+    return 'Nome inválido.'
   }
   const phone = typeof p.whatsapp === 'string' ? p.whatsapp.replace(/\D/g, '') : ''
   if (phone.length < 10 || phone.length > 13) return 'WhatsApp inválido.'
   if (!str(p.planoEscolhidoId, 40) || !p.planoEscolhidoId) return 'Plano é obrigatório.'
   if (!str(p.planoEscolhidoNome, 60)) return 'Plano inválido.'
   if (!num(p.mensalidadeFinal) || !num(p.ativacao)) return 'Valores do plano inválidos.'
-  // CPF e E-mail agora são obrigatórios
-  if (typeof p.cpf !== 'string' || p.cpf.replace(/\D/g, '').length !== 11) return 'CPF é obrigatório e deve ser válido.'
+  // CPF é opcional (vem do documento)
+  if (p.cpf && (typeof p.cpf !== 'string' || p.cpf.replace(/\D/g, '').length !== 11)) return 'CPF inválido.'
+  // E-mail é obrigatório (não vem do documento)
   if (typeof p.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email) || p.email.length > 120) return 'E-mail é obrigatório e deve ser válido.'
-  if (typeof p.cidade !== 'string' || !str(p.cidade, 80) || p.cidade.trim().length < 2) return 'Cidade é obrigatória.'
+  // Cidade é opcional (vem do comprovante)
+  if (p.cidade && !str(p.cidade, 80)) return 'Cidade inválida.'
   if (p.placa != null && !str(p.placa, 10)) return 'Placa inválida.'
   const v = p.vehicle
   if (!v || typeof v !== 'object' || !str(v.marca, 80) || !str(v.modelo, 120) || !str(String(v.ano ?? ''), 10)) {
@@ -42,7 +45,6 @@ function validatePayload(p: any): string | null {
 
 export async function POST(req: NextRequest) {
   try {
-    // Endpoint público que aciona CRM, Telegram e WhatsApp oficial: limita abuso por IP.
     if (!rateLimit(req, 'quote-submit', 5, 10 * 60 * 1000)) {
       return NextResponse.json(
         { error: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
@@ -57,7 +59,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: invalid }, { status: 400 })
     }
 
-    // Valores (adesão, mensalidade) vêm do token assinado pelo servidor — nunca do navegador.
     const verified = verifyQuoteToken(payload.quoteToken, payload.planoEscolhidoId)
     if (!verified || verified.fipe !== payload.vehicle.fipeCode) {
       return NextResponse.json(
@@ -70,7 +71,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Valores do plano inválidos. Refaça a simulação.' }, { status: 400 })
     }
     payload.ativacao = verified.plan.ativacao
-    // Dados oficiais do veículo e IDs do Power CRM vêm da cotação assinada (não do navegador).
     if (verified.vehicle) {
       payload.vehicle = { ...verified.vehicle, placa: payload.vehicle.placa }
     }
@@ -79,17 +79,11 @@ export async function POST(req: NextRequest) {
     payload.mensalidadeOriginal = verified.plan.monthly
 
     const cobrarPix = mpEnabled()
-
-    // Referência imprevisível: é ela que autoriza o envio posterior da vistoria.
     const leadRef = `lead_${crypto.randomUUID()}`
 
-    // 1. Cadastra diretamente no Power CRM com código de consultor CITmax (vrXbXyyq)
     const powerCrmResult = await sendLeadToPowerCrm(payload)
-
-    // 2. Se configuradas as credenciais do CRM 21 Go, também notifica o CRM 21 Go
     const crmResult = await sendLeadToCrm(payload)
 
-    // 3. Salva no nosso banco de dados de backup local
     const storedLead = saveNewLead(
       payload,
       leadRef,
@@ -97,7 +91,6 @@ export async function POST(req: NextRequest) {
       'pendente_vistoria'
     )
 
-    // 4. Formatações para notificação
     const fipeFormatted = payload.vehicle.fipeValue
       ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
           payload.vehicle.fipeValue
@@ -116,20 +109,16 @@ export async function POST(req: NextRequest) {
 
     const vistoriaUrl = vistoriaPath(storedLead)
 
-    // Com Mercado Pago ativo, a adesão é paga no nosso Pix; o checkout externo só entra sem ele.
     const checkoutUrl =
       !cobrarPix && powerCrmResult.qttnCd
         ? `https://checkout.cotacao.me/myplanquot?h=${powerCrmResult.qttnCd}`
         : undefined
 
-    // 5. Dispara Notificação Instantânea no Telegram para você
-    const telegramMessage = `🚨 <b>NOVO CADASTRO NO SITE!</b> 🚨\n\n👤 <b>Cliente:</b> ${esc(payload.nome)}\n📱 <b>WhatsApp:</b> ${esc(payload.whatsapp)}\n📄 <b>CPF:</b> ${esc(payload.cpf)}\n✉️ <b>E-mail:</b> ${esc(payload.email)}\n📍 <b>Cidade:</b> ${esc(payload.cidade)}\n🚗 <b>Veículo:</b> ${esc(payload.vehicle.marca)} ${esc(payload.vehicle.modelo)} (${esc(payload.vehicle.ano)})\n🔢 <b>Placa:</b> ${esc(payload.placa || payload.vehicle.placa || 'Não informada')}\n💰 <b>Tabela FIPE:</b> ${fipeFormatted}\n🚕 <b>Trabalho/App:</b> ${payload.veiculoTrabalho ? 'Sim' : 'Não'}\n\n🛡️ <b>Plano Escolhido:</b> ${esc(payload.planoEscolhidoNome)}\n💵 <b>Mensalidade:</b> ${mensalidadeFormatted}/mês ${payload.comAdesivo ? '(com adesivo)' : ''}\n⚡ <b>Ativação:</b> ${ativacaoFormatted}\n\n${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${esc(powerCrmResult.qttnCd)}</code>\n` : ''}${checkoutUrl ? `🔗 <b>Link Checkout:</b> ${esc(checkoutUrl)}\n` : ''}💾 <b>Backup Local:</b> Salvo no painel interno (ID: <code>${storedLead.id}</code>)\n✅ <b>Status:</b> Cadastrado e aguardando os documentos${cobrarPix ? '. Ordem: documentos → App Visto → aprovação no /admin → Pix da adesão' : ''}.`
+    const telegramMessage = `🚨 <b>NOVO CADASTRO NO SITE!</b> 🚨\n\n👤 <b>Cliente:</b> ${esc(payload.nome || 'Aguardando documentos')}\n📱 <b>WhatsApp:</b> ${esc(payload.whatsapp)}\n${payload.cpf ? `📄 <b>CPF:</b> ${esc(payload.cpf)}\n` : ''}✉️ <b>E-mail:</b> ${esc(payload.email)}\n${payload.cidade ? `📍 <b>Cidade:</b> ${esc(payload.cidade)}\n` : ''}🚗 <b>Veículo:</b> ${esc(payload.vehicle.marca)} ${esc(payload.vehicle.modelo)} (${esc(payload.vehicle.ano)})\n🔢 <b>Placa:</b> ${esc(payload.placa || payload.vehicle.placa || 'Não informada')}\n💰 <b>Tabela FIPE:</b> ${fipeFormatted}\n🚕 <b>Trabalho/App:</b> ${payload.veiculoTrabalho ? 'Sim' : 'Não'}\n\n🛡️ <b>Plano Escolhido:</b> ${esc(payload.planoEscolhidoNome)}\n💵 <b>Mensalidade:</b> ${mensalidadeFormatted}/mês ${payload.comAdesivo ? '(com adesivo)' : ''}\n⚡ <b>Ativação:</b> ${ativacaoFormatted}\n\n${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${esc(powerCrmResult.qttnCd)}</code>\n` : ''}${checkoutUrl ? `🔗 <b>Link Checkout:</b> ${esc(checkoutUrl)}\n` : ''}💾 <b>Backup Local:</b> Salvo no painel interno (ID: <code>${storedLead.id}</code>)\n✅ <b>Status:</b> Cadastrado. Aguardando documentos para completar dados.${cobrarPix ? ' Ordem: documentos → App Visto → aprovação → Pix' : ''}.`
 
     await sendTelegramNotification(telegramMessage)
 
-    // 6. Dispara WhatsApp automático via AtendeHub / CITchat para o cliente (com link de checkout e vistoria)
     await sendWhatsAppQuoteMessage(payload, {
-      // Com o Pix do site, a adesão é o último passo: nada de link de pagamento no cadastro.
       quotationCode: cobrarPix ? undefined : powerCrmResult.qttnCd,
       vistoriaUrl,
     })
@@ -143,7 +132,7 @@ export async function POST(req: NextRequest) {
       crmSuccess: crmResult.success,
       cardId: crmResult.cardId,
       vistoriaUrl,
-      message: 'Cadastro realizado e salvo com sucesso!',
+      message: 'Cadastro realizado! Envie os documentos para completar.',
     })
   } catch (err: any) {
     console.error('Erro ao processar envio do lead:', err)
