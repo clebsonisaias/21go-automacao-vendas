@@ -20,23 +20,37 @@ function logo(): string {
   return logoData
 }
 
-/** Arte do post (1080×1350, JPEG — formato exigido pela API do Instagram). Pública: a Meta baixa por URL. */
-export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+/**
+ * Arte do post em JPEG (formato exigido pela API do Instagram). Pública: a Meta baixa por URL.
+ * Feed 1080×1350; story 1080×1920 (?formato=story) com o texto fora da área dos botões do app
+ * (250 px em cima, 420 px embaixo, 160 px à direita).
+ */
+export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params
   const c = contentById(id)
   if (!c) return new Response('Não encontrado', { status: 404 })
+
+  const story = new URL(req.url).searchParams.get('formato') === 'story'
+  const width = 1080
+  const height = story ? 1920 : 1350
+  const pad = story
+    ? { top: 250, bottom: 420, left: 88, right: 160 }
+    : { top: 88, bottom: 88, left: 88, right: 88 }
 
   const png = new ImageResponse(
     (
       <div
         style={{
-          width: 1080,
-          height: 1350,
+          width,
+          height,
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           background: '#0b1230',
-          padding: 88,
+          paddingTop: pad.top,
+          paddingBottom: pad.bottom,
+          paddingLeft: pad.left,
+          paddingRight: pad.right,
           fontFamily: 'sans-serif',
         }}
       >
@@ -52,7 +66,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
           <span style={{ color: '#f2911d', fontSize: 34, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase' }}>
             {c.kicker}
           </span>
-          <span style={{ color: '#ffffff', fontSize: 92, fontWeight: 700, lineHeight: 1.08, letterSpacing: -2 }}>
+          <span style={{ color: '#ffffff', fontSize: story ? 100 : 92, fontWeight: 700, lineHeight: 1.08, letterSpacing: -2 }}>
             {c.title}
           </span>
           <span style={{ color: '#c9d1e6', fontSize: 42, lineHeight: 1.35 }}>{c.body}</span>
@@ -61,8 +75,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
         <div
           style={{
             display: 'flex',
-            alignItems: 'center',
+            flexDirection: story ? 'column' : 'row',
+            alignItems: story ? 'flex-start' : 'center',
             justifyContent: 'space-between',
+            gap: 28,
             borderTop: '2px solid #26346a',
             paddingTop: 40,
           }}
@@ -78,16 +94,16 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
               borderRadius: 16,
             }}
           >
-            Cotação pelo link da bio
+            {story ? 'Faça sua cotação grátis' : 'Cotação pelo link da bio'}
           </span>
         </div>
       </div>
     ),
-    { width: 1080, height: 1350 }
+    { width, height }
   )
 
   const jpeg = await sharp(Buffer.from(await png.arrayBuffer())).jpeg({ quality: 90 }).toBuffer()
   return new Response(new Uint8Array(jpeg), {
-    headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=86400' },
+    headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=3600' },
   })
 }

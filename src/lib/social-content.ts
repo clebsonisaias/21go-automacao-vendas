@@ -11,6 +11,8 @@ export interface SocialContent {
   /** Complemento na arte (até ~110 caracteres). */
   body: string
   caption: string
+  /** Post avulso: fica fora do rodízio diário. */
+  oneOff?: boolean
 }
 
 const CTA = 'Faça sua cotação em 2 minutos pelo link da bio. 👆'
@@ -34,6 +36,23 @@ export const SOCIAL_CONTENT: SocialContent[] = [
   { id: 'regiao', kicker: 'Grande Natal', title: 'Atendemos Natal, Parnamirim e Macaíba', body: 'E a assistência 24h vale em todo o Brasil.', caption: cap('Somos a franquia CITmax da 21Go na Grande Natal. A assistência 24h acompanha você em todo o Brasil, conforme o plano.') },
 ]
 
+// Posts avulsos com dia e hora marcados (horário de Natal). Saem uma vez, no feed e no story.
+export const SOCIAL_ONE_OFFS: SocialContent[] = [
+  {
+    id: 'inauguracao-rn',
+    oneOff: true,
+    kicker: 'Inauguração · Hoje, 21/11',
+    title: 'Chegamos ao Rio Grande do Norte',
+    body: 'A proteção veicular da 21Go agora tem atendimento potiguar, com o Grupo CITmax.',
+    caption:
+      'Chegamos ao Rio Grande do Norte! 🧡\nA partir de hoje, a proteção veicular da 21Go tem atendimento potiguar, com o Grupo CITmax.\nCarro ou moto, a cotação é grátis e sai pela placa.\n👉 Link na bio ou www.21go.seg.br\n\n#21Go #ProteçãoVeicular #RioGrandeDoNorte #Natal #RN #GrupoCITmax',
+  },
+]
+
+export const SOCIAL_SCHEDULE: { contentId: string; at: string }[] = [
+  { contentId: 'inauguracao-rn', at: '2026-11-21T11:50:00-03:00' },
+]
+
 export function contentById(id: string): SocialContent | undefined {
-  return SOCIAL_CONTENT.find((c) => c.id === id)
+  return SOCIAL_CONTENT.find((c) => c.id === id) || SOCIAL_ONE_OFFS.find((c) => c.id === id)
 }
