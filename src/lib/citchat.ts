@@ -144,8 +144,8 @@ export async function sendWhatsAppQuoteMessage(
     ...(pagamentoUrl
       ? []
       : [
-          `📸 *2. Vistoria Digital Rápida no Celular:*`,
-          `Para validar a sua cobertura com ativação imediata, basta abrir o link de auto-vistoria e fotografar o veículo:`,
+          `📸 *Próximo passo: vistoria digital no celular*`,
+          `Abra o link, envie os documentos e as fotos do veículo. Depois, o último passo é o Pix da adesão:`,
           `👉 ${vistoriaUrl}`,
           ``,
         ]),
@@ -190,7 +190,7 @@ export async function sendWhatsAppVistoriaConfirmation(params: {
 export async function sendWhatsAppAdesaoConfirmada(params: {
   telefone: string
   nome: string
-  vistoriaUrl: string
+  vistoriaUrl?: string
   valor: number
 }): Promise<{ success: boolean; error?: string; data?: any }> {
   const message = [
@@ -198,11 +198,15 @@ export async function sendWhatsAppAdesaoConfirmada(params: {
     ``,
     `Olá *${params.nome}*, recebemos o Pix da taxa de adesão (R$ ${params.valor.toFixed(2)}). Obrigado!`,
     ``,
-    `📸 *Próximo passo — vistoria digital:*`,
-    `Abra o link, envie CNH/RG, documento do veículo, comprovante de residência e as fotos do veículo:`,
-    `👉 ${params.vistoriaUrl}`,
-    ``,
-    `Depois da conferência da nossa equipe, sua proteção é ativada. 🤝`,
+    ...(params.vistoriaUrl
+      ? [
+          `📸 *Falta só a vistoria digital:*`,
+          `👉 ${params.vistoriaUrl}`,
+        ]
+      : [
+          `🔍 Seu cadastro está completo e nossa equipe já está conferindo a vistoria.`,
+          `Assim que for aprovada, você recebe aqui a confirmação da sua proteção. 🤝`,
+        ]),
   ].join('\n')
 
   return sendCitchatMessage(params.telefone, message)

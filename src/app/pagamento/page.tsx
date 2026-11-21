@@ -26,12 +26,13 @@ function PagamentoContent() {
   const [copied, setCopied] = useState(false)
   const redirected = useRef(false)
 
+  // Pago: mostra a conclusão. Se ainda faltar a vistoria (cadastro antigo), leva até ela.
   const goVistoria = useCallback(
-    (url: string) => {
+    (url?: string) => {
       if (redirected.current) return
       redirected.current = true
       setPhase('paid')
-      setTimeout(() => router.push(url), 1800)
+      if (url) setTimeout(() => router.push(url), 1800)
     },
     [router]
   )
@@ -54,6 +55,11 @@ function PagamentoContent() {
       }
       if (data.status === 'paid') {
         goVistoria(data.vistoriaUrl)
+        return
+      }
+      if (data.status === 'vistoria' && data.vistoriaUrl) {
+        // A vistoria vem antes do pagamento.
+        router.replace(data.vistoriaUrl)
         return
       }
       setPix(data)
@@ -120,7 +126,7 @@ function PagamentoContent() {
         {phase === 'pending' && pix && (
           <section className="flex flex-col items-center gap-5 rounded-2xl border border-line bg-white p-6 text-center shadow-card sm:p-8">
             <div className="flex flex-col gap-1">
-              <h1 className="m-0 text-[26px] font-extrabold leading-tight tracking-[-0.8px]">Pague a adesão via Pix</h1>
+              <h1 className="m-0 text-[26px] font-extrabold leading-tight tracking-[-0.8px]">Último passo: pague a adesão via Pix</h1>
               <p className="m-0 text-base text-muted">
                 Valor: <strong className="text-navy-800">{brl(pix.valor)}</strong>
               </p>
@@ -168,8 +174,8 @@ function PagamentoContent() {
               Aguardando a confirmação do pagamento…
             </p>
             <p className="m-0 text-xs text-muted">
-              Abra o app do seu banco, escolha Pix e leia o QR Code ou cole o código. Esta página avança sozinha
-              quando o pagamento for confirmado, e também enviamos o link da vistoria no seu WhatsApp.
+              Abra o app do seu banco, escolha Pix e leia o QR Code ou cole o código. Esta página confirma sozinha
+              quando o pagamento entrar, e também avisamos no seu WhatsApp.
             </p>
             {error && <p role="alert" className="m-0 text-sm font-semibold text-red-700">{error}</p>}
           </section>
@@ -181,7 +187,16 @@ function PagamentoContent() {
               <CheckCircle2 aria-hidden className="h-9 w-9 text-navy-950" />
             </span>
             <h1 className="m-0 text-[26px] font-extrabold tracking-[-0.8px]">Pagamento confirmado!</h1>
-            <p className="m-0 text-base text-muted">Levando você para a vistoria digital…</p>
+            <p className="m-0 max-w-sm text-base text-muted">
+              Seu cadastro está completo. Nossa equipe vai conferir a vistoria e avisar você pelo WhatsApp quando a
+              proteção for ativada.
+            </p>
+            <a
+              href="/"
+              className="mt-2 inline-flex min-h-[48px] items-center rounded-lg border border-navy-800 px-6 font-bold text-navy-800 no-underline transition hover:bg-surface-100"
+            >
+              Voltar à página inicial
+            </a>
           </section>
         )}
 
