@@ -1,6 +1,8 @@
 import { StoredLead, findLeadByRef, getStoredLeads, updateLead } from './db'
 import { sendWhatsAppAppVisto } from './citchat'
 import { esc, sendTelegramNotification } from './telegram'
+import { readVistoriaFile } from './vistoria-files'
+import sharp from 'sharp'
 
 // Gera sozinho o link da vistoria oficial (Vistoria 21Go) no CRM 21Go, depois que o cliente envia
 // os documentos no site. Mesmas chamadas que o botão "Gerar link" do CRM faz:
@@ -54,6 +56,25 @@ async function crm<T = any>(method: 'GET' | 'POST' | 'PUT', path: string, body?:
   throw new Error('CRM recusou o acesso')
 }
 
+/** Envio multipart (documentos). Mesmo login e nova tentativa em 401 do crm(). */
+async function crmUpload(path: string, form: FormData): Promise<{ status: number; data: any }> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const t = token && Date.now() - tokenAt < 50 * 60_000 ? token : await login()
+    const res = await fetch(`${CRM}${path}`, {
+      method: 'POST',
+      headers: { Accept: 'application/json', Authorization: `Bearer ${t}` },
+      body: form,
+      signal: AbortSignal.timeout(180_000),
+    })
+    if (res.status === 401 && attempt === 0) {
+      token = null
+      continue
+    }
+    return { status: res.status, data: await res.json().catch(() => ({})) }
+  }
+  throw new Error('CRM recusou o acesso')
+}
+
 const norm = (s: unknown) =>
   String(s ?? '')
     .normalize('NFD')
@@ -62,7 +83,7 @@ const norm = (s: unknown) =>
     .replace(/[^A-Z0-9]/g, '')
 
 function errMsg(data: any, fallback: string): string {
-  const m = data?.error || data?.message || data?.mensagem
+  const m = data?.message || data?.mensagem || data?.error
   const faltas = Array.isArray(data?.faltas) ? ` (${data.faltas.map((f: any) => f?.label || f).join(', ')})` : ''
   return `${typeof m === 'string' ? m : fallback}${faltas}`.slice(0, 240)
 }
@@ -119,6 +140,92 @@ async function ensureRequisitos(lead: StoredLead, negId: string, cotacaoId: stri
   }
 }
 
+// Documentos do cliente para a "Documentos IA" do CRM: anexa no PowerCRM, lê e grava os campos vazios
+// (CPF, RG, CNH, endereço, chassi, Renavam). Uma chamada por documento, como o botão "Anexar" do CRM.
+const DOC_TIPOS = { cnhOuRg: 'cnh', crlv: 'crlv', comprovanteResidencia: 'comprovante' } as const
+
+/** O CRM aceita JPG, PNG e PDF; foto grande é reduzida como o próprio CRM faz no navegador. */
+async function prepararArquivo(buf: Buffer, ext: string, mime: string): Promise<{ buf: Buffer; mime: string; ext: string } | null> {
+  if (ext === 'pdf') return { buf, mime, ext }
+  if ((ext === 'jpg' || ext === 'png') && buf.length < 1_200_000) return { buf, mime, ext }
+  try {
+    const out = await sharp(buf).rotate().resize(2200, 2200, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 85 }).toBuffer()
+    return { buf: out, mime: 'image/jpeg', ext: 'jpg' }
+  } catch {
+    return null // ex.: HEIC que o servidor não sabe abrir
+  }
+}
+
+async function enviarDocumentos(lead: StoredLead, negId: string, cotacaoId: string): Promise<void> {
+  const feitos = new Set(lead.crmVistoria?.docs || [])
+  const pendentes = (Object.keys(DOC_TIPOS) as (keyof typeof DOC_TIPOS)[]).filter((slot) => !feitos.has(slot) && lead.vistoriaArquivos?.[slot])
+  if (!pendentes.length) return
+
+  const lib = await crm<any>('GET', '/documentos-ia/liberado')
+  if (lib.status !== 200 || !lib.data?.liberado) {
+    console.warn('[Vistoria CRM] leitura de documentos não liberada no CRM; seguindo sem anexar')
+    return
+  }
+  const avisos: string[] = []
+  for (const slot of pendentes) {
+    const meta = lead.vistoriaArquivos![slot]
+    const raw = readVistoriaFile(lead.id, slot, meta.ext)
+    const arq = raw ? await prepararArquivo(raw, meta.ext, meta.mime) : null
+    if (!arq) {
+      avisos.push(`${slot}: formato não aceito pelo CRM`)
+      continue
+    }
+    const form = new FormData()
+    form.append('tipo', DOC_TIPOS[slot])
+    form.append('cotacaoId', cotacaoId)
+    form.append('arquivo', new Blob([new Uint8Array(arq.buf)], { type: arq.mime }), `${DOC_TIPOS[slot]}.${arq.ext}`)
+    const r = await crmUpload(`/documentos-ia/negociacao/${negId}/anexar`, form)
+    if (r.status >= 300) {
+      avisos.push(`${slot}: ${errMsg(r.data, `HTTP ${r.status}`)}`)
+      continue
+    }
+    updateLead(lead.ref, (l) => {
+      const c = l.crmVistoria || { tentativas: 0 }
+      c.docs = Array.from(new Set([...(c.docs || []), slot]))
+      l.crmVistoria = c
+    })
+  }
+  if (avisos.length) console.warn('[Vistoria CRM] documentos:', avisos.join(' | '))
+}
+
+// Campos do contato do card, na mesma forma que o formulário do CRM manda (PUT substitui o contato inteiro).
+const CONTATO_CAMPOS = [
+  'nome', 'cpf', 'rg', 'rgOrgaoExpedidor', 'rgDataExpedicao', 'cnh', 'cnhCategoria', 'cnhPrimeiraHab', 'cnhValidade',
+  'dataNascimento', 'sexo', 'telefone', 'telefone2', 'telefoneResidencial', 'telefoneComercial', 'email', 'cep',
+  'endereco', 'numero', 'complemento', 'bairro', 'uf', 'cidade', 'estadoPowerId', 'cidadeId',
+] as const
+const CAMPOS_DATA = new Set(['rgDataExpedicao', 'cnhPrimeiraHab', 'cnhValidade', 'dataNascimento'])
+
+/** O CRM só gera a vistoria com o CPF no card. O cadastro do site tem o CPF; completa sem apagar o resto. */
+async function ensureCpfNoCard(lead: StoredLead, negId: string): Promise<void> {
+  const { status, data: neg } = await crm<any>('GET', `/negociacoes/${negId}`)
+  if (status !== 200 || !neg?.cardId) throw new Error(errMsg(neg, `card da negociação não encontrado (HTTP ${status})`))
+  const card = await crm<any>('GET', `/pipes/cards/${neg.cardId}`)
+  if (card.status !== 200) throw new Error(errMsg(card.data, `card não abriu (HTTP ${card.status})`))
+  const a = (card.data?.associado || {}) as Record<string, unknown>
+  const cpf = String(lead.cpf || '').replace(/\D/g, '')
+  // Já tem CPF (lido da CNH pela IA do CRM ou digitado pela equipe): não troca.
+  if (String(a.cpf || '').replace(/\D/g, '').length >= 11) return
+  if (cpf.length !== 11 && cpf.length !== 14) throw new Error('o card do CRM está sem CPF e o cadastro do site não tem CPF válido')
+
+  const body: Record<string, string> = {}
+  for (const k of CONTATO_CAMPOS) {
+    const v = a[k]
+    body[k] = v == null ? '' : CAMPOS_DATA.has(k) ? String(v).slice(0, 10) : String(v)
+  }
+  body.cpf = cpf
+  if (!body.nome) body.nome = lead.nome
+  if (!body.telefone) body.telefone = String(lead.whatsapp || '').replace(/\D/g, '')
+  if (!body.email && lead.email) body.email = lead.email
+  const r = await crm<any>('PUT', `/pipes/cards/${neg.cardId}/contato`, body)
+  if (r.status >= 300) throw new Error(errMsg(r.data, `não salvou o CPF no card (HTTP ${r.status})`))
+}
+
 type Estado = { url?: string; aguardandoLink?: boolean; filaEstado?: string; ultimoErro?: string } | null
 
 async function estadoVistoria(negId: string, cotacaoId: string): Promise<Estado> {
@@ -144,12 +251,16 @@ async function gerarUmaVez(lead: StoredLead): Promise<string | null> {
 
   let v = await estadoVistoria(negId, cotacaoId)
   if (!v) {
+    // Documentos primeiro: a IA do CRM preenche CPF, endereço, chassi etc. a partir deles.
+    await enviarDocumentos(findLeadByRef(lead.ref) || lead, negId, cotacaoId)
     await ensureRequisitos(lead, negId, cotacaoId)
+    await ensureCpfNoCard(lead, negId)
     const r = await crm<any>('POST', `/vistoria-propria/${negId}`, { cotacaoId, zeroKm: false })
     if (r.status >= 300) throw new Error(errMsg(r.data, `CRM não gerou a vistoria (HTTP ${r.status})`))
     v = r.data?.vistoria || r.data || null
   } else if (!v.url && v.filaEstado === 'travada') {
-    // O CRM desistiu de tentar: pede de novo (é o que o botão "Corrigi, gerar o link de novo" faz).
+    // O CRM desistiu de tentar: corrige o que dá e pede de novo (botão "Corrigi, gerar o link de novo").
+    await ensureCpfNoCard(lead, negId)
     await crm<any>('POST', `/vistoria-propria/${negId}`, { cotacaoId, zeroKm: false })
   }
 
