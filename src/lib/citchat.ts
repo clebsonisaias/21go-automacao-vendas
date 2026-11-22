@@ -322,3 +322,51 @@ export async function sendWhatsAppVistoriaAprovada(params: {
 
   return sendCitchatMessage(params.telefone, message)
 }
+
+/**
+ * Lembrete de etapa parada (ver lembretes.ts). Dentro da janela de 24h vai o texto; fora dela,
+ * o mesmo template da etapa (documentos, vistoria ou Pix), que já leva o link certo.
+ */
+export async function sendWhatsAppLembrete(params: {
+  etapa: 'documentos' | 'vistoria' | 'pagamento'
+  telefone: string
+  nome: string
+  veiculo: string
+  plano: string
+  mensalidade: number
+  placa: string
+  valor: number
+  url: string
+}): Promise<{ success: boolean; error?: string; data?: any }> {
+  const { etapa, url } = params
+  if (etapa === 'documentos') {
+    const message = [
+      `${ola(params.nome)}! Seu cadastro da proteção 21Go para o ${params.veiculo} está quase pronto: falta enviar os documentos (CNH ou RG, documento do carro e comprovante de residência).`,
+      ``,
+      `É rapidinho pelo link: ${url}`,
+      ``,
+      `Se preferir, mande as fotos aqui mesmo na conversa.`,
+    ].join('\n')
+    return sendCitchatMessage(params.telefone, message, {
+      template: 'citmax_21go_documentos',
+      params: [params.veiculo, params.plano, reais(params.mensalidade), url],
+    })
+  }
+  if (etapa === 'vistoria') {
+    const message = [
+      `${ola(params.nome)}! Falta só a vistoria do seu veículo na 21Go: são as fotos pelo celular, neste link: ${url}`,
+      ``,
+      `Depois das fotos, a equipe analisa e o Pix da adesão chega aqui.`,
+    ].join('\n')
+    return sendCitchatMessage(params.telefone, message, { template: 'citmax_21go_vistoria', params: [url] })
+  }
+  const message = [
+    `${ola(params.nome)}! A vistoria do veículo de placa ${params.placa} foi aprovada e falta só a taxa de adesão (R$ ${reais(params.valor)}) por Pix: ${url}`,
+    ``,
+    `Se preferir, peça o código Pix aqui na conversa.`,
+  ].join('\n')
+  return sendCitchatMessage(params.telefone, message, {
+    template: 'citmax_21go_pix_adesao',
+    params: [params.placa, reais(params.valor), url],
+  })
+}

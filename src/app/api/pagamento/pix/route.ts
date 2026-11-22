@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { findLeadByRef, updateLead } from '@/lib/db'
-import { createPixOrder, getOrder, isOrderDead, mpEnabled } from '@/lib/mercadopago'
-import { refreshLeadPayment, syncPaymentFromOrder } from '@/lib/orchestrator'
+import { findLeadByRef, LeadPagamento } from '@/lib/db'
+import { mpEnabled } from '@/lib/mercadopago'
+import { obterPixDaAdesao } from '@/lib/pix-adesao'
 import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
@@ -22,74 +22,37 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => ({}))
     const ref = typeof body?.ref === 'string' ? body.ref.slice(0, 80) : ''
-    let lead = ref ? findLeadByRef(ref) : undefined
+    const lead = ref ? findLeadByRef(ref) : undefined
     if (!lead) {
       return NextResponse.json({ error: 'Link inválido ou expirado. Faça uma nova cotação.' }, { status: 404 })
     }
-    if (lead.status === 'cancelado') {
-      return NextResponse.json({ error: 'Este cadastro foi encerrado. Faça uma nova cotação ou fale com a nossa equipe.' }, { status: 410 })
-    }
 
-    // Já pago: nada a fazer.
-    if (lead.pagamento?.paidAt) {
-      return NextResponse.json({ status: lead.pagamento.provider === 'cupom' ? 'gratis' : 'paid' })
-    }
-    // Adesão zerada por cupom: não existe Pix de R$ 0 (vale como paga quando a vistoria é aprovada).
-    if (lead.ativacao <= 0) {
-      return NextResponse.json({ status: 'gratis' })
-    }
-    // Adesão por último: o Pix só abre depois de a equipe aprovar a vistoria (status aguardando_pagamento).
-    if (lead.status !== 'aguardando_pagamento' && !lead.pagamento) {
-      return NextResponse.json({ status: 'bloqueado' })
-    }
-
-    // Pix já emitido e ainda válido: confere no MP e reaproveita (não gera cobrança duplicada).
-    if (lead.pagamento) {
-      lead = await refreshLeadPayment(lead)
-      if (lead.pagamento?.paidAt) {
+    const r = await obterPixDaAdesao(lead)
+    switch (r.status) {
+      case 'indisponivel':
+        return NextResponse.json({ error: 'Pagamento online indisponível no momento.' }, { status: 503 })
+      case 'cancelado':
+        return NextResponse.json({ error: 'Este cadastro foi encerrado. Faça uma nova cotação ou fale com a nossa equipe.' }, { status: 410 })
+      case 'pago':
         return NextResponse.json({ status: 'paid' })
-      }
-      const current = lead.pagamento && (await getOrder(lead.pagamento.orderId))
-      if (current && !isOrderDead(current) && lead.pagamento?.qrCode) {
-        return NextResponse.json(publicPix(lead.pagamento))
-      }
+      case 'gratis':
+        return NextResponse.json({ status: 'gratis' })
+      case 'bloqueado':
+        return NextResponse.json({ status: 'bloqueado' })
+      case 'limite':
+        return NextResponse.json({ error: 'Limite de cobranças atingido. Fale com a nossa equipe.' }, { status: 429 })
+      case 'valor_mudou':
+        return NextResponse.json({ error: 'O valor da adesão mudou. Atualize a página para gerar o Pix certo.' }, { status: 409 })
+      case 'pendente':
+        return NextResponse.json(publicPix(r.pagamento))
     }
-
-    // Sem Pix, ou o anterior expirou/cancelou: gera um novo.
-    const attempt = (lead.pagamento?.attempt ?? 0) + 1
-    if (attempt > 5) {
-      return NextResponse.json({ error: 'Limite de cobranças atingido. Fale com a nossa equipe.' }, { status: 429 })
-    }
-    const pagamento = await createPixOrder(lead, attempt)
-    // A ordem foi criada com o valor lido acima; se a adesão mudou nesse meio-tempo, não grava
-    // (o cliente pagaria um valor que a conferência do pagamento recusaria). A ordem fica sem uso e vence.
-    const valorDaOrdem = lead.ativacao
-    let valorMudou = false
-    const updated = updateLead(lead.ref, (l) => {
-      if (l.ativacao !== valorDaOrdem) {
-        valorMudou = true
-        return
-      }
-      l.pagamento = pagamento
-    })
-    if (valorMudou) {
-      console.warn('[/api/pagamento/pix] adesão mudou durante a criação do Pix; ordem descartada', { orderId: pagamento.orderId })
-      return NextResponse.json({ error: 'O valor da adesão mudou. Atualize a página para gerar o Pix certo.' }, { status: 409 })
-    }
-    if (!updated?.pagamento) throw new Error('Falha ao salvar cobrança')
-
-    // Caso raro: o MP já devolve a order paga/processada.
-    const fresh = await getOrder(pagamento.orderId)
-    if (fresh) await syncPaymentFromOrder(lead.ref, fresh)
-
-    return NextResponse.json(publicPix(updated.pagamento))
   } catch (err) {
     console.error('[/api/pagamento/pix]', err instanceof Error ? err.message : err)
     return NextResponse.json({ error: 'Não foi possível gerar o Pix agora. Tente novamente.' }, { status: 502 })
   }
 }
 
-function publicPix(p: NonNullable<ReturnType<typeof findLeadByRef>>['pagamento'] & object) {
+function publicPix(p: LeadPagamento) {
   return {
     status: 'pending' as const,
     valor: p.valor,

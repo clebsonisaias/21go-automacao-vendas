@@ -6,5 +6,7 @@ export async function register() {
     if (process.env.MP_ACCESS_TOKEN) node.startPaymentReconciler()
     if (process.env.IG_USER_ID && process.env.IG_ACCESS_TOKEN) node.startSocialScheduler()
     if (process.env.CRM_EMAIL && process.env.CRM_PASSWORD) node.startVistoriaLinkScheduler()
+    // Lembretes por WhatsApp: só com o gateway configurado; LEMBRETES_WHATSAPP=off desliga.
+    if (process.env.CITCHAT_GATEWAY_TOKEN && process.env.LEMBRETES_WHATSAPP !== 'off') node.startLembretes()
   }
 }
