@@ -84,7 +84,15 @@ export interface StoredLead {
     | 'cotacoes_recebidas'
     | 'vendas_concretizadas'
   /** Lembrete de etapa parada por WhatsApp (ver lembretes.ts): etapa, desde quando e quando foi enviado. */
-  lembrete?: { etapa: 'documentos' | 'vistoria' | 'pagamento'; desde: string; enviados: string[] }
+  lembrete?: {
+    etapa: 'documentos' | 'vistoria' | 'pagamento'
+    desde: string
+    enviados: string[]
+    /** Saiu da etapa nesta hora; voltando a ela, a contagem recomeça. */
+    saiuEm?: string
+    /** Cadastro antigo (de antes dos lembretes): nada é enviado nesta etapa. */
+    semLembrete?: boolean
+  }
   /** Arquivos reais da vistoria gravados no servidor (ver vistoria-files.ts). */
   vistoriaArquivos?: Record<string, { ext: string; mime: string; size: number; originalName: string; savedAt: string; sha256?: string }>
   vistoriaData?: {

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { autorizarAtendai, cadastroMaisRecente, chaveTelefone, json, situacaoDoCadastro } from '@/lib/atendai'
+import { autorizarAtendai, cadastroParaPagamento, chaveTelefone, json, situacaoDoCadastro } from '@/lib/atendai'
 import { absolute, pagamentoPath } from '@/lib/links'
 import { obterPixDaAdesao } from '@/lib/pix-adesao'
 import { limitePorChave, rateLimit } from '@/lib/rate-limit'
@@ -7,10 +7,14 @@ import { esc, sendTelegramNotification } from '@/lib/telegram'
 
 export const dynamic = 'force-dynamic'
 
+/** Aviso de limite de cobranças: um por cadastro a cada 12 h (o cliente pede de novo e o lembrete convida). */
+const LIMITE_AVISADO_MS = 12 * 60 * 60 * 1000
+const limiteAvisado = new Map<string, number>()
+
 const brl = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
 /**
- * POST { telefone } → Pix da taxa de adesão do cadastro mais recente desse WhatsApp, para o
+ * POST { telefone } → Pix da taxa de adesão do cadastro desse WhatsApp (o que espera o Pix), para o
  * chat mandar na conversa. Mesma regra da página /pagamento: só depois da vistoria aprovada,
  * com o valor do cadastro (`lead.ativacao`); o Pix que ainda vale é reaproveitado.
  *
@@ -37,7 +41,7 @@ export async function POST(req: NextRequest) {
     return json({ erro: 'Muitos pedidos de Pix seguidos. Peça de novo em alguns minutos.' }, 429)
   }
 
-  const lead = cadastroMaisRecente(telefone)
+  const lead = cadastroParaPagamento(telefone)
   if (!lead) {
     return json({
       encontrado: false,
@@ -68,6 +72,10 @@ export async function POST(req: NextRequest) {
         return json({ encontrado: true, situacao: 'gratis', placa, mensagem: 'A adesão ficou grátis com o cupom: não há Pix a pagar.' })
       case 'bloqueado': {
         const s = situacaoDoCadastro(lead)
+        // Cadastro concluído sem Pix do site (aprovado com o Pix desligado): não há o que pagar aqui.
+        if (s.etapa === 'concluido') {
+          return json({ encontrado: true, situacao: 'concluido', placa, etapaTexto: s.etapaTexto, proximoPasso: s.proximoPasso, mensagem: 'Este cadastro já está concluído: não há Pix da adesão a pagar por aqui.' })
+        }
         return json({
           encontrado: true,
           situacao: 'aguardando_vistoria',
@@ -89,16 +97,22 @@ export async function POST(req: NextRequest) {
             ? 'O pagamento da adesão é pelo link de pagamento.'
             : 'O pagamento pelo chat está indisponível agora. Tente de novo mais tarde.',
         })
-      case 'limite':
-        await sendTelegramNotification(
-          `⚠️ <b>Pix da adesão pelo chat:</b> limite de cobranças atingido para a placa ${esc(placa || 'sem placa')}. Confira o cadastro no /admin.`
-        )
+      case 'limite': {
+        const agora = Date.now()
+        if ((limiteAvisado.get(lead.ref) ?? 0) < agora - LIMITE_AVISADO_MS) {
+          limiteAvisado.set(lead.ref, agora)
+          if (limiteAvisado.size > 500) limiteAvisado.clear()
+          await sendTelegramNotification(
+            `⚠️ <b>Pix da adesão pelo chat:</b> limite de cobranças atingido para a placa ${esc(placa || 'sem placa')}. Confira o cadastro no /admin.`
+          )
+        }
         return json({
           encontrado: true,
           situacao: 'limite',
           placa,
           mensagem: 'Não consigo gerar outro Pix para este cadastro agora. A equipe da 21Go foi avisada e entra em contato.',
         })
+      }
       case 'valor_mudou':
         return json({ erro: 'O valor da adesão acabou de mudar. Peça o Pix de novo em instantes.' }, 409)
       case 'cancelado':

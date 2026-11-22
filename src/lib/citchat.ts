@@ -349,7 +349,8 @@ export async function sendWhatsAppLembrete(params: {
     ].join('\n')
     return sendCitchatMessage(params.telefone, message, {
       template: 'citmax_21go_documentos',
-      params: [params.veiculo, params.plano, reais(params.mensalidade), url],
+      // Mensalidade ausente vira valor vazio: a mensagem vai pela reserva do produto, sem quebrar.
+      params: [params.veiculo, params.plano, Number.isFinite(params.mensalidade) ? reais(params.mensalidade) : '', url],
     })
   }
   if (etapa === 'vistoria') {

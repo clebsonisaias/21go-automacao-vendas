@@ -56,6 +56,10 @@ export async function POST(req: NextRequest) {
   let placa = ''
   try {
     const leitura = await extractDocumentWithAi({ imageBase64: buf.toString('base64'), mimeType: tipo.mime, docTypeHint: 'crlv' })
+    // Sem nenhuma IA respondendo, a leitura volta "simulada": é falha nossa, não foto ruim.
+    if (leitura.model === 'simulation') {
+      return json({ erro: 'Não consegui ler o documento agora. Peça para o cliente digitar a placa ou mandar a foto de novo em alguns minutos.' }, 503)
+    }
     if (leituraConfiavel(leitura)) {
       if (leitura.documentType === 'cnh' || leitura.documentType === 'comprovante_residencia') {
         return json(
