@@ -364,3 +364,15 @@ O chat do 21Go (AtendeHub) faz o cadastro igual ao site: pede o telefone para co
 - **`src/lib/documentos.ts`:** a lógica que estava dentro de `/api/vistoria/upload`, `extrair` e `submit` (`receberArquivo`, `aplicarLeitura`, `concluirDocumentos`). As três rotas da página continuam com o mesmo comportamento.
 - **Leitura de PDF:** vai à OpenAI como arquivo (antes ia como imagem e não era lida). A foto HEIC vira JPEG antes da leitura.
 - **`/contratacao`:** aceita `telefoneConversa`. Quando o cliente dá outro número para contato, o da conversa fica em `atendaiTelefone`, e `cadastroMaisRecente` acha o cadastro pelos dois.
+
+### [Claude] — 2026-11-22 — Logo oficial do 21Go no site
+
+Pedido do Clebson: o site usa o logo do CRM 21Go (https://crm21go.site/logo21go.png).
+
+- **Arquivos gerados** por `python3 -I scripts/logo-21go.py logo21go.png`:
+  - `public/brand/logo-21go.png`: o logo inteiro, recortado, com fundo transparente e **texto branco**, só para fundo escuro;
+  - `public/brand/simbolo-21go.png`: só o símbolo, quadrado;
+  - `src/app/icon.png`: ícone da aba do navegador.
+- **`src/components/Marca.tsx`:** `LogoCompleto` (cabeçalho, rodapé, Área do Cliente, login do painel, vistoria, pagamento, carteirinha) e `SimboloLogo` (cabeçalhos compactos do painel da franquia e do associado).
+- **Corrigido:** a Área do Cliente, o painel do associado e o login do painel apontavam para `/images/logo-21go.png`, que não existe, e a imagem saía quebrada.
+- **Arte do Instagram** (`/api/social/arte/[id]`): logo inteiro com "Franquia CITmax" ao lado.

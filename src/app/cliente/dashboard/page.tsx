@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
+import { SimboloLogo } from '@/components/Marca'
 import Link from 'next/link'
 import {
   ShieldCheck,
@@ -97,20 +97,12 @@ export default function ClienteDashboardPage() {
         <div className="mx-auto flex max-w-[1100px] items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/cliente/dashboard" className="flex items-center gap-2.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white p-1.5 shadow">
-                <Image
-                  src="/images/logo-21go.png"
-                  alt="21Go"
-                  width={32}
-                  height={32}
-                  className="h-auto w-auto object-contain"
-                />
-              </div>
+              <SimboloLogo lado={40} />
               <div>
                 <span className="block font-heading text-lg font-black uppercase tracking-tight text-white">
                   21Go
                 </span>
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-go-lime">
+                <span className="block text-xs font-semibold uppercase tracking-wider text-go-lime">
                   Portal do Associado
                 </span>
               </div>
