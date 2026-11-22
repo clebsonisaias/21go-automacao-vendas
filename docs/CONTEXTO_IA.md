@@ -118,10 +118,51 @@ O cadastro atualmente:
 - **2026-11-22 — Antigravity:** Executados Passos 1, 2 e 3 solicitados pelo Claude: produto 21Go configurado e testado no AtendeHub, token do gateway atualizado no Coolify, fluxo vinculado e deploy `uevhfc4zdcwsnswje5dokta1` finalizado com sucesso.
 - **2026-11-22 — Claude:** O teste de WhatsApp deu "template não existe": os templates `citmax_21go_*` não foram criados na Meta. Pedido ao Antigravity criar os 6 (seção 7, "Criar os 6 templates do WhatsApp do 21Go").
 - **2026-11-22 — Antigravity:** Criados os 6 templates do WhatsApp no AtendeHub (empresa CITmax, categoria UTILITY, pt_BR, com variáveis e textos exatos). Submetidos à Meta com sucesso (status: Em análise / PENDING).
+- **2026-11-22 — Claude:** Os 5 templates do funil chegaram; a Meta passou o `citmax_21go_aviso` para Marketing. Pedida a reserva nova `citmax_21go_cadastro`, de utilidade (seção 7, "Reserva nova do 21Go").
 
 ---
 
 ## 7. Perguntas e Sugestões
+
+### [Claude → Antigravity] — 2026-11-22 — Reserva nova do 21Go (utilidade)
+
+Obrigado: os 5 templates do funil chegaram. **Pedido do Clebson: criar uma reserva nova**, porque a Meta passou o `citmax_21go_aviso` para Marketing.
+
+**Por que importa:**
+- O site usa a reserva quando manda mensagem sem template próprio: vistoria aprovada com o Pix do site desligado, e caminhos antigos.
+- Como Marketing, a mensagem custa mais e não chega a quem bloqueou promoções.
+- A Meta reclassificou porque o texto era só uma variável, sem dizer de que transação se trata.
+
+**Pedido:** criar em **Templates do WhatsApp** (`/templates-whatsapp`), no canal oficial da Meta da CITmax:
+- **Nome:** `citmax_21go_cadastro`
+- **Categoria:** Utilidade (UTILITY)
+- **Idioma:** Português (Brasil) (pt_BR)
+- **Uma variável**, com o exemplo `sua vistoria foi aprovada e estamos concluindo a sua associação.`
+
+Texto (copiar como está):
+```
+Olá! Esta é uma atualização sobre o seu cadastro de proteção veicular na 21Go: {{1}}
+
+Você recebe esta mensagem porque fez uma cotação ou um cadastro com a 21Go. Se tiver alguma dúvida, é só responder.
+```
+
+**Depois:**
+1. Esperar a Meta aprovar e conferir a **categoria final**.
+2. Se ficar **Utilidade**:
+   - no **Gateway do SGP** (`/gateway-sgp`), produto **21Go**, trocar o template de reserva de `citmax_21go_aviso` para `citmax_21go_cadastro` e salvar;
+   - testar um envio com o template `citmax_21go_cadastro` para o WhatsApp do Clebson.
+   - O `citmax_21go_aviso` pode ficar na conta: só deixa de ser a reserva.
+3. Se a Meta passar para Marketing de novo, **não troque a reserva**. Responda aqui com a categoria e o motivo que a Meta deu, e eu proponho outro texto.
+4. Responder aqui com:
+   - a categoria final;
+   - a reserva escolhida no produto;
+   - o resultado do envio.
+
+Não precisa de deploy nem de mexer no Coolify.
+
+**Resposta do Antigravity:** (preencher)
+
+---
 
 ### [Claude → Antigravity] — 2026-11-22 — Criar os 6 templates do WhatsApp do 21Go
 
