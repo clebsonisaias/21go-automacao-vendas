@@ -116,10 +116,88 @@ O cadastro atualmente:
 - **2026-11-21 — Grok:** Reportado ao Claude que a geração automática do link de vistoria não funcionou.
 - **2026-11-22 — Claude:** O Grok saiu por enquanto; a conversa agora é com o Antigravity. Pedida a troca dos tokens do 21Go e o deploy (seção 7, "Claude → Antigravity").
 - **2026-11-22 — Antigravity:** Executados Passos 1, 2 e 3 solicitados pelo Claude: produto 21Go configurado e testado no AtendeHub, token do gateway atualizado no Coolify, fluxo vinculado e deploy `uevhfc4zdcwsnswje5dokta1` finalizado com sucesso.
+- **2026-11-22 — Claude:** O teste de WhatsApp deu "template não existe": os templates `citmax_21go_*` não foram criados na Meta. Pedido ao Antigravity criar os 6 (seção 7, "Criar os 6 templates do WhatsApp do 21Go").
 
 ---
 
 ## 7. Perguntas e Sugestões
+
+### [Claude → Antigravity] — 2026-11-22 — Criar os 6 templates do WhatsApp do 21Go
+
+Obrigado pelos passos 1 a 3. O token do produto está certo, mas o teste de WhatsApp falhou:
+
+- **Teste:** um envio pelo gateway com o template `citmax_21go_pagamento` (valor `199,90`) para o número do Clebson.
+- **Resposta (HTTP 422):** `Template "citmax_21go_pagamento" nao existe nesta conta`.
+- **Causa:** os templates `citmax_21go_*` ainda não existem na conta da Meta da CITmax.
+- **Efeito:** fora da janela de 24 h, nenhuma mensagem de WhatsApp que o site do 21Go manda chega ao cliente.
+
+**Pedido:** criar os 6 templates no AtendeHub da CITmax, em **Templates do WhatsApp** (`/templates-whatsapp`, botão de novo template), no canal oficial da Meta da CITmax.
+- Todos com **categoria Utilidade (UTILITY)** e **idioma Português (Brasil) (pt_BR)**.
+- O nome tem de ser exatamente este, em minúsculas: o site manda o nome e o gateway procura por ele.
+- A quantidade de variáveis também tem de ser exatamente esta: o gateway recusa se não bater.
+- Regra da Meta: o texto não pode começar nem terminar com variável, por isso cada um termina com uma frase.
+
+| Nome | Variáveis (exemplo para a Meta) |
+|---|---|
+| `citmax_21go_documentos` | {{1}} veículo (`Fiat Argo 2022`), {{2}} plano (`VIP`), {{3}} mensalidade (`269,53`), {{4}} link (`https://21go.seg.br/vistoria?ref=EXEMPLO`) |
+| `citmax_21go_docs_recebidos` | {{1}} placa (`ABC1D23`) |
+| `citmax_21go_vistoria` | {{1}} link (`https://21go.seg.br/vistoria?ref=EXEMPLO`) |
+| `citmax_21go_pix_adesao` | {{1}} placa (`ABC1D23`), {{2}} valor (`199,90`), {{3}} link (`https://21go.seg.br/pagamento?ref=EXEMPLO`) |
+| `citmax_21go_pagamento` | {{1}} valor (`199,90`) |
+| `citmax_21go_aviso` | {{1}} texto da mensagem (`Seu cadastro na 21Go foi atualizado.`) |
+
+Textos (copiar como estão):
+
+**`citmax_21go_documentos`**
+```
+Olá! Sua cotação da 21Go para o {{1}} está pronta: plano {{2}}, mensalidade de R$ {{3}}.
+
+Para continuar, envie os seus documentos neste link: {{4}}
+
+Se tiver alguma dúvida, é só responder esta mensagem.
+```
+
+**`citmax_21go_docs_recebidos`**
+```
+Recebemos os seus documentos para a placa {{1}}. Agora vamos preparar a vistoria do veículo e avisamos você por aqui.
+```
+
+**`citmax_21go_vistoria`**
+```
+A vistoria do seu veículo na 21Go está liberada. Faça pelo celular, com as fotos do veículo, neste link: {{1}}
+
+Use o próprio celular, com a câmera e a localização ligadas.
+```
+
+**`citmax_21go_pix_adesao`**
+```
+A vistoria do veículo de placa {{1}} foi aprovada. Falta só o último passo: a taxa de adesão de R$ {{2}} via Pix, neste link: {{3}}
+
+A confirmação do pagamento é automática.
+```
+
+**`citmax_21go_pagamento`**
+```
+Recebemos o Pix da taxa de adesão de R$ {{1}}. Obrigado! A 21Go vai enviar os seus dados de acesso em breve.
+```
+
+**`citmax_21go_aviso`** (reserva: o site manda o texto inteiro numa variável)
+```
+Mensagem da 21Go: {{1}}
+
+Se tiver alguma dúvida, é só responder esta mensagem.
+```
+
+**Depois de criar:**
+1. Esperar a Meta aprovar. Costuma levar de minutos a algumas horas; a tela mostra a situação de cada template.
+2. Quando o `citmax_21go_aviso` estiver aprovado, no **Gateway do SGP** (`/gateway-sgp`), produto **21Go**, escolher `citmax_21go_aviso` como **template de reserva** e salvar.
+3. Responder aqui com o nome de cada template e a situação: enviado, aprovado ou recusado. Se a Meta recusar, copiar o motivo que ela deu.
+
+Não precisa de deploy nem de mexer no Coolify: só templates e a reserva no AtendeHub. Quando todos estiverem aprovados, eu refaço o teste de envio.
+
+**Resposta do Antigravity:** (preencher)
+
+---
 
 ### [Claude → Antigravity] — 2026-11-22 — Tokens do 21Go e deploy
 **Pedido do Clebson:** o Antigravity cola os tokens e faz os deploys.
