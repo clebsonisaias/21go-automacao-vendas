@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { findLeadByRef, updateLead } from '@/lib/db'
+import { findLeadByRef } from '@/lib/db'
+import { bloqueioDoCadastro, receberArquivo } from '@/lib/documentos'
 import { rateLimit } from '@/lib/rate-limit'
-import { MAX_FILE_BYTES, VISTORIA_SLOTS, isVistoriaSlot, saveVistoriaFile, sniffType } from '@/lib/vistoria-files'
+import { MAX_FILE_BYTES, isVistoriaSlot } from '@/lib/vistoria-files'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,12 +29,8 @@ export async function POST(req: NextRequest) {
     if (!lead) {
       return NextResponse.json({ error: 'Link de vistoria inválido ou expirado. Faça uma nova cotação.' }, { status: 404 })
     }
-    if (lead.status === 'cancelado') {
-      return NextResponse.json({ error: 'Este cadastro foi encerrado. Faça uma nova cotação ou fale com a nossa equipe.' }, { status: 410 })
-    }
-    if (lead.status === 'aprovado') {
-      return NextResponse.json({ error: 'Esta vistoria já foi aprovada. Fale com a nossa equipe para alterar.' }, { status: 409 })
-    }
+    const bloqueio = bloqueioDoCadastro(lead)
+    if (bloqueio) return NextResponse.json({ error: bloqueio.erro }, { status: bloqueio.status })
     if (!isVistoriaSlot(slot) || !(file instanceof File)) {
       return NextResponse.json({ error: 'Envio inválido.' }, { status: 400 })
     }
@@ -42,27 +39,8 @@ export async function POST(req: NextRequest) {
     }
 
     const buf = Buffer.from(await file.arrayBuffer())
-    const type = sniffType(buf)
-    if (!type || (type.ext === 'pdf' && !VISTORIA_SLOTS[slot].pdf)) {
-      return NextResponse.json(
-        { error: VISTORIA_SLOTS[slot].pdf ? 'Envie uma foto (JPG, PNG) ou PDF.' : 'Envie uma foto (JPG ou PNG).' },
-        { status: 415 }
-      )
-    }
-
-    saveVistoriaFile(lead.id, slot, buf, type.ext)
-    updateLead(lead.ref, (l) => {
-      l.vistoriaArquivos = {
-        ...(l.vistoriaArquivos || {}),
-        [slot]: {
-          ext: type.ext,
-          mime: type.mime,
-          size: buf.length,
-          originalName: file.name.replace(/[^\w.\- ()]/g, '_').slice(0, 120),
-          savedAt: new Date().toISOString(),
-        },
-      }
-    })
+    const r = receberArquivo(lead, slot, buf, file.name)
+    if (!r.ok) return NextResponse.json({ error: r.erro }, { status: r.status })
 
     return NextResponse.json({ success: true, slot })
   } catch (err) {

@@ -28,6 +28,8 @@ export interface StoredLead {
   nome: string
   cpf?: string
   whatsapp: string
+  /** WhatsApp da conversa do chat (AtendeHub), quando o cliente deu outro número para contato. */
+  atendaiTelefone?: string
   email?: string
   cidade?: string
   uf?: string
@@ -78,7 +80,7 @@ export interface StoredLead {
     | 'cotacoes_recebidas'
     | 'vendas_concretizadas'
   /** Arquivos reais da vistoria gravados no servidor (ver vistoria-files.ts). */
-  vistoriaArquivos?: Record<string, { ext: string; mime: string; size: number; originalName: string; savedAt: string }>
+  vistoriaArquivos?: Record<string, { ext: string; mime: string; size: number; originalName: string; savedAt: string; sha256?: string }>
   vistoriaData?: {
     cnhOuRgNome?: string
     crlvNome?: string

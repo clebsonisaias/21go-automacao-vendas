@@ -125,11 +125,19 @@ export function chaveTelefone(bruto: string): string | null {
   return `${d.slice(0, 2)}${d.slice(-8)}`
 }
 
+/**
+ * Cadastro mais recente deste telefone: o WhatsApp do cadastro (contato) ou o da conversa
+ * do chat, quando o cliente deu outro número para contato.
+ */
 export function cadastroMaisRecente(telefone: string): StoredLead | null {
   const chave = chaveTelefone(telefone)
   if (!chave) return null
   const doCliente = getStoredLeads()
-    .filter((l) => l.status !== 'cancelado' && chaveTelefone(l.whatsapp) === chave)
+    .filter(
+      (l) =>
+        l.status !== 'cancelado' &&
+        (chaveTelefone(l.whatsapp) === chave || (l.atendaiTelefone ? chaveTelefone(l.atendaiTelefone) === chave : false))
+    )
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
   return doCliente[0] ?? null
 }

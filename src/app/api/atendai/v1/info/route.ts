@@ -7,5 +7,5 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: NextRequest) {
   const negado = autorizarAtendai(req)
   if (negado) return negado
-  return json({ nome: '21Go', recursos: ['cotacao', 'contratacao', 'situacao'] })
+  return json({ nome: '21Go', recursos: ['cotacao', 'contratacao', 'situacao', 'documentos'] })
 }
