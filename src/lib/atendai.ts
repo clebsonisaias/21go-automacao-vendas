@@ -126,8 +126,11 @@ export function chaveTelefone(bruto: string): string | null {
 }
 
 /**
- * Cadastro mais recente deste telefone: o WhatsApp do cadastro (contato) ou o da conversa
- * do chat, quando o cliente deu outro número para contato.
+ * Cadastro mais recente deste telefone. Cadastro feito pelo chat com outro número de contato
+ * é achado só pelo WhatsApp da conversa (`atendaiTelefone`), nunca pelo contato: o número de
+ * contato vem do que o cliente digitou, e quem é dono dele não pode, conversando pelo chat,
+ * ver a situação ou mandar documentos para o cadastro de outra pessoa. Os outros cadastros
+ * (site, ou chat com o próprio número) são achados pelo WhatsApp do cadastro.
  */
 export function cadastroMaisRecente(telefone: string): StoredLead | null {
   const chave = chaveTelefone(telefone)
@@ -136,7 +139,7 @@ export function cadastroMaisRecente(telefone: string): StoredLead | null {
     .filter(
       (l) =>
         l.status !== 'cancelado' &&
-        (chaveTelefone(l.whatsapp) === chave || (l.atendaiTelefone ? chaveTelefone(l.atendaiTelefone) === chave : false))
+        chaveTelefone(l.atendaiTelefone ? l.atendaiTelefone : l.whatsapp) === chave
     )
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
   return doCliente[0] ?? null
