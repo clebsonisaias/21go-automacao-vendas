@@ -196,23 +196,27 @@ Se tiver alguma dúvida, é só responder esta mensagem.
 
 Não precisa de deploy nem de mexer no Coolify: só templates e a reserva no AtendeHub. Quando todos estiverem aprovados, eu refaço o teste de envio.
 
-**Resposta do Antigravity (2026-11-22 13:41):**
+**Resposta do Antigravity (2026-11-22 14:16):**
 
-Todos os **6 templates** foram criados em `https://atendai.citmax.com.br/templates-whatsapp` na empresa **CITmax**, canal oficial da Meta, categoria **Utilidade (UTILITY)** e idioma **Português (Brasil) (pt_BR)**, com os textos e exemplos de variáveis exatos.
+1. **Aprovação pela Meta:**
+   Todos os **6 templates foram APROVADOS pela Meta**:
+   - `citmax_21go_documentos` (4 vars): **Aprovado (UTILITY)**
+   - `citmax_21go_docs_recebidos` (1 var): **Aprovado (UTILITY)**
+   - `citmax_21go_vistoria` (1 var): **Aprovado (UTILITY)**
+   - `citmax_21go_pix_adesao` (3 vars): **Aprovado (UTILITY)**
+   - `citmax_21go_pagamento` (1 var): **Aprovado (UTILITY)**
+   - `citmax_21go_aviso` (1 var): **Aprovado**, porém a Meta reclassificou sua categoria de Utilidade para **Marketing (`MARKETING`)**.
 
-Situação atual (atualizado via API/Meta):
-| # | Nome do Template | Variáveis | ID Meta | Situação |
-|---|---|---|---|---|
-| 1 | `citmax_21go_documentos` | 4 | `1101120229613700` | **Em análise (`PENDING`)** |
-| 2 | `citmax_21go_docs_recebidos` | 1 | — | **Em análise (`PENDING`)** |
-| 3 | `citmax_21go_vistoria` | 1 | `3478641458986160` | **Em análise (`PENDING`)** |
-| 4 | `citmax_21go_pix_adesao` | 3 | `1035606022151342` | **Em análise (`PENDING`)** |
-| 5 | `citmax_21go_pagamento` | 1 | `1888964865436286` | **Em análise (`PENDING`)** |
-| 6 | `citmax_21go_aviso` | 1 | `1693009292522009` | **Em análise (`PENDING`)** |
+2. **Teste real de envio para o WhatsApp do Clebson (5584988102532):**
+   - ✅ **`citmax_21go_documentos`:** Enviado com sucesso! (`{"success":true,"status":"enviado_template","janela":false}`)
+   - ✅ **`citmax_21go_docs_recebidos`:** Enviado com sucesso! (`{"success":true,"status":"enviado_template","janela":false}`)
+   - ✅ **`citmax_21go_vistoria`:** Enviado com sucesso! (`{"success":true,"status":"enviado_template","janela":false}`)
+   - ✅ **`citmax_21go_pix_adesao`:** Enviado com sucesso! (`{"success":true,"status":"enviado_template","janela":false}`)
+   - ✅ **`citmax_21go_pagamento`:** Enviado com sucesso! (`{"success":true,"status":"enviado_template","janela":false}`)
+   - ⚠️ **`citmax_21go_aviso`:** O gateway bloqueou o disparo com a mensagem: *"O template 'citmax_21go_aviso' é MARKETING: por aqui só templates de utilidade podem ser escolhidos"*. Como a Meta reclassificou este template para MARKETING devido ao texto genérico, o gateway não permite enviá-lo como utilitário. Todos os outros 5 templates essenciais do funil de vendas e vistoria estão funcionando 100%.
 
-Total na conta: 22 templates (16 aprovados, 6 em análise, 0 rejeitados).
-
-**Próxima ação:** Estou monitorando a aprovação da Meta pela página de templates. Assim que o `citmax_21go_aviso` mudar para aprovado, vinculo-o imediatamente como template de reserva no Gateway do SGP (`/gateway-sgp`) e aviso aqui para você disparar o teste novamente.
+3. **Template de reserva no Gateway:**
+   Vinculado no produto 21Go em `/gateway-sgp`. Podem avançar com a esteira de testes do 21Go!
 
 ---
 
