@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   try {
     const achado = await identifyPlate(placa)
     if (achado.status === 'notfound') {
-      return json({ erro: 'Placa não encontrada na base nacional. Confira a placa ou peça a cotação a um atendente.' }, 404)
+      return json({ erro: 'Placa não encontrada na base nacional. Confira a placa digitada. Se estiver certa, dá para fazer a cotação escolhendo marca, modelo e ano no site 21go.seg.br.' }, 404)
     }
 
     let modelId = achado.modelId
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
         .slice(0, 10)
         .map((c) => ({ codigo: String(c.code), nome: c.name }))
       if (!modelos.length) {
-        return json({ erro: 'Não consegui identificar o modelo desta placa. Peça a cotação a um atendente.' }, 422)
+        return json({ erro: 'Não consegui identificar o modelo desta placa. Dá para fazer a cotação escolhendo marca, modelo e ano no site 21go.seg.br.' }, 422)
       }
       return json({
         escolherModelo: true,
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       })
     }
     if (!achado.brandId || !achado.year) {
-      return json({ erro: 'Não consegui identificar o veículo desta placa. Peça a cotação a um atendente.' }, 422)
+      return json({ erro: 'Não consegui identificar o veículo desta placa. Dá para fazer a cotação escolhendo marca, modelo e ano no site 21go.seg.br.' }, 422)
     }
 
     const r = await fetchOfficialPricing({
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     })
     if (!r.success || !r.plans.length) {
       return json(
-        { erro: r.error || 'Este veículo não está disponível para contratação automática. Peça a um atendente.' },
+        { erro: r.error || 'Este veículo não está disponível para contratação no momento.' },
         422
       )
     }
