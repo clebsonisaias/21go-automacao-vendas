@@ -1,5 +1,4 @@
-import Link from 'next/link'
-import { MessageCircle, ShieldCheck } from 'lucide-react'
+import { MessageCircle } from 'lucide-react'
 import { SITE, whatsappUrl } from '@/lib/site'
 import { LogoCompleto, SimboloLogo } from '@/components/Marca'
 
@@ -61,19 +60,8 @@ export function SiteHeader() {
               {label}
             </a>
           ))}
-          <Link href="/cliente" className="text-go-lime font-bold no-underline transition hover:text-white">
-            Área do Cliente
-          </Link>
         </nav>
         <div className="flex items-center gap-2.5">
-          <Link
-            href="/cliente"
-            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-go-lime/40 bg-navy-900/80 px-3.5 text-xs font-bold text-go-lime transition hover:bg-navy-800"
-          >
-            <ShieldCheck className="h-4 w-4" />
-            <span className="hidden sm:inline">Área do Cliente</span>
-            <span className="sm:hidden">Cliente</span>
-          </Link>
           <a
             href={whatsappUrl()}
             className="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-navy-500 px-4 text-[15px] font-semibold text-white no-underline"
@@ -99,7 +87,6 @@ export function SiteFooter() {
     ['#planos', 'Planos'],
     ['#como-funciona', 'Como funciona'],
     ['#duvidas', 'Dúvidas'],
-    ['/cliente', 'Área do Associado (Login)'],
     ['/carteirinha', 'Carteirinha Digital'],
     ['/admin', 'Painel da Franquia'],
   ]
