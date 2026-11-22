@@ -258,11 +258,12 @@ export default function HomePage() {
     setCupomErro('')
   }, [selectedPlan?.id])
 
-  const conferirCupom = async () => {
+  /** Confere o cupom digitado; devolve se ele vale (o desconto aparece no resumo). */
+  const conferirCupom = async (): Promise<boolean> => {
     const codigo = cupomCodigo.trim()
     if (!codigo || !selectedPlan || !quoteResult) {
       setCupomErro('Digite o código do cupom.')
-      return
+      return false
     }
     setCupomConferindo(true)
     setCupomErro('')
@@ -273,13 +274,16 @@ export default function HomePage() {
         body: JSON.stringify({ codigo, quoteToken: quoteResult.quoteToken, planoId: selectedPlan.id }),
       })
       const d = await res.json().catch(() => ({}))
-      if (d?.ok) setCupomInfo({ codigo: d.codigo, ativacaoOriginal: d.ativacaoOriginal, ativacaoFinal: d.ativacaoFinal })
-      else {
-        setCupomInfo(null)
-        setCupomErro(d?.erro || 'Não foi possível conferir o cupom agora. Tente de novo.')
+      if (d?.ok) {
+        setCupomInfo({ codigo: d.codigo, ativacaoOriginal: d.ativacaoOriginal, ativacaoFinal: d.ativacaoFinal })
+        return true
       }
+      setCupomInfo(null)
+      setCupomErro(d?.erro || 'Não foi possível conferir o cupom agora. Tente de novo.')
+      return false
     } catch {
       setCupomErro('Sem conexão com o servidor. Tente de novo.')
+      return false
     } finally {
       setCupomConferindo(false)
     }
@@ -294,6 +298,16 @@ export default function HomePage() {
     if (cleanPhone.length < 10) {
       alert('Digite um número de WhatsApp válido com DDD.')
       return
+    }
+
+    // Cupom digitado e ainda não conferido: confere antes, para um código errado não
+    // gastar tentativa de cadastro nem enviar o cadastro sem o desconto que o cliente espera.
+    if (cupomCodigo.trim() && !cupomInfo) {
+      const vale = await conferirCupom()
+      if (!vale) {
+        document.getElementById('lead-cupom')?.focus()
+        return
+      }
     }
 
     setIsSubmittingLead(true)

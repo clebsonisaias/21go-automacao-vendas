@@ -547,6 +547,7 @@ Pedido do Clebson: cupons de desconto na taxa de adesão, criados no `/admin` (a
   - na página dos documentos (`/api/vistoria/cupom`), até o Pix ser gerado;
   - no chat (`cupom` no `/api/atendai/v1/contratacao`).
 - **O desconto é aplicado no servidor** sobre a adesão assinada da cotação, antes de gravar o cadastro. O lead guarda `cupom` e `ativacaoOriginal`, e daí em diante tudo usa `lead.ativacao` já com desconto: Pix, WhatsApp, e-mail, Telegram, painel e observação do PowerCRM.
-- **Uso:** é reservado no cadastro e devolvido se o cadastro falhar. O mesmo cadastro não conta duas vezes.
-- **Adesão zerada:** na aprovação da vistoria vale como paga (`pagamento.provider = 'cupom'`), sem Pix. A página `/pagamento` mostra "Adesão grátis".
-- **Limite:** o cupom não vale no checkout do PowerCRM, que é usado só com o Pix do site desligado.
+- **Uso:** é reservado no cadastro e devolvido se o cadastro falhar ou for encerrado no `/admin`. O mesmo cadastro não conta duas vezes.
+- **Prazo:** na página dos documentos, o cupom só entra **antes da aprovação da vistoria**. A aprovação libera o Pix com o valor nas mensagens; depois disso a adesão não muda.
+- **Adesão zerada:** na aprovação da vistoria vale como paga (`pagamento.provider = 'cupom'`), sem Pix. A página `/pagamento` mostra "Adesão grátis". O que sobrar abaixo de R$ 1,00 também vira grátis (não se gera Pix de centavos).
+- **Sem o Pix do site** (`MP_ACCESS_TOKEN` vazio), os cupons ficam desligados: o checkout do PowerCRM não conhece o desconto.

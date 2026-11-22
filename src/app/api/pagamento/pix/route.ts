@@ -61,9 +61,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Limite de cobranças atingido. Fale com a nossa equipe.' }, { status: 429 })
     }
     const pagamento = await createPixOrder(lead, attempt)
+    // A ordem foi criada com o valor lido acima; se a adesão mudou nesse meio-tempo, não grava
+    // (o cliente pagaria um valor que a conferência do pagamento recusaria). A ordem fica sem uso e vence.
+    const valorDaOrdem = lead.ativacao
+    let valorMudou = false
     const updated = updateLead(lead.ref, (l) => {
+      if (l.ativacao !== valorDaOrdem) {
+        valorMudou = true
+        return
+      }
       l.pagamento = pagamento
     })
+    if (valorMudou) {
+      console.warn('[/api/pagamento/pix] adesão mudou durante a criação do Pix; ordem descartada', { orderId: pagamento.orderId })
+      return NextResponse.json({ error: 'O valor da adesão mudou. Atualize a página para gerar o Pix certo.' }, { status: 409 })
+    }
     if (!updated?.pagamento) throw new Error('Falha ao salvar cobrança')
 
     // Caso raro: o MP já devolve a order paga/processada.

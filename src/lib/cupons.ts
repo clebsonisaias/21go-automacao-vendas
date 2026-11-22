@@ -2,6 +2,7 @@ import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { DATA_DIR } from '@/lib/db'
+import { mpEnabled } from '@/lib/mercadopago'
 import type { CupomAplicado } from '@/lib/types'
 
 export type { CupomAplicado }
@@ -50,13 +51,29 @@ export function normalizarCodigo(v: unknown): string {
     .slice(0, 40)
 }
 
+/**
+ * Lê os cupons. Sem arquivo ainda = nenhum cupom. Qualquer outro erro (arquivo corrompido,
+ * disco) é lançado: devolver lista vazia faria a próxima gravação apagar todos os cupons.
+ */
 export function lerCupons(): Cupom[] {
+  let bruto: string
   try {
-    const d = JSON.parse(fs.readFileSync(ARQUIVO, 'utf-8'))
-    return Array.isArray(d) ? (d as Cupom[]) : []
-  } catch {
-    return []
+    bruto = fs.readFileSync(ARQUIVO, 'utf-8')
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException)?.code === 'ENOENT') return []
+    throw e
   }
+  const d = JSON.parse(bruto)
+  if (!Array.isArray(d)) throw new Error('cupons.json não é uma lista')
+  return d as Cupom[]
+}
+
+const ERRO_LEITURA = 'Não foi possível conferir o cupom agora. Tente de novo em instantes.'
+
+/** Cadastro em que o cupom ainda cabe: antes da aprovação da vistoria, sem Pix e sem cupom. */
+const STATUS_SEM_CUPOM = new Set(['aguardando_pagamento', 'adesao_paga', 'aprovado', 'cancelado', 'vendas_concretizadas'])
+export function cupomAindaCabe(lead: { status: string; cupom?: unknown; pagamento?: unknown }): boolean {
+  return !lead.cupom && !lead.pagamento && !STATUS_SEM_CUPOM.has(lead.status)
 }
 
 function gravarCupons(cupons: Cupom[]): void {
@@ -73,11 +90,15 @@ export function hojeBrasilia(agora = new Date()): string {
 
 const centavos = (v: number) => Math.round(v * 100) / 100
 
-/** Quanto o cupom tira da adesão; a adesão nunca fica abaixo de zero. */
+/** Abaixo disto não se gera Pix: o que sobrar menor que R$ 1,00 vira adesão grátis. */
+export const SOBRA_MINIMA = 1
+
+/** Quanto o cupom tira da adesão; a adesão nunca fica abaixo de zero nem em centavos soltos. */
 export function calcularDesconto(ativacao: number, cupom: Pick<Cupom, 'tipo' | 'desconto'>) {
   const base = centavos(Math.max(0, ativacao))
   const bruto = cupom.tipo === 'percentual' ? (base * cupom.desconto) / 100 : cupom.desconto
-  const valorDesconto = centavos(Math.min(base, Math.max(0, bruto)))
+  let valorDesconto = centavos(Math.min(base, Math.max(0, bruto)))
+  if (base - valorDesconto > 0 && base - valorDesconto < SOBRA_MINIMA) valorDesconto = base
   return { valorDesconto, ativacaoFinal: centavos(base - valorDesconto) }
 }
 
@@ -89,6 +110,8 @@ export function descreverDesconto(c: Pick<Cupom, 'tipo' | 'desconto'>): string {
 
 /** Por que o cupom não pode ser usado agora (texto para o cliente), ou null se pode. */
 function motivoRecusa(c: Cupom | undefined, hoje: string, chaveDoLead?: string): string | null {
+  // Sem o Pix do site, a cobrança é a do checkout do PowerCRM, que não conhece o cupom.
+  if (!mpEnabled()) return 'Os cupons estão indisponíveis no momento. Siga sem o cupom ou tente mais tarde.'
   if (!c) return 'Cupom não encontrado. Confira o código digitado.'
   if (!c.ativo) return 'Este cupom não está mais ativo.'
   if (c.inicio && hoje < c.inicio) return 'Este cupom ainda não começou a valer.'
@@ -103,7 +126,13 @@ export function conferirCupom(
   agora = new Date()
 ): { ok: true; cupom: Cupom } | { ok: false; motivo: string } {
   const cod = normalizarCodigo(codigo)
-  const c = lerCupons().find((x) => x.codigo === cod)
+  let c: Cupom | undefined
+  try {
+    c = lerCupons().find((x) => x.codigo === cod)
+  } catch (e) {
+    console.error('[cupons] leitura falhou:', e instanceof Error ? e.message : e)
+    return { ok: false, motivo: ERRO_LEITURA }
+  }
   const motivo = motivoRecusa(c, hojeBrasilia(agora))
   return motivo ? { ok: false, motivo } : { ok: true, cupom: c! }
 }
@@ -118,7 +147,13 @@ export function reservarCupom(
   agora = new Date()
 ): { ok: true; cupom: Cupom } | { ok: false; motivo: string } {
   const cod = normalizarCodigo(codigo)
-  const cupons = lerCupons()
+  let cupons: Cupom[]
+  try {
+    cupons = lerCupons()
+  } catch (e) {
+    console.error('[cupons] leitura falhou:', e instanceof Error ? e.message : e)
+    return { ok: false, motivo: ERRO_LEITURA }
+  }
   const c = cupons.find((x) => x.codigo === cod)
   const motivo = motivoRecusa(c, hojeBrasilia(agora), chaveDoLead)
   if (motivo) return { ok: false, motivo }
@@ -134,7 +169,14 @@ export function reservarCupom(
 /** Desfaz a reserva (o cadastro falhou ou o cupom saiu do cadastro). */
 export function liberarCupom(codigo: string, chaveDoLead: string): void {
   const cod = normalizarCodigo(codigo)
-  const cupons = lerCupons()
+  let cupons: Cupom[]
+  try {
+    cupons = lerCupons()
+  } catch (e) {
+    // Não devolve o uso agora; o cupom fica com um uso a mais, nunca a menos.
+    console.error('[cupons] não consegui devolver o uso de', cod, e instanceof Error ? e.message : e)
+    return
+  }
   const c = cupons.find((x) => x.codigo === cod)
   if (!c || !c.leads.includes(chaveDoLead)) return
   c.leads = c.leads.filter((l) => l !== chaveDoLead)

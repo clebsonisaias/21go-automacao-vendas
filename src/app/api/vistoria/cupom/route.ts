@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { findLeadByRef, updateLead } from '@/lib/db'
-import { calcularDesconto, descreverDesconto, liberarCupom, normalizarCodigo, reservarCupom } from '@/lib/cupons'
+import { calcularDesconto, cupomAindaCabe, descreverDesconto, liberarCupom, normalizarCodigo, reservarCupom } from '@/lib/cupons'
 import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * POST { ref, codigo } → aplica o cupom de desconto na adesão de um cadastro que ainda
- * não tem cupom, pela página dos documentos. Só antes do Pix existir: depois, a ordem
- * do Mercado Pago já tem o valor e não muda. A ref (UUID) do cadastro é a credencial.
+ * não tem cupom, pela página dos documentos. Só antes da aprovação da vistoria: é ela que
+ * libera o Pix (com o valor da adesão nas mensagens) ou, com adesão zerada, dá como paga.
+ * A ref (UUID) do cadastro é a credencial.
  */
 export async function POST(req: NextRequest) {
   if (!rateLimit(req, 'vistoria-cupom', 10, 10 * 60 * 1000)) {
@@ -32,9 +33,9 @@ export async function POST(req: NextRequest) {
   if (lead.cupom) {
     return NextResponse.json({ ok: false, erro: `Este cadastro já tem o cupom ${lead.cupom.codigo}.` }, { status: 409 })
   }
-  if (lead.pagamento || lead.status === 'aprovado' || lead.status === 'adesao_paga') {
+  if (!cupomAindaCabe(lead)) {
     return NextResponse.json(
-      { ok: false, erro: 'O Pix da adesão já foi gerado; o cupom não pode mais ser aplicado.' },
+      { ok: false, erro: 'O cupom só pode ser aplicado antes da aprovação da vistoria.' },
       { status: 409 }
     )
   }
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
   let aplicado = false
   const atualizado = updateLead(lead.ref, (l) => {
     // Confere de novo dentro da gravação: dois cliques seguidos não aplicam duas vezes.
-    if (l.cupom || l.pagamento) return
+    if (!cupomAindaCabe(l)) return
     l.ativacaoOriginal = l.ativacao
     l.ativacao = ativacaoFinal
     l.cupom = {
