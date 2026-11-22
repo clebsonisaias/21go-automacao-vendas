@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import Image from 'next/image'
+import { SimboloLogo } from '@/components/Marca'
 import { Bot, Calculator, Camera, FileText, LogOut, Menu, MessageSquareText, Users, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { LeadsView } from '@/components/admin/LeadsView'
@@ -74,7 +74,7 @@ export default function AdminPage() {
       <header className="sticky top-0 z-40 w-full border-b border-navy-line bg-navy-950">
         <div className="flex h-16 w-full items-center gap-4 px-4 sm:px-6">
           <div className="flex shrink-0 items-center gap-3">
-            <Image src="/brand/logo-21go.png" alt="21Go" width={36} height={36} className="rounded-lg object-cover" priority />
+            <SimboloLogo lado={36} priority />
             <span className="text-sm font-semibold text-white">Painel da franquia</span>
           </div>
 

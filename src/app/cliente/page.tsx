@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
+import { LogoCompleto } from '@/components/Marca'
 import Link from 'next/link'
 import { Lock, User, ArrowRight, ShieldCheck, Eye, EyeOff, AlertCircle, PhoneCall, Sparkles } from 'lucide-react'
 
@@ -86,25 +86,11 @@ export default function ClienteLoginPage() {
       <div className="relative w-full max-w-[420px]">
         {/* Branding e Cabeçalho */}
         <div className="mb-8 flex flex-col items-center text-center">
-          <Link href="/" className="mb-4 flex items-center gap-3 transition hover:opacity-90">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white p-2 shadow-card">
-              <Image
-                src="/images/logo-21go.png"
-                alt="21Go Proteção Veicular"
-                width={48}
-                height={48}
-                className="h-auto w-auto object-contain"
-                priority
-              />
-            </div>
-            <div className="text-left">
-              <span className="block font-heading text-2xl font-black uppercase tracking-tight text-white">
-                21Go
-              </span>
-              <span className="flex items-center gap-1 text-[11px] font-bold tracking-widest text-go-lime uppercase">
-                <ShieldCheck className="h-3.5 w-3.5 text-go-lime" /> Central do Associado
-              </span>
-            </div>
+          <Link href="/" className="mb-4 flex flex-col items-center gap-2 transition hover:opacity-90">
+            <LogoCompleto altura={64} priority />
+            <span className="flex items-center gap-1 text-xs font-semibold tracking-widest text-go-lime uppercase">
+              <ShieldCheck className="h-3.5 w-3.5 text-go-lime" /> Central do Associado
+            </span>
           </Link>
 
           <h1 className="font-heading text-xl font-extrabold text-white">

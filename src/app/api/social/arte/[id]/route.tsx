@@ -54,12 +54,16 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
           fontFamily: 'sans-serif',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          {logo() ? <img src={logo()} width={112} height={112} style={{ borderRadius: 24 }} alt="" /> : null}
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ color: '#ffffff', fontSize: 40, fontWeight: 700 }}>21Go CITmax</span>
-            <span style={{ color: '#c9d1e6', fontSize: 28 }}>Proteção veicular</span>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+          {/* Logo oficial (484 × 219, texto branco): já traz "21 Go! Proteção Veicular". */}
+          {logo() ? (
+            <img src={logo()} width={274} height={124} alt="" />
+          ) : (
+            <span style={{ color: '#ffffff', fontSize: 40, fontWeight: 700 }}>21Go Proteção Veicular</span>
+          )}
+          <span style={{ color: '#c9d1e6', fontSize: 28, borderLeft: '2px solid #26346a', paddingLeft: 28 }}>
+            Franquia CITmax
+          </span>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 36 }}>

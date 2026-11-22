@@ -1,10 +1,10 @@
-import Image from 'next/image'
 import Link from 'next/link'
 import { MessageCircle, ShieldCheck } from 'lucide-react'
 import { SITE, whatsappUrl } from '@/lib/site'
+import { LogoCompleto, SimboloLogo } from '@/components/Marca'
 
 export function Logo({
-  size = 52,
+  size = 60,
   showText = true,
   href = '#topo',
   subtitle = 'FRANQUIA AUTORIZADA',
@@ -14,21 +14,18 @@ export function Logo({
   href?: string
   subtitle?: string
 }) {
+  // O logo já traz "21 Go! Proteção Veicular"; sem texto, só o símbolo.
   return (
     <a href={href} className="flex items-center gap-3 no-underline">
-      <Image
-        src="/brand/logo-21go.png"
-        alt="21Go Proteção Veicular"
-        width={size}
-        height={size}
-        className="rounded-xl object-cover"
-        priority
-      />
-      {showText && (
-        <span className="flex flex-col leading-tight">
-          <span className="text-lg font-extrabold tracking-tight text-white">21Go Proteção Veicular</span>
-          <span className="text-[11px] font-bold tracking-[1.5px] text-go-lime">{subtitle}</span>
-        </span>
+      {showText ? (
+        <>
+          <LogoCompleto altura={size} priority />
+          <span className="hidden border-l border-white/20 pl-3 text-xs font-semibold leading-tight tracking-[1.5px] text-go-lime sm:block">
+            {subtitle}
+          </span>
+        </>
+      ) : (
+        <SimboloLogo lado={size} priority alt="21Go Proteção Veicular" />
       )}
     </a>
   )
@@ -110,16 +107,9 @@ export function SiteFooter() {
     <footer className="bg-navy-deep px-6 pb-8 pt-14 text-muted-dark">
       <div className="mx-auto flex max-w-[1200px] flex-col gap-8">
         <div className="flex flex-wrap justify-between gap-8">
-          <div className="flex items-center gap-3.5">
-            <Image
-              src="/brand/logo-21go.png"
-              alt="21Go Proteção Veicular"
-              width={56}
-              height={56}
-              className="rounded-xl object-cover"
-            />
+          <div className="flex flex-col gap-2">
+            <LogoCompleto altura={56} />
             <div className="flex flex-col gap-0.5">
-              <span className="font-bold text-white">21Go Proteção Veicular</span>
               <span className="text-sm">
                 Franquia autorizada{SITE.nome ? ` · ${SITE.nome}` : ''}
               </span>
