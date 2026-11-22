@@ -143,7 +143,9 @@ export async function buildPowerCrmBody(payload: LeadSubmissionPayload): Promise
       `FIPE ${payload.vehicle.fipeCode}: ${brl(payload.vehicle.fipeValue || 0)}`,
       `Plano: ${payload.planoEscolhidoNome}`,
       `Mensalidade: ${brl(payload.mensalidadeFinal)}`,
-      `Adesão: ${brl(payload.ativacao)}`,
+      payload.cupom
+        ? `Adesão: ${brl(payload.ativacao)} (cupom ${payload.cupom.codigo}, de ${brl(payload.ativacaoOriginal ?? payload.ativacao)})`
+        : `Adesão: ${brl(payload.ativacao)}`,
       `CPF: ${payload.cpf || 'não informado'}`,
       `Cidade: ${payload.cidade || 'não informada'}`,
       `Trabalho/app: ${payload.veiculoTrabalho ? 'SIM' : 'NÃO'}`,

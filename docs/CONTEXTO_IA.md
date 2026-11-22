@@ -531,3 +531,23 @@ Pedido do Clebson: o site usa o logo do CRM 21Go (https://crm21go.site/logo21go.
 - **`src/components/Marca.tsx`:** `LogoCompleto` (cabeçalho, rodapé, Área do Cliente, login do painel, vistoria, pagamento, carteirinha) e `SimboloLogo` (cabeçalhos compactos do painel da franquia e do associado).
 - **Corrigido:** a Área do Cliente, o painel do associado e o login do painel apontavam para `/images/logo-21go.png`, que não existe, e a imagem saía quebrada.
 - **Arte do Instagram** (`/api/social/arte/[id]`): logo inteiro com "Franquia CITmax" ao lado.
+
+### [Claude] — 2026-11-22 — Cupom de desconto na adesão
+
+Pedido do Clebson: cupons de desconto na taxa de adesão, criados no `/admin` (aba **Cupons**).
+
+- **Cada cupom tem:**
+  - código;
+  - desconto em R$ ou % (100% = adesão grátis);
+  - "vale uma vez só" ou "por um período" (início e fim), com limite opcional de usos;
+  - liga/desliga.
+  - Arquivo `DATA_DIR/cupons.json`, regras em `src/lib/cupons.ts`.
+- **Onde o cliente usa:**
+  - no cadastro da home (campo opcional, conferido em `/api/cupom/conferir`);
+  - na página dos documentos (`/api/vistoria/cupom`), até o Pix ser gerado;
+  - no chat (`cupom` no `/api/atendai/v1/contratacao`).
+- **O desconto é aplicado no servidor** sobre a adesão assinada da cotação, antes de gravar o cadastro. O lead guarda `cupom` e `ativacaoOriginal`, e daí em diante tudo usa `lead.ativacao` já com desconto: Pix, WhatsApp, e-mail, Telegram, painel e observação do PowerCRM.
+- **Uso:** é reservado no cadastro e devolvido se o cadastro falhar ou for encerrado no `/admin`. O mesmo cadastro não conta duas vezes.
+- **Prazo:** na página dos documentos, o cupom só entra **antes da aprovação da vistoria**. A aprovação libera o Pix com o valor nas mensagens; depois disso a adesão não muda.
+- **Adesão zerada:** na aprovação da vistoria vale como paga (`pagamento.provider = 'cupom'`), sem Pix. A página `/pagamento` mostra "Adesão grátis". O que sobrar abaixo de R$ 1,00 também vira grátis (não se gera Pix de centavos).
+- **Sem o Pix do site** (`MP_ACCESS_TOKEN` vazio), os cupons ficam desligados: o checkout do PowerCRM não conhece o desconto.

@@ -12,6 +12,7 @@ import {
   Info,
   UserCheck,
   Sparkles,
+  TicketPercent,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Logo } from '@/components/home/SiteChrome'
@@ -115,6 +116,129 @@ type Situacao = {
   vistoriaStatus?: string | null
   pagamentoUrl: string | null
   pago: boolean
+  ativacao?: number
+  ativacaoOriginal?: number | null
+  cupom?: string | null
+  podeAplicarCupom?: boolean
+}
+
+const brl = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
+
+/**
+ * Cupom de desconto na adesão: o cliente pode aplicar aqui se não usou no cadastro,
+ * até o Pix da adesão ser gerado. Fora do formulário dos documentos (Enter não envia os arquivos).
+ */
+function CupomAdesao({
+  refId,
+  situacao,
+  onAplicado,
+}: {
+  refId: string
+  situacao: Situacao | null
+  onAplicado: (s: Partial<Situacao>) => void
+}) {
+  const [codigo, setCodigo] = useState('')
+  const [erro, setErro] = useState('')
+  const [enviando, setEnviando] = useState(false)
+
+  if (!situacao) return null
+  if (situacao.cupom) {
+    return (
+      <section
+        aria-live="polite"
+        className="flex items-start gap-3 rounded-2xl border border-line bg-white p-5 text-left shadow-card"
+      >
+        <TicketPercent aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-go-orange-dark" />
+        <p className="m-0 text-sm text-navy-800">
+          <strong>Cupom {situacao.cupom} aplicado.</strong>{' '}
+          {typeof situacao.ativacao === 'number' && situacao.ativacao <= 0
+            ? 'Sua adesão ficou grátis.'
+            : `Adesão de ${brl(situacao.ativacaoOriginal ?? situacao.ativacao ?? 0)} por ${brl(situacao.ativacao ?? 0)}.`}
+        </p>
+      </section>
+    )
+  }
+  if (!situacao.podeAplicarCupom) return null
+
+  async function aplicar(e: React.FormEvent) {
+    e.preventDefault()
+    if (!codigo.trim()) {
+      setErro('Digite o código do cupom.')
+      return
+    }
+    setEnviando(true)
+    setErro('')
+    try {
+      const res = await fetch('/api/vistoria/cupom', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ref: refId, codigo }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (d?.ok) {
+        onAplicado({
+          cupom: d.codigo,
+          ativacao: d.ativacaoFinal,
+          ativacaoOriginal: d.ativacaoOriginal,
+          podeAplicarCupom: false,
+        })
+      } else {
+        setErro(d?.erro || 'Não foi possível aplicar o cupom agora. Tente de novo.')
+      }
+    } catch {
+      setErro('Sem conexão com o servidor. Verifique sua internet e tente de novo.')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <form
+      onSubmit={aplicar}
+      noValidate
+      className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-5 text-left shadow-card sm:p-7"
+    >
+      <div className="flex items-start gap-3">
+        <TicketPercent aria-hidden className="mt-1 h-5 w-5 shrink-0 text-go-orange-dark" />
+        <div>
+          <h2 className="m-0 text-lg font-extrabold leading-snug">Tem cupom de desconto na adesão?</h2>
+          <p className="m-0 mt-0.5 text-sm text-muted">Opcional. Dá para aplicar até o Pix da adesão ser gerado.</p>
+        </div>
+      </div>
+      <label htmlFor="cupom-adesao" className="text-sm font-semibold text-navy-800">
+        Código do cupom
+      </label>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <input
+          id="cupom-adesao"
+          name="cupom"
+          autoComplete="off"
+          autoCapitalize="characters"
+          value={codigo}
+          onChange={(e) => {
+            setCodigo(e.target.value.toUpperCase())
+            if (erro) setErro('')
+          }}
+          aria-invalid={Boolean(erro)}
+          aria-describedby={erro ? 'cupom-adesao-erro' : undefined}
+          className="min-h-[48px] flex-1 rounded-lg border border-line bg-white px-4 text-base uppercase tracking-wide aria-[invalid=true]:border-red-700 text-navy-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-go-orange"
+        />
+        <button
+          type="submit"
+          disabled={enviando}
+          className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-lg border border-navy-800 px-5 font-bold text-navy-800 transition hover:bg-surface-100 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {enviando && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
+          Aplicar cupom
+        </button>
+      </div>
+      {erro && (
+        <p id="cupom-adesao-erro" role="alert" className="m-0 text-sm font-semibold text-red-700">
+          {erro}
+        </p>
+      )}
+    </form>
+  )
 }
 
 // Etapas da vistoria no CRM 21Go, em palavras do cliente.
@@ -393,6 +517,13 @@ function VistoriaContent() {
               Documentos enviados!
             </h1>
             <ProximosPassos situacao={situacao} />
+            <div className="w-full max-w-md">
+              <CupomAdesao
+                refId={ref}
+                situacao={situacao}
+                onAplicado={(s) => setSituacao((atual) => (atual ? { ...atual, ...s } : atual))}
+              />
+            </div>
             <a
               href="/"
               className="mt-2 inline-flex min-h-[48px] items-center rounded-lg border border-navy-800 px-6 font-bold text-navy-800 no-underline transition hover:bg-surface-100"
@@ -441,6 +572,12 @@ function VistoriaContent() {
                 />
               </div>
             </section>
+
+            <CupomAdesao
+              refId={ref}
+              situacao={situacao}
+              onAplicado={(s) => setSituacao((atual) => (atual ? { ...atual, ...s } : atual))}
+            />
 
             <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
               <section className="rounded-2xl border border-line bg-white p-5 shadow-card sm:p-7">

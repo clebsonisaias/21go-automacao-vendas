@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { findLeadByRef } from '@/lib/db'
+import { cupomAindaCabe } from '@/lib/cupons'
+import { mpEnabled } from '@/lib/mercadopago'
 import { pagamentoPath } from '@/lib/links'
 import { rateLimit } from '@/lib/rate-limit'
 
@@ -28,6 +30,12 @@ export async function GET(req: NextRequest) {
       vistoriaStatus: lead.crmVistoria?.vistoriaStatus || null,
       pagamentoUrl: pixLiberado ? pagamentoPath(lead.ref) : null,
       pago,
+      // Cupom de desconto na adesão: pode ser aplicado até o Pix ser gerado.
+      ativacao: lead.ativacao,
+      ativacaoOriginal: lead.ativacaoOriginal ?? null,
+      cupom: lead.cupom ? lead.cupom.codigo : null,
+      // Sem o Pix do site os cupons ficam desligados (o checkout do PowerCRM não os conhece).
+      podeAplicarCupom: mpEnabled() && cupomAindaCabe(lead),
     },
     { headers: { 'Cache-Control': 'no-store' } }
   )

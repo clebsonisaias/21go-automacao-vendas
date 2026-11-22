@@ -2,20 +2,22 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { SimboloLogo } from '@/components/Marca'
-import { Bot, Calculator, Camera, FileText, LogOut, Menu, MessageSquareText, Users, X } from 'lucide-react'
+import { Bot, Calculator, Camera, FileText, LogOut, Menu, MessageSquareText, TicketPercent, Users, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { LeadsView } from '@/components/admin/LeadsView'
 import { InstagramPanel } from '@/components/admin/InstagramPanel'
+import { CuponsPanel } from '@/components/admin/CuponsPanel'
 import { Tooltip } from '@/components/admin/Tooltip'
 import { LucroSimulator } from '@/components/admin/LucroSimulator'
 import { HinovaBoletos } from '@/components/admin/HinovaBoletos'
 import { ScriptsGo } from '@/components/admin/ScriptsGo'
 import { LunaAssistant } from '@/components/admin/LunaAssistant'
 
-type Tab = 'cadastros' | 'instagram' | 'lucro' | 'hinova' | 'scripts' | 'luna'
+type Tab = 'cadastros' | 'cupons' | 'instagram' | 'lucro' | 'hinova' | 'scripts' | 'luna'
 
 const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: 'cadastros', label: 'Cadastros', icon: Users },
+  { id: 'cupons', label: 'Cupons', icon: TicketPercent },
   { id: 'instagram', label: 'Instagram', icon: Camera },
   { id: 'lucro', label: 'Simulador de lucro', icon: Calculator },
   { id: 'hinova', label: 'Consulta Hinova', icon: FileText },
@@ -154,6 +156,7 @@ export default function AdminPage() {
 
       <main className="admin-light mx-auto w-full max-w-[1280px] px-4 pb-16 pt-6 sm:px-6 sm:pt-8">
         {tab === 'cadastros' && <LeadsView />}
+        {tab === 'cupons' && <CuponsPanel />}
         {tab === 'instagram' && <InstagramPanel />}
         {tab === 'lucro' && <LucroSimulator />}
         {tab === 'hinova' && <HinovaBoletos />}

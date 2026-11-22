@@ -309,8 +309,18 @@ export function LeadDrawer({
           <Section title="Plano e pagamento">
             <Field label="Plano">{draft.planoEscolhidoNome}</Field>
             <Field label="Mensalidade">{brl(draft.mensalidadeFinal)}/mês</Field>
-            <Field label="Adesão">{brl(draft.ativacao)}</Field>
-            {draft.pagamento && (
+            <Field label="Adesão">
+              {brl(draft.ativacao)}
+              {draft.cupom ? ` (cupom ${draft.cupom.codigo}, de ${brl(draft.ativacaoOriginal ?? draft.ativacao)})` : ''}
+            </Field>
+            {draft.pagamento?.provider === 'cupom' ? (
+              <Field label="Pagamento da adesão">
+                <span className="inline-flex items-center gap-1.5 text-emerald-700">
+                  <CheckCircle2 aria-hidden className="h-4 w-4" />
+                  Grátis pelo cupom {draft.cupom?.codigo ?? ''}, sem Pix
+                </span>
+              </Field>
+            ) : draft.pagamento && (
               <Field label="Pix da adesão">
                 {pago ? (
                   <span className="inline-flex items-center gap-1.5 text-emerald-700">
