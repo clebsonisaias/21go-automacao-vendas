@@ -8,7 +8,7 @@ import {
   respostaJaDada,
   RespostaCadastro,
 } from '@/lib/atendai'
-import { aplicarCotacao, registrarCadastro, validarCadastro } from '@/lib/cadastro'
+import { aplicarCotacao, aplicarCupom, CupomRecusado, registrarCadastro, validarCadastro } from '@/lib/cadastro'
 import { updateLead } from '@/lib/db'
 import { absolute } from '@/lib/links'
 import { verifyQuoteToken } from '@/lib/quote-token'
@@ -17,11 +17,13 @@ import { LeadSubmissionPayload } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
+const brl = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
+
 /** O mesmo pedido chegando duas vezes ao mesmo tempo espera o primeiro (um cadastro só). */
 const emAndamento = new Map<string, Promise<{ dados: RespostaCadastro | { erro: string }; status: number }>>()
 
 /**
- * POST { cotacao, plano, email, telefone, telefoneConversa?, comAdesivo? } + Idempotency-Key →
+ * POST { cotacao, plano, email, telefone, telefoneConversa?, comAdesivo?, cupom? } + Idempotency-Key →
  * o mesmo cadastro do formulário do site (PowerCRM, painel, Telegram), com os
  * valores da cotação guardada. Não manda a mensagem de WhatsApp dos documentos:
  * o chat entrega o link na própria conversa.
@@ -102,6 +104,9 @@ async function cadastrar(
   if (invalido) return { dados: { erro: invalido }, status: 400 }
   const recusa = aplicarCotacao(payload)
   if (recusa) return { dados: { erro: recusa }, status: 410 }
+  // Cupom de desconto na adesão (opcional): recusado, o texto vai para o cliente.
+  const recusaCupom = aplicarCupom(payload, corpo?.cupom, 'chat')
+  if (recusaCupom) return { dados: { erro: recusaCupom }, status: 400 }
 
   try {
     const feito = await registrarCadastro(payload, { enviarWhatsApp: false, origem: 'chat' })
@@ -114,12 +119,16 @@ async function cadastrar(
     const resposta: RespostaCadastro = {
       protocolo: feito.lead.id,
       linkDocumentos: absolute(feito.vistoriaUrl),
-      mensagem:
-        'Cadastro feito! Agora é só enviar a CNH ou o RG, o documento do carro e um comprovante de residência pelo link. A adesão só é paga no fim, com a vistoria aprovada.',
+      mensagem: `Cadastro feito!${
+        payload.cupom
+          ? ` Cupom ${payload.cupom.codigo} aplicado: a adesão fica em ${brl(payload.ativacao)} (era ${brl(payload.ativacaoOriginal ?? payload.ativacao)}).`
+          : ''
+      } Agora é só enviar a CNH ou o RG, o documento do carro e um comprovante de residência. A adesão só é paga no fim, com a vistoria aprovada.`,
     }
     guardarResposta(chave, resposta)
     return { dados: resposta, status: 201 }
   } catch (err) {
+    if (err instanceof CupomRecusado) return { dados: { erro: err.message }, status: 400 }
     console.error('[atendai] cadastro falhou:', err instanceof Error ? err.message : err)
     return { dados: { erro: 'Não foi possível concluir o cadastro agora. Tente de novo em instantes.' }, status: 502 }
   }

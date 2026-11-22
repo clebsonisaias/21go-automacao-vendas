@@ -309,7 +309,10 @@ export function LeadDrawer({
           <Section title="Plano e pagamento">
             <Field label="Plano">{draft.planoEscolhidoNome}</Field>
             <Field label="Mensalidade">{brl(draft.mensalidadeFinal)}/mês</Field>
-            <Field label="Adesão">{brl(draft.ativacao)}</Field>
+            <Field label="Adesão">
+              {brl(draft.ativacao)}
+              {draft.cupom ? ` (cupom ${draft.cupom.codigo}, de ${brl(draft.ativacaoOriginal ?? draft.ativacao)})` : ''}
+            </Field>
             {draft.pagamento && (
               <Field label="Pix da adesão">
                 {pago ? (

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit } from '@/lib/rate-limit'
-import { aplicarCotacao, registrarCadastro, validarCadastro } from '@/lib/cadastro'
+import { aplicarCotacao, aplicarCupom, CupomRecusado, registrarCadastro, validarCadastro } from '@/lib/cadastro'
 import { LeadSubmissionPayload } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -26,6 +26,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: recusa }, { status: 400 })
     }
 
+    // Cupom de desconto na adesão (opcional): o código vem em `cupomCodigo`.
+    const recusaCupom = aplicarCupom(payload, (payload as unknown as { cupomCodigo?: unknown }).cupomCodigo, 'cadastro')
+    if (recusaCupom) {
+      return NextResponse.json({ error: recusaCupom, campo: 'cupom' }, { status: 400 })
+    }
+
     const feito = await registrarCadastro(payload, { enviarWhatsApp: true, origem: 'site' })
 
     return NextResponse.json({
@@ -38,6 +44,9 @@ export async function POST(req: NextRequest) {
       message: 'Cadastro realizado! Envie os documentos para completar.',
     })
   } catch (err: any) {
+    if (err instanceof CupomRecusado) {
+      return NextResponse.json({ error: err.message, campo: 'cupom' }, { status: 400 })
+    }
     console.error('Erro ao processar envio do lead:', err)
     return NextResponse.json(
       { error: 'Não foi possível concluir o cadastro agora. Tente novamente em instantes.' },

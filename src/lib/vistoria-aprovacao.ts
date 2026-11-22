@@ -15,11 +15,17 @@ export async function aprovarVistoria(
   lead: StoredLead,
   origem: OrigemAprovacao
 ): Promise<{ ok: boolean; lead?: StoredLead; whatsappEnviado?: boolean; message: string }> {
-  const liberarPix = mpEnabled() && !lead.pagamento?.paidAt
+  // Adesão zerada por cupom (100%): não existe Pix de R$ 0; vale como paga na aprovação.
+  const adesaoGratis = lead.ativacao <= 0 && Boolean(lead.cupom)
+  const liberarPix = mpEnabled() && !lead.pagamento?.paidAt && !adesaoGratis
   let mudou = false
   const updated = updateLead(lead.ref, (l) => {
     if (l.status !== 'vistoria_enviada') return
     l.status = liberarPix ? 'aguardando_pagamento' : 'aprovado'
+    if (adesaoGratis && !l.pagamento) {
+      const agora = new Date().toISOString()
+      l.pagamento = { provider: 'cupom', orderId: '', status: 'approved', valor: 0, createdAt: agora, paidAt: agora, attempt: 0 }
+    }
     mudou = true
   })
   if (!mudou || !updated) return { ok: false, message: 'Só é possível aprovar cadastros com vistoria enviada.' }
@@ -58,7 +64,9 @@ export async function aprovarVistoria(
   }
 
   await sendTelegramNotification(
-    `✅ <b>Vistoria aprovada ${quem}</b> — ${esc(lead.nome)} (${esc(lead.placa || 'sem placa')}). Próximo passo: cadastrar no Hinova SGA para gerar as mensalidades.`
+    `✅ <b>Vistoria aprovada ${quem}</b> — ${esc(lead.nome)} (${esc(lead.placa || 'sem placa')}).${
+      adesaoGratis ? ` Adesão grátis (cupom ${esc(lead.cupom?.codigo)}): sem Pix.` : ''
+    } Próximo passo: cadastrar no Hinova SGA para gerar as mensalidades.`
   )
   await sendEmail({
     para: lead.email,

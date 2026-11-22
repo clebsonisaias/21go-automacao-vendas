@@ -1,10 +1,11 @@
 import fs from 'fs'
 import path from 'path'
-import { LeadSubmissionPayload } from './types'
+import { CupomAplicado, LeadSubmissionPayload } from './types'
 
 /** Cobrança Pix da taxa de adesão (Mercado Pago, Orders API). */
 export interface LeadPagamento {
-  provider: 'mercadopago'
+  /** 'cupom' = adesão grátis por cupom (100%): sem Pix, sem order no Mercado Pago (orderId vazio). */
+  provider: 'mercadopago' | 'cupom'
   orderId: string
   paymentId?: string
   /** Status bruto do MP: action_required, processed, canceled, expired, failed... */
@@ -39,6 +40,9 @@ export interface StoredLead {
   planoEscolhidoNome: string
   mensalidadeFinal: number
   ativacao: number
+  /** Adesão antes do cupom (só quando há cupom). */
+  ativacaoOriginal?: number
+  cupom?: CupomAplicado
   comAdesivo: boolean
   vehicle: {
     marca: string
@@ -122,6 +126,7 @@ export function getStoredLeads(): StoredLead[] {
 }
 
 export function findLeadByOrderId(orderId: string): StoredLead | undefined {
+  if (!orderId) return undefined
   return getStoredLeads().find((l) => l.pagamento?.orderId === orderId)
 }
 
@@ -173,6 +178,7 @@ export function saveNewLead(
     planoEscolhidoNome: payload.planoEscolhidoNome,
     mensalidadeFinal: payload.mensalidadeFinal,
     ativacao: payload.ativacao,
+    ...(payload.cupom ? { cupom: payload.cupom, ativacaoOriginal: payload.ativacaoOriginal } : {}),
     comAdesivo: payload.comAdesivo,
     vehicle: {
       marca: payload.vehicle.marca,

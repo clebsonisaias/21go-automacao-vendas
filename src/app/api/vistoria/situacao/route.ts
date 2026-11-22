@@ -28,6 +28,11 @@ export async function GET(req: NextRequest) {
       vistoriaStatus: lead.crmVistoria?.vistoriaStatus || null,
       pagamentoUrl: pixLiberado ? pagamentoPath(lead.ref) : null,
       pago,
+      // Cupom de desconto na adesão: pode ser aplicado até o Pix ser gerado.
+      ativacao: lead.ativacao,
+      ativacaoOriginal: lead.ativacaoOriginal ?? null,
+      cupom: lead.cupom ? lead.cupom.codigo : null,
+      podeAplicarCupom: !lead.cupom && !lead.pagamento && !['aprovado', 'adesao_paga', 'cancelado'].includes(lead.status),
     },
     { headers: { 'Cache-Control': 'no-store' } }
   )

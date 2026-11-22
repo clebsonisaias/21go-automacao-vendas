@@ -32,7 +32,11 @@ export async function POST(req: NextRequest) {
 
     // Já pago: nada a fazer.
     if (lead.pagamento?.paidAt) {
-      return NextResponse.json({ status: 'paid' })
+      return NextResponse.json({ status: lead.pagamento.provider === 'cupom' ? 'gratis' : 'paid' })
+    }
+    // Adesão zerada por cupom: não existe Pix de R$ 0 (vale como paga quando a vistoria é aprovada).
+    if (lead.ativacao <= 0) {
+      return NextResponse.json({ status: 'gratis' })
     }
     // Adesão por último: o Pix só abre depois de a equipe aprovar a vistoria (status aguardando_pagamento).
     if (lead.status !== 'aguardando_pagamento' && !lead.pagamento) {

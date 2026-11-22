@@ -12,7 +12,7 @@ interface PixData {
   ticketUrl?: string
 }
 
-type Phase = 'loading' | 'locked' | 'pending' | 'paid' | 'expired' | 'error'
+type Phase = 'loading' | 'locked' | 'pending' | 'paid' | 'gratis' | 'expired' | 'error'
 
 const brl = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
@@ -55,6 +55,11 @@ function PagamentoContent() {
       }
       if (data.status === 'paid') {
         goVistoria(data.vistoriaUrl)
+        return
+      }
+      if (data.status === 'gratis') {
+        // Cupom de 100%: não há Pix a pagar.
+        setPhase('gratis')
         return
       }
       if (data.status === 'bloqueado') {
@@ -189,6 +194,24 @@ function PagamentoContent() {
             <h1 className="m-0 text-[26px] font-extrabold tracking-[-0.8px]">Pagamento confirmado!</h1>
             <p className="m-0 max-w-sm text-base text-muted">
               Seu cadastro está completo. A 21Go envia os seus dados de acesso por e-mail e WhatsApp.
+            </p>
+            <a
+              href="/"
+              className="mt-2 inline-flex min-h-[48px] items-center rounded-lg border border-navy-800 px-6 font-bold text-navy-800 no-underline transition hover:bg-surface-100"
+            >
+              Voltar à página inicial
+            </a>
+          </section>
+        )}
+
+        {phase === 'gratis' && (
+          <section aria-live="polite" className="flex flex-col items-center gap-4 rounded-2xl border border-line bg-white p-10 text-center shadow-card">
+            <span className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-go-lime">
+              <CheckCircle2 aria-hidden className="h-9 w-9 text-navy-950" />
+            </span>
+            <h1 className="m-0 text-[26px] font-extrabold tracking-[-0.8px]">Adesão grátis com o seu cupom</h1>
+            <p className="m-0 max-w-sm text-base text-muted">
+              Não há Pix a pagar. Com a vistoria aprovada, a 21Go envia os seus dados de acesso por e-mail e WhatsApp.
             </p>
             <a
               href="/"

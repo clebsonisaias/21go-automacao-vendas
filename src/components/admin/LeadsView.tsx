@@ -232,7 +232,7 @@ export function LeadsView() {
 
   const exportCsv = () => {
     if (!filtered.length) return
-    const headers = ['Data/Hora', 'Nome', 'CPF', 'WhatsApp', 'Email', 'Cidade', 'Placa', 'Veículo', 'Ano', 'FIPE', 'Plano', 'Mensalidade', 'Adesão', 'Status']
+    const headers = ['Data/Hora', 'Nome', 'CPF', 'WhatsApp', 'Email', 'Cidade', 'Placa', 'Veículo', 'Ano', 'FIPE', 'Plano', 'Mensalidade', 'Adesão', 'Cupom', 'Adesão sem cupom', 'Status']
     const rows = filtered.map((l) => [
       new Date(l.createdAt).toLocaleString('pt-BR'),
       l.nome,
@@ -247,6 +247,8 @@ export function LeadsView() {
       l.planoEscolhidoNome,
       l.mensalidadeFinal,
       l.ativacao,
+      l.cupom?.codigo || '',
+      l.cupom ? l.ativacaoOriginal ?? '' : '',
       STATUS_META[l.status]?.label || l.status,
     ])
     const csv = [headers, ...rows].map((r) => r.map(csvCell).join(';')).join('\n')
@@ -505,7 +507,10 @@ export function LeadsView() {
                     <td className="px-4 py-3 text-navy-900">{lead.planoEscolhidoNome}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
                       <div className="text-navy-900">{brl(lead.mensalidadeFinal)}</div>
-                      <div className="text-xs text-muted">adesão {brl(lead.ativacao)}</div>
+                      <div className="text-xs text-muted">
+                        adesão {brl(lead.ativacao)}
+                        {lead.cupom ? ` · cupom ${lead.cupom.codigo}` : ''}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <StatusLabel status={lead.status} />

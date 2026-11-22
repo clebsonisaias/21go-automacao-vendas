@@ -1,11 +1,12 @@
 import { sendLeadToPowerCrm } from '@/lib/powercrm-lead'
 import { sendTelegramNotification, esc } from '@/lib/telegram'
 import { sendWhatsAppQuoteMessage } from '@/lib/citchat'
-import { saveNewLead, StoredLead } from '@/lib/db'
+import { findLeadByRef, saveNewLead, StoredLead } from '@/lib/db'
 import { verifyQuoteToken } from '@/lib/quote-token'
 import { mpEnabled } from '@/lib/mercadopago'
 import { vistoriaPath } from '@/lib/links'
 import { LeadSubmissionPayload } from '@/lib/types'
+import { calcularDesconto, conferirCupom, liberarCupom, normalizarCodigo, reservarCupom } from '@/lib/cupons'
 
 /**
  * O cadastro de um cliente, igual para o formulário do site (`/api/quote/submit`)
@@ -59,12 +60,51 @@ export function aplicarCotacao(payload: LeadSubmissionPayload): string | null {
     return 'Valores do plano inválidos. Refaça a simulação.'
   }
   payload.ativacao = verified.plan.ativacao
+  // Cupom só entra por `aplicarCupom`, nunca pelo que veio no pedido.
+  delete payload.cupom
+  delete payload.ativacaoOriginal
   if (verified.vehicle) {
     payload.vehicle = { ...verified.vehicle, placa: payload.vehicle.placa }
   }
   if (verified.meta) payload.powercrmMeta = verified.meta
   payload.planoEscolhidoNome = verified.plan.name
   payload.mensalidadeOriginal = verified.plan.monthly
+  return null
+}
+
+/** O cupom foi recusado na hora de gravar (ex.: o último uso acabou de ser pego por outro). */
+export class CupomRecusado extends Error {
+  constructor(motivo: string) {
+    super(motivo)
+    this.name = 'CupomRecusado'
+  }
+}
+
+/**
+ * Aplica o cupom de desconto na adesão, depois de `aplicarCotacao` (que fixa a adesão
+ * assinada). Só confere: o uso é reservado em `registrarCadastro`. Devolve o motivo da
+ * recusa (texto para o cliente) ou `null`. Sem código, não faz nada.
+ */
+export function aplicarCupom(
+  payload: LeadSubmissionPayload,
+  codigoBruto: unknown,
+  origem: 'cadastro' | 'chat'
+): string | null {
+  const codigo = normalizarCodigo(codigoBruto)
+  if (!codigo) return null
+  const r = conferirCupom(codigo)
+  if (!r.ok) return r.motivo
+  const { valorDesconto, ativacaoFinal } = calcularDesconto(payload.ativacao, r.cupom)
+  payload.ativacaoOriginal = payload.ativacao
+  payload.ativacao = ativacaoFinal
+  payload.cupom = {
+    codigo: r.cupom.codigo,
+    tipo: r.cupom.tipo,
+    desconto: r.cupom.desconto,
+    valorDesconto,
+    aplicadoEm: new Date().toISOString(),
+    origem,
+  }
   return null
 }
 
@@ -88,6 +128,26 @@ export async function registrarCadastro(
   const cobrarPix = mpEnabled()
   const leadRef = `lead_${crypto.randomUUID()}`
 
+  // Reserva o uso do cupom antes de gravar; se algo falhar depois, o uso é devolvido.
+  if (payload.cupom) {
+    const r = reservarCupom(payload.cupom.codigo, leadRef)
+    if (!r.ok) throw new CupomRecusado(r.motivo)
+  }
+  try {
+    return await gravarCadastro(payload, leadRef, cobrarPix, opcoes)
+  } catch (err) {
+    // Só devolve o uso se o cadastro não chegou a ser gravado (gravado, o cupom é dele).
+    if (payload.cupom && !findLeadByRef(leadRef)) liberarCupom(payload.cupom.codigo, leadRef)
+    throw err
+  }
+}
+
+async function gravarCadastro(
+  payload: LeadSubmissionPayload,
+  leadRef: string,
+  cobrarPix: boolean,
+  opcoes: { enviarWhatsApp: boolean; origem: 'site' | 'chat' }
+): Promise<CadastroFeito> {
   const powerCrmResult = await sendLeadToPowerCrm(payload)
   // O card do CRM 21Go chega pela sincronização do PowerCRM; o site não cria outro (ficava duplicado no Kanban).
 
@@ -102,10 +162,10 @@ export async function registrarCadastro(
     currency: 'BRL',
   }).format(payload.mensalidadeFinal)
 
-  const ativacaoFormatted = new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(payload.ativacao)
+  const brl = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
+  const ativacaoFormatted = payload.cupom
+    ? `${brl(payload.ativacao)} (cupom ${payload.cupom.codigo}, de ${brl(payload.ativacaoOriginal ?? payload.ativacao)})`
+    : brl(payload.ativacao)
 
   const vistoriaUrl = vistoriaPath(storedLead)
 

@@ -72,6 +72,11 @@ export default function HomePage() {
   const [email, setEmail] = useState('')
   const [cidade, setCidade] = useState('Rio de Janeiro')
   const [veiculoTrabalho, setVeiculoTrabalho] = useState(false)
+  // Cupom de desconto na adesão (opcional): conferido no servidor sobre a cotação assinada.
+  const [cupomCodigo, setCupomCodigo] = useState('')
+  const [cupomInfo, setCupomInfo] = useState<{ codigo: string; ativacaoOriginal: number; ativacaoFinal: number } | null>(null)
+  const [cupomErro, setCupomErro] = useState('')
+  const [cupomConferindo, setCupomConferindo] = useState(false)
   const [isSubmittingLead, setIsSubmittingLead] = useState(false)
   const [submitSuccessData, setSubmitSuccessData] = useState<{
     vistoriaUrl: string
@@ -247,6 +252,39 @@ export default function HomePage() {
     }
   }
 
+  // O desconto do cupom é sobre a adesão do plano escolhido: trocou de plano, confere de novo.
+  useEffect(() => {
+    setCupomInfo(null)
+    setCupomErro('')
+  }, [selectedPlan?.id])
+
+  const conferirCupom = async () => {
+    const codigo = cupomCodigo.trim()
+    if (!codigo || !selectedPlan || !quoteResult) {
+      setCupomErro('Digite o código do cupom.')
+      return
+    }
+    setCupomConferindo(true)
+    setCupomErro('')
+    try {
+      const res = await fetch('/api/cupom/conferir', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ codigo, quoteToken: quoteResult.quoteToken, planoId: selectedPlan.id }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (d?.ok) setCupomInfo({ codigo: d.codigo, ativacaoOriginal: d.ativacaoOriginal, ativacaoFinal: d.ativacaoFinal })
+      else {
+        setCupomInfo(null)
+        setCupomErro(d?.erro || 'Não foi possível conferir o cupom agora. Tente de novo.')
+      }
+    } catch {
+      setCupomErro('Sem conexão com o servidor. Tente de novo.')
+    } finally {
+      setCupomConferindo(false)
+    }
+  }
+
   // Envio de Cadastro Completo (Sem WhatsApp, direto pro CRM)
   const handleSubmitLead = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -285,10 +323,17 @@ export default function HomePage() {
           vehicle: quoteResult.vehicle,
           powercrmMeta: quoteResult.powercrmMeta,
           quoteToken: quoteResult.quoteToken,
+          ...(cupomCodigo.trim() ? { cupomCodigo: cupomCodigo.trim() } : {}),
         }),
       })
 
       const data = await res.json()
+      if (!data.success && data.campo === 'cupom') {
+        // Cupom recusado: o cadastro não foi feito; mostra no campo do cupom.
+        setCupomInfo(null)
+        setCupomErro(data.error || 'Cupom não aceito.')
+        return
+      }
       if (data.success) {
         setSubmitSuccessData({
           vistoriaUrl: data.vistoriaUrl || '/vistoria',
@@ -852,7 +897,16 @@ export default function HomePage() {
                   <dt className="text-muted-soft">Mensalidade</dt>
                   <dd className="m-0 text-right font-bold">R$ {money(priceFor(selectedPlan))}/mês</dd>
                   <dt className="text-muted-soft">Ativação (uma vez, no Pix)</dt>
-                  <dd className="m-0 text-right">{brl(selectedPlan.ativacao)}</dd>
+                  <dd className="m-0 text-right">
+                    {cupomInfo ? (
+                      <>
+                        <s className="mr-2 text-muted-soft">{brl(cupomInfo.ativacaoOriginal)}</s>
+                        <strong>{cupomInfo.ativacaoFinal <= 0 ? 'Grátis' : brl(cupomInfo.ativacaoFinal)}</strong>
+                      </>
+                    ) : (
+                      brl(selectedPlan.ativacao)
+                    )}
+                  </dd>
                 </dl>
 
                 <form onSubmit={handleSubmitLead} className="flex flex-col gap-4">
@@ -888,6 +942,57 @@ export default function HomePage() {
                         className={inputCls}
                       />
                     </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label htmlFor="lead-cupom" className={labelCls}>
+                      Tem cupom de desconto na adesão? (opcional)
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        id="lead-cupom"
+                        autoComplete="off"
+                        autoCapitalize="characters"
+                        value={cupomCodigo}
+                        onChange={(e) => {
+                          setCupomCodigo(e.target.value.toUpperCase())
+                          setCupomInfo(null)
+                          setCupomErro('')
+                        }}
+                        onKeyDown={(e) => {
+                          // Enter no cupom confere o cupom em vez de enviar o cadastro.
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            conferirCupom()
+                          }
+                        }}
+                        aria-invalid={Boolean(cupomErro)}
+                        aria-describedby={cupomErro ? 'lead-cupom-erro' : cupomInfo ? 'lead-cupom-ok' : undefined}
+                        placeholder="Código do cupom"
+                        className={`${inputCls} uppercase aria-[invalid=true]:border-red-700`}
+                      />
+                      <button
+                        type="button"
+                        onClick={conferirCupom}
+                        disabled={cupomConferindo}
+                        className="inline-flex min-h-[48px] shrink-0 items-center justify-center rounded-lg border border-navy-800 px-4 text-sm font-bold text-navy-800 transition hover:bg-surface-100 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {cupomConferindo ? 'Conferindo…' : 'Aplicar'}
+                      </button>
+                    </div>
+                    {cupomInfo && (
+                      <p id="lead-cupom-ok" role="status" className="m-0 text-sm font-semibold text-emerald-700">
+                        Cupom {cupomInfo.codigo} aplicado:{' '}
+                        {cupomInfo.ativacaoFinal <= 0
+                          ? 'adesão grátis.'
+                          : `adesão de ${brl(cupomInfo.ativacaoOriginal)} por ${brl(cupomInfo.ativacaoFinal)}.`}
+                      </p>
+                    )}
+                    {cupomErro && (
+                      <p id="lead-cupom-erro" role="alert" className="m-0 text-sm font-semibold text-red-700">
+                        {cupomErro}
+                      </p>
+                    )}
                   </div>
 
                   <label className="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-xl border border-line bg-surface-50 px-4 py-2 text-[15px] font-semibold">

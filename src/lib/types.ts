@@ -42,6 +42,16 @@ export interface QuoteCalculationResult {
   error?: string
 }
 
+/** Cupom de desconto aplicado na adesão (ver src/lib/cupons.ts). */
+export interface CupomAplicado {
+  codigo: string
+  tipo: 'valor' | 'percentual'
+  desconto: number
+  valorDesconto: number
+  aplicadoEm: string
+  origem: 'cadastro' | 'documentos' | 'chat'
+}
+
 export interface LeadSubmissionPayload {
   nome: string
   cpf?: string
@@ -56,6 +66,9 @@ export interface LeadSubmissionPayload {
   mensalidadeOriginal: number
   mensalidadeFinal: number
   ativacao: number
+  /** Adesão antes do cupom (só quando há cupom). */
+  ativacaoOriginal?: number
+  cupom?: CupomAplicado
   comAdesivo: boolean
   vehicle: VehicleInfo
   quoteToken?: string
