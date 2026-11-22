@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import {
   autorizarAtendai,
+  chaveTelefone,
   guardarResposta,
   json,
   lerCotacao,
@@ -8,6 +9,7 @@ import {
   RespostaCadastro,
 } from '@/lib/atendai'
 import { aplicarCotacao, registrarCadastro, validarCadastro } from '@/lib/cadastro'
+import { updateLead } from '@/lib/db'
 import { absolute } from '@/lib/links'
 import { verifyQuoteToken } from '@/lib/quote-token'
 import { rateLimit } from '@/lib/rate-limit'
@@ -19,10 +21,14 @@ export const dynamic = 'force-dynamic'
 const emAndamento = new Map<string, Promise<{ dados: RespostaCadastro | { erro: string }; status: number }>>()
 
 /**
- * POST { cotacao, plano, email, telefone, comAdesivo? } + Idempotency-Key →
+ * POST { cotacao, plano, email, telefone, telefoneConversa?, comAdesivo? } + Idempotency-Key →
  * o mesmo cadastro do formulário do site (PowerCRM, painel, Telegram), com os
  * valores da cotação guardada. Não manda a mensagem de WhatsApp dos documentos:
  * o chat entrega o link na própria conversa.
+ *
+ * `telefone` é o de contato que o cliente informou; `telefoneConversa`, o WhatsApp da
+ * conversa do chat. Se forem diferentes, o da conversa fica no cadastro para o chat achar
+ * a situação e receber os documentos dele.
  */
 export async function POST(req: NextRequest) {
   const negado = autorizarAtendai(req)
@@ -99,6 +105,12 @@ async function cadastrar(
 
   try {
     const feito = await registrarCadastro(payload, { enviarWhatsApp: false, origem: 'chat' })
+    const conversa = String(corpo?.telefoneConversa ?? '').replace(/\D/g, '').slice(0, 15)
+    if (chaveTelefone(conversa) && chaveTelefone(conversa) !== chaveTelefone(payload.whatsapp)) {
+      updateLead(feito.lead.ref, (l) => {
+        l.atendaiTelefone = conversa
+      })
+    }
     const resposta: RespostaCadastro = {
       protocolo: feito.lead.id,
       linkDocumentos: absolute(feito.vistoriaUrl),

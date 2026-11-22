@@ -1,3 +1,4 @@
+import sharp from 'sharp'
 import { DocumentAiResult, ExtractedDocType } from './types'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
@@ -196,6 +197,10 @@ async function tryOpenAIModel(
   dataUri: string,
   docTypeHint?: ExtractedDocType
 ): Promise<DocumentAiResult | null> {
+  // PDF vai como arquivo (a OpenAI não lê PDF como imagem); foto vai como imagem.
+  const arquivo = dataUri.startsWith('data:application/pdf;')
+    ? { type: 'file', file: { filename: 'documento.pdf', file_data: dataUri } }
+    : { type: 'image_url', image_url: { url: dataUri, detail: 'high' } }
   const start = Date.now()
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -216,10 +221,7 @@ async function tryOpenAIModel(
                 type: 'text',
                 text: `Extraia os dados deste documento brasileiro com máxima precisão.${docTypeHint ? ` Tipo esperado: ${docTypeHint}` : ''}`,
               },
-              {
-                type: 'image_url',
-                image_url: { url: dataUri, detail: 'high' },
-              },
+              arquivo,
             ],
           },
         ],
@@ -257,8 +259,19 @@ export async function extractDocumentWithAi(params: {
   mimeType: string
   docTypeHint?: ExtractedDocType
 }): Promise<DocumentAiResult> {
-  const { imageBase64, mimeType, docTypeHint } = params
-  const rawBase64 = imageBase64.replace(/^data:[^;]+;base64,/, '')
+  const { docTypeHint } = params
+  let mimeType = params.mimeType
+  let rawBase64 = params.imageBase64.replace(/^data:[^;]+;base64,/, '')
+  // Foto do iPhone (HEIC): as IAs não leem; vira JPEG antes. Se não der, segue como veio.
+  if (/^image\/hei[cf]$/i.test(mimeType)) {
+    try {
+      const jpeg = await sharp(Buffer.from(rawBase64, 'base64')).rotate().jpeg({ quality: 88 }).toBuffer()
+      rawBase64 = jpeg.toString('base64')
+      mimeType = 'image/jpeg'
+    } catch (err) {
+      console.warn('[Document AI] HEIC não convertido:', err instanceof Error ? err.message : err)
+    }
+  }
   const dataUri = `data:${mimeType};base64,${rawBase64}`
 
   // 1. Tenta gpt-6-luna (principal, mais barato)

@@ -347,3 +347,20 @@ Decisão do Clebson: o 21Go no chat da CITmax não tem atendente humano, é tudo
 - veículo recusado pelo motor de preço: "não está disponível para contratação no momento".
 
 Em caso de sinistro (batida, roubo, furto, incêndio, danos da natureza, reboque), a IA indica o 0800 234 5555, que atende 24h.
+
+### [Claude] — 2026-11-22 — Documentos pelo chat, igual à página /vistoria
+
+O chat do 21Go (AtendeHub) faz o cadastro igual ao site: pede o telefone para contato e o e-mail, e o cliente manda **na conversa** foto ou PDF da CNH (ou RG), do documento do veículo e do comprovante de residência.
+
+- **`POST /api/atendai/v1/documentos`:** multipart com `telefone` (o da conversa, vindo do AtendeHub) e `arquivos[]` (até 5, 12 MB cada).
+  - A IA do site lê cada arquivo e o tipo lido diz qual documento é.
+  - O arquivo é gravado igual ao upload da página e a leitura completa o cadastro.
+  - Com os 3 documentos, o envio é concluído igual ao "Enviar" da página: Telegram e link da vistoria no CRM, o que faz o card andar.
+  - Diferença: não manda o WhatsApp "documentos recebidos", porque o chat já responde.
+  - **A resposta não devolve dado lido**, só o que chegou, o que falta e o próximo passo.
+  - O mesmo arquivo mandado de novo não é lido outra vez (`sha256` em `vistoriaArquivos`).
+  - Documento do veículo de outra placa é recusado com aviso.
+  - O limite de envios é por telefone, não por IP.
+- **`src/lib/documentos.ts`:** a lógica que estava dentro de `/api/vistoria/upload`, `extrair` e `submit` (`receberArquivo`, `aplicarLeitura`, `concluirDocumentos`). As três rotas da página continuam com o mesmo comportamento.
+- **Leitura de PDF:** vai à OpenAI como arquivo (antes ia como imagem e não era lida). A foto HEIC vira JPEG antes da leitura.
+- **`/contratacao`:** aceita `telefoneConversa`. Quando o cliente dá outro número para contato, o da conversa fica em `atendaiTelefone`, e `cadastroMaisRecente` acha o cadastro pelos dois.
