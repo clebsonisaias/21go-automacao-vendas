@@ -596,3 +596,35 @@ Pedido do Clebson: cupons de desconto na taxa de adesão, criados no `/admin` (a
 - **Prazo:** na página dos documentos, o cupom só entra **antes da aprovação da vistoria**. A aprovação libera o Pix com o valor nas mensagens; depois disso a adesão não muda.
 - **Adesão zerada:** na aprovação da vistoria vale como paga (`pagamento.provider = 'cupom'`), sem Pix. A página `/pagamento` mostra "Adesão grátis". O que sobrar abaixo de R$ 1,00 também vira grátis (não se gera Pix de centavos).
 - **Sem o Pix do site** (`MP_ACCESS_TOKEN` vazio), os cupons ficam desligados: o checkout do PowerCRM não conhece o desconto.
+
+### [Claude] — 2026-11-22 — Chat: Pix na conversa, cotação pela foto do CRLV e lembretes de etapa parada
+
+Pedido do Clebson (ideias 1, 2 e 3 para o chat do 21Go).
+
+**API do chat (`/api/atendai/v1`), dois recursos novos no `/info`:**
+- `POST /pagamento {telefone}`: o Pix da adesão do cadastro desse WhatsApp. Escolhe o cadastro que espera o Pix (`cadastroParaPagamento`).
+  - Devolve `situacao`, que pode ser `pix`, `pago`, `gratis`, `aguardando_vistoria`, `concluido`, `indisponivel`, `limite` ou `sem_cadastro`.
+  - Com Pix, traz o copia-e-cola (`pixCopiaECola`), o valor e o link da página `/pagamento`.
+  - A regra é a mesma da página: a lógica é comum, em `src/lib/pix-adesao.ts`.
+  - Limite de cobranças: o Telegram é avisado uma vez a cada 12 h.
+- `POST /cotacao/documento` (multipart com `telefone`, `arquivo`, `usoApp` e `leilao`): a IA do site lê a placa do CRLV e cota igual à placa digitada (`src/lib/atendai-cotacao.ts`).
+  - Devolve `placaLida`.
+  - O arquivo não é gravado, e a resposta não traz dono, CPF nem chassi.
+  - Com a IA fora do ar, responde 503 ("digite a placa").
+
+**Lembretes por WhatsApp (`src/lib/lembretes.ts`):** documentos, vistoria e Pix parados recebem o template da etapa.
+- Saem com 24 h e com 72 h na etapa, no máximo 2 por etapa, das 9h às 20h e até 10 por rodada.
+- Vão para o WhatsApp da conversa do chat (`atendaiTelefone`) ou para o do formulário, nunca para o contato digitado.
+- A vistoria só entra com a etapa lida do CRM (`criada` ou `em_andamento`). O Pix só entra se der para pagar.
+- Não recebem lembrete:
+  - cadastros que já tinham mais de 2 dias quando os lembretes começaram;
+  - cadastros encerrados.
+- Voltar a uma etapa recomeça a contagem.
+- Configuração:
+  - só ligam com `CITCHAT_GATEWAY_TOKEN`;
+  - `LEMBRETES_WHATSAPP=off` desliga.
+- O painel mostra os lembretes enviados.
+
+**No AtendeHub** (clebsonisaias/atendehub#130), duas ferramentas que valem quando marcadas no nó:
+- `veiculo_pagar_adesao`: o Pix sai exato numa mensagem só dele, pelo mecanismo da 2ª via.
+- `veiculo_cotar_por_documento`: usa a última foto ou PDF da conversa.

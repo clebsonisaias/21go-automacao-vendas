@@ -1,6 +1,7 @@
 import { reconcilePendingPayments } from './lib/orchestrator'
 import { socialTick } from './lib/instagram'
 import { acompanharVistorias, gerarLinksPendentes } from './lib/crm-vistoria'
+import { lembretesTick } from './lib/lembretes'
 
 function every(ms: number, label: string, job: () => Promise<unknown>) {
   let running = false
@@ -34,4 +35,10 @@ export function startVistoriaLinkScheduler() {
     await gerarLinksPendentes()
     await acompanharVistorias()
   })
+}
+
+// Lembretes de etapa parada (documentos, vistoria, Pix) pelo WhatsApp: confere a cada 10 min.
+export function startLembretes() {
+  const ms = Number(process.env.LEMBRETES_INTERVALO_MS) || 10 * 60_000
+  every(ms, 'Lembretes', () => lembretesTick())
 }

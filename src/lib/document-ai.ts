@@ -245,7 +245,8 @@ async function tryOpenAIModel(
     }
   } catch (err) {
     const latencyMs = Date.now() - start
-    console.error(`[Document AI] Erro com ${model} em ${latencyMs}ms:`, err)
+    // Só o tipo do erro: a mensagem de JSON inválido traz trecho da resposta, que pode ter nome e CPF.
+    console.error(`[Document AI] Erro com ${model} em ${latencyMs}ms:`, err instanceof Error ? err.name : 'erro')
   }
   return null
 }
@@ -322,7 +323,7 @@ export async function extractDocumentWithAi(params: {
         }
       }
     } catch (err) {
-      console.error('[Document AI] Erro ao extrair com Gemini:', err)
+      console.error('[Document AI] Erro ao extrair com Gemini:', err instanceof Error ? err.name : 'erro')
     }
   }
 

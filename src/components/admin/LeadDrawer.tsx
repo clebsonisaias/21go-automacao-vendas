@@ -332,6 +332,13 @@ export function LeadDrawer({
                 )}
               </Field>
             )}
+            {draft.lembrete && draft.lembrete.enviados.length > 0 && (
+              <Field label="Lembretes no WhatsApp">
+                {draft.lembrete.enviados.length} de 2 sobre{' '}
+                {{ documentos: 'os documentos', vistoria: 'a vistoria', pagamento: 'o Pix da adesão' }[draft.lembrete.etapa]}, o último em{' '}
+                {new Date(draft.lembrete.enviados[draft.lembrete.enviados.length - 1]).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+              </Field>
+            )}
             {draft.diaVencimento && <Field label="Vencimento">Todo dia {draft.diaVencimento}</Field>}
             <Field label="Adesivo 21Go">{draft.comAdesivo ? 'Sim' : 'Não'}</Field>
             {draft.powercrmCode && (

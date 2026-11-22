@@ -145,6 +145,27 @@ export function cadastroMaisRecente(telefone: string): StoredLead | null {
   return doCliente[0] ?? null
 }
 
+/**
+ * Cadastro cujo Pix da adesão o cliente quer pagar: entre os cadastros deste WhatsApp (mesma
+ * regra de `cadastroMaisRecente`), o mais recente que está esperando o Pix; sem nenhum assim,
+ * o mais recente. Quem tem dois cadastros (outro carro, formulário repetido) acha o que cobra.
+ */
+export function cadastroParaPagamento(telefone: string): StoredLead | null {
+  const chave = chaveTelefone(telefone)
+  if (!chave) return null
+  const doCliente = getStoredLeads()
+    .filter(
+      (l) =>
+        l.status !== 'cancelado' &&
+        chaveTelefone(l.atendaiTelefone ? l.atendaiTelefone : l.whatsapp) === chave
+    )
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+  const esperandoPix = doCliente.find(
+    (l) => !l.pagamento?.paidAt && (l.status === 'aguardando_pagamento' || Boolean(l.pagamento))
+  )
+  return esperandoPix ?? doCliente[0] ?? null
+}
+
 export interface Situacao {
   encontrado: boolean
   etapa?: string
