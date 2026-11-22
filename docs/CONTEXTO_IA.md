@@ -339,3 +339,11 @@ O que o cliente faz no site (cotação e contratação) passa a dar para fazer n
 - Depois de publicar, o `CITCHAT_GATEWAY_TOKEN` deste site passa a ser o token do produto 21Go.
 
 Também: em `sendCitchatMessage`, se algum valor do template vier vazio, a mensagem vai sem template (cai na reserva do produto), em vez de levar 400 e se perder.
+
+### [Claude] — 2026-11-22 — Chat do 21Go sem atendente humano
+
+Decisão do Clebson: o 21Go no chat da CITmax não tem atendente humano, é tudo com a IA pela API. As mensagens de erro de `/api/atendai/v1/cotacao`, que a IA repassa ao cliente, não falam mais em "atendente":
+- placa não encontrada ou veículo não identificado: indicam a cotação no site, escolhendo marca, modelo e ano;
+- veículo recusado pelo motor de preço: "não está disponível para contratação no momento".
+
+Em caso de sinistro (batida, roubo, furto, incêndio, danos da natureza, reboque), a IA indica o 0800 234 5555, que atende 24h.
