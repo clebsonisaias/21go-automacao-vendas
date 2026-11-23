@@ -407,6 +407,11 @@ function VistoriaContent() {
   }, [ref])
 
   const handleDocExtracted = async (result: DocumentAiResult) => {
+    if (result.model === 'simulation' || !result.success) {
+      setAiSummary('Documento anexado! Nossa equipe fará a conferência pela imagem.')
+      return
+    }
+
     if (result.documentType === 'crlv' && result.vehicle) {
       setAiSummary(
         `CRLV reconhecido! Veículo: ${result.vehicle.marcaModelo || 'Identificado'} · Placa: ${result.vehicle.placa || 'OK'}`
