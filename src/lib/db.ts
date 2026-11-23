@@ -1,6 +1,7 @@
 import fs from 'fs'
 import path from 'path'
-import { CupomAplicado, LeadSubmissionPayload } from './types'
+import { CupomAplicado, LeadSubmissionPayload, PlanoNacional } from './types'
+import type { PrecoNordeste } from './tabela-nordeste'
 
 /** Cobrança Pix da taxa de adesão (Mercado Pago, Orders API). */
 export interface LeadPagamento {
@@ -33,7 +34,19 @@ export interface StoredLead {
   atendaiTelefone?: string
   email?: string
   cidade?: string
+  /** UF lida no comprovante de residência. */
   uf?: string
+  /** UF que o cliente informou na cotação. */
+  ufDeclarada?: string
+  /** Preço da Tabela Nordeste ou o nacional (do CRM); ver preco-regional.ts. */
+  precoRegiao?: 'nordeste' | 'nacional'
+  tabelaNordeste?: PrecoNordeste
+  /** Valores do plano no CRM, para voltar a eles se o comprovante for de fora do Nordeste. */
+  planoNacional?: PlanoNacional
+  /** Região conferida pelo comprovante (leitura feita no servidor). */
+  regiaoConfirmada?: { status: 'nordeste' | 'fora' | 'conferir'; uf?: string; motivo?: string; em: string; mudouPreco?: boolean; sha256?: string }
+  /** Endereço do comprovante lido no servidor (o sha256 diz de qual arquivo). */
+  comprovanteLido?: { sha256: string; uf?: string; cep?: string; em: string }
   veiculoTrabalho?: boolean
   placa?: string
   planoEscolhidoId: string
@@ -182,6 +195,10 @@ export function saveNewLead(
     whatsapp: payload.whatsapp,
     email: payload.email,
     cidade: payload.cidade,
+    ...(payload.ufDeclarada ? { ufDeclarada: payload.ufDeclarada } : {}),
+    ...(payload.precoRegiao ? { precoRegiao: payload.precoRegiao } : {}),
+    ...(payload.tabelaNordeste ? { tabelaNordeste: payload.tabelaNordeste } : {}),
+    ...(payload.planoNacional ? { planoNacional: payload.planoNacional } : {}),
     veiculoTrabalho: payload.veiculoTrabalho,
     placa: payload.placa || payload.vehicle.placa,
     planoEscolhidoId: payload.planoEscolhidoId,
@@ -197,6 +214,7 @@ export function saveNewLead(
       fipeValue: payload.vehicle.fipeValue,
       fipeCode: payload.vehicle.fipeCode,
       placa: payload.placa || payload.vehicle.placa,
+      tipo: payload.vehicle.categoria?.toUpperCase().includes('MOTO') ? 'Moto' : 'Carro',
     },
     powercrmCode,
     status: initialStatus,

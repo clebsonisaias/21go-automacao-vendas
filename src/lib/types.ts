@@ -1,4 +1,21 @@
+import type { PrecoNordeste } from './tabela-nordeste'
+
 export type VehicleType = 'carro' | 'moto'
+
+/** Valores do plano no CRM (preço nacional): guardados para voltar a eles se o comprovante mudar a região. */
+export interface PlanoNacional {
+  monthly: number
+  pontualidade: number
+  adesivo: number
+  ativacao: number
+}
+
+/** Plano com o preço da Tabela Nordeste (ver tabela-nordeste.ts e preco-regional.ts). */
+export interface PlanoNordeste {
+  uf: string
+  tabela: PrecoNordeste
+  nacional: PlanoNacional
+}
 
 export interface VehicleInfo {
   marca: string
@@ -20,6 +37,9 @@ export interface PlanPricing {
   mensalidadeComPontualidade: number // 5% off
   mensalidadeComAdesivo: number // 10% ou 15% off + pontualidade
   coberturas: string[]
+  /** Mensalidade do mesmo plano no CRM, quando este plano tem o preço da Tabela Nordeste. */
+  precoNacional?: number
+  nordeste?: PlanoNordeste
 }
 
 export interface QuoteCalculationResult {
@@ -37,6 +57,8 @@ export interface QuoteCalculationResult {
     percentualAdesivo: number
     percentualPontualidade: number
   }
+  /** Estado informado na cotação; `tabela` = os planos foram trocados pelo da Tabela Nordeste. */
+  regiao?: { uf: string; nordeste: boolean; tabela: boolean }
   /** Assinado pelo servidor; reenviado no cadastro para o servidor fixar os valores cobrados. */
   quoteToken?: string
   error?: string
@@ -77,6 +99,11 @@ export interface LeadSubmissionPayload {
     modelId: number | string
     yearId: number | string
   }
+  /** Daqui para baixo, só o servidor preenche (em `aplicarCotacao`, a partir do token). */
+  ufDeclarada?: string
+  precoRegiao?: 'nordeste' | 'nacional'
+  tabelaNordeste?: PrecoNordeste
+  planoNacional?: PlanoNacional
 }
 
 export type ExtractedDocType = 'cnh' | 'crlv' | 'comprovante_residencia' | 'desconhecido'

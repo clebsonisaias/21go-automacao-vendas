@@ -1,4 +1,5 @@
 import { LeadSubmissionPayload } from './types'
+import { linhaTabelaNordeste } from './tabela-nordeste'
 
 // Envio de leads ao Power CRM pelo formulário dinâmico oficial (o mesmo que o cotacao.me usa).
 // Formato espelhado do script oficial: resources.powercrm.com.br/assets/external/js/script.pwrcrm.js
@@ -110,6 +111,15 @@ export function maskPhone(raw: string): string {
   return d
 }
 
+/**
+ * Linhas do preço por região na observação do lead.
+ * TODO(Clebson): trocar pelo texto que ele vai mandar para a observação do CRM.
+ */
+export function linhasRegiao(payload: Pick<LeadSubmissionPayload, 'tabelaNordeste' | 'ufDeclarada' | 'planoNacional'>): string[] {
+  if (payload.tabelaNordeste) return [linhaTabelaNordeste(payload.tabelaNordeste, payload.ufDeclarada, payload.planoNacional?.monthly)]
+  return payload.ufDeclarada ? [`Estado informado: ${payload.ufDeclarada} (preço nacional)`] : []
+}
+
 /** Monta o corpo exatamente como o formulário oficial, com os IDs reais da cotação (powercrmMeta). */
 export async function buildPowerCrmBody(payload: LeadSubmissionPayload): Promise<Record<string, unknown>> {
   const form = await getFormConfig()
@@ -146,6 +156,7 @@ export async function buildPowerCrmBody(payload: LeadSubmissionPayload): Promise
       payload.cupom
         ? `Adesão: ${brl(payload.ativacao)} (cupom ${payload.cupom.codigo}, de ${brl(payload.ativacaoOriginal ?? payload.ativacao)})`
         : `Adesão: ${brl(payload.ativacao)}`,
+      ...linhasRegiao(payload),
       `CPF: ${payload.cpf || 'não informado'}`,
       `Cidade: ${payload.cidade || 'não informada'}`,
       `Trabalho/app: ${payload.veiculoTrabalho ? 'SIM' : 'NÃO'}`,

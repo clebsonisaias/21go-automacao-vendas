@@ -7,6 +7,7 @@ import { mpEnabled } from '@/lib/mercadopago'
 import { vistoriaPath } from '@/lib/links'
 import { LeadSubmissionPayload } from '@/lib/types'
 import { calcularDesconto, conferirCupom, liberarCupom, normalizarCodigo, reservarCupom } from '@/lib/cupons'
+import { linhaTabelaNordeste } from '@/lib/tabela-nordeste'
 
 /**
  * O cadastro de um cliente, igual para o formulário do site (`/api/quote/submit`)
@@ -69,6 +70,24 @@ export function aplicarCotacao(payload: LeadSubmissionPayload): string | null {
   if (verified.meta) payload.powercrmMeta = verified.meta
   payload.planoEscolhidoNome = verified.plan.name
   payload.mensalidadeOriginal = verified.plan.monthly
+
+  // Região e preço regional só vêm do token, nunca do pedido.
+  delete payload.ufDeclarada
+  delete payload.tabelaNordeste
+  payload.estado = verified.uf
+  if (verified.uf) payload.ufDeclarada = verified.uf
+  const ne = verified.plan.nordeste
+  if (ne) {
+    payload.precoRegiao = 'nordeste'
+    payload.tabelaNordeste = ne.tabela
+    payload.planoNacional = ne.nacional
+    // A tabela é o preço final: não há desconto do adesivo por cima.
+    payload.comAdesivo = false
+  } else {
+    const p = verified.plan
+    payload.precoRegiao = 'nacional'
+    payload.planoNacional = { monthly: p.monthly, pontualidade: p.pontualidade, adesivo: p.adesivo, ativacao: p.ativacao }
+  }
   return null
 }
 
@@ -172,8 +191,14 @@ async function gravarCadastro(
   const checkoutUrl =
     !cobrarPix && powerCrmResult.qttnCd ? `https://checkout.cotacao.me/myplanquot?h=${powerCrmResult.qttnCd}` : undefined
 
+  const linhaRegiao = payload.tabelaNordeste
+    ? `📍 <b>Preço Nordeste:</b> ${esc(linhaTabelaNordeste(payload.tabelaNordeste, payload.ufDeclarada, payload.planoNacional?.monthly))}\n`
+    : payload.ufDeclarada
+      ? `📍 <b>Estado informado:</b> ${esc(payload.ufDeclarada)} (preço nacional)\n`
+      : ''
+
   const titulo = opcoes.origem === 'chat' ? '💬 <b>NOVO CADASTRO PELO CHAT!</b> 💬' : '🚨 <b>NOVO CADASTRO NO SITE!</b> 🚨'
-  const telegramMessage = `${titulo}\n\n👤 <b>Cliente:</b> ${esc(payload.nome || 'Aguardando documentos')}\n📱 <b>WhatsApp:</b> ${esc(payload.whatsapp)}\n${payload.cpf ? `📄 <b>CPF:</b> ${esc(payload.cpf)}\n` : ''}✉️ <b>E-mail:</b> ${esc(payload.email)}\n${payload.cidade ? `📍 <b>Cidade:</b> ${esc(payload.cidade)}\n` : ''}🚗 <b>Veículo:</b> ${esc(payload.vehicle.marca)} ${esc(payload.vehicle.modelo)} (${esc(payload.vehicle.ano)})\n🔢 <b>Placa:</b> ${esc(payload.placa || payload.vehicle.placa || 'Não informada')}\n💰 <b>Tabela FIPE:</b> ${fipeFormatted}\n🚕 <b>Trabalho/App:</b> ${payload.veiculoTrabalho ? 'Sim' : 'Não'}\n\n🛡️ <b>Plano Escolhido:</b> ${esc(payload.planoEscolhidoNome)}\n💵 <b>Mensalidade:</b> ${mensalidadeFormatted}/mês ${payload.comAdesivo ? '(com adesivo)' : ''}\n⚡ <b>Ativação:</b> ${ativacaoFormatted}\n\n${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${esc(powerCrmResult.qttnCd)}</code>\n` : ''}${checkoutUrl ? `🔗 <b>Link Checkout:</b> ${esc(checkoutUrl)}\n` : ''}💾 <b>Backup Local:</b> Salvo no painel interno (ID: <code>${storedLead.id}</code>)\n✅ <b>Status:</b> Cadastrado. Aguardando documentos para completar dados.${cobrarPix ? ' Ordem: documentos → App Visto → aprovação → Pix' : ''}.`
+  const telegramMessage = `${titulo}\n\n👤 <b>Cliente:</b> ${esc(payload.nome || 'Aguardando documentos')}\n📱 <b>WhatsApp:</b> ${esc(payload.whatsapp)}\n${payload.cpf ? `📄 <b>CPF:</b> ${esc(payload.cpf)}\n` : ''}✉️ <b>E-mail:</b> ${esc(payload.email)}\n${payload.cidade ? `📍 <b>Cidade:</b> ${esc(payload.cidade)}\n` : ''}🚗 <b>Veículo:</b> ${esc(payload.vehicle.marca)} ${esc(payload.vehicle.modelo)} (${esc(payload.vehicle.ano)})\n🔢 <b>Placa:</b> ${esc(payload.placa || payload.vehicle.placa || 'Não informada')}\n💰 <b>Tabela FIPE:</b> ${fipeFormatted}\n🚕 <b>Trabalho/App:</b> ${payload.veiculoTrabalho ? 'Sim' : 'Não'}\n\n🛡️ <b>Plano Escolhido:</b> ${esc(payload.planoEscolhidoNome)}\n💵 <b>Mensalidade:</b> ${mensalidadeFormatted}/mês ${payload.comAdesivo ? '(com adesivo)' : ''}\n⚡ <b>Ativação:</b> ${ativacaoFormatted}\n${linhaRegiao}\n${powerCrmResult.qttnCd ? `📋 <b>Código PowerCRM:</b> <code>${esc(powerCrmResult.qttnCd)}</code>\n` : ''}${checkoutUrl ? `🔗 <b>Link Checkout:</b> ${esc(checkoutUrl)}\n` : ''}💾 <b>Backup Local:</b> Salvo no painel interno (ID: <code>${storedLead.id}</code>)\n✅ <b>Status:</b> Cadastrado. Aguardando documentos para completar dados.${cobrarPix ? ' Ordem: documentos → App Visto → aprovação → Pix' : ''}.`
 
   await sendTelegramNotification(telegramMessage)
 

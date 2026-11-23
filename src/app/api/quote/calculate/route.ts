@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchOfficialPricing } from '@/lib/powercrm'
 import { createQuoteToken } from '@/lib/quote-token'
+import { aplicarPrecoRegional } from '@/lib/preco-regional'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { tipo, brandId, brandText, modelId, modelText, year, codFipe, leilao, carroApp } = body
+    const { tipo, brandId, brandText, modelId, modelText, year, codFipe, leilao, carroApp, uf } = body
 
     if (!brandId || !modelId || !year || !codFipe) {
       return NextResponse.json(
@@ -28,8 +29,11 @@ export async function POST(req: NextRequest) {
       carroApp: carroApp || 'nao',
     })
 
+    // Quem mora no Nordeste paga a Tabela Nordeste (ver preco-regional.ts).
+    aplicarPrecoRegional(result, uf, tipo === 'moto' ? 'moto' : 'carro')
+
     if (result.success && result.plans.length) {
-      result.quoteToken = createQuoteToken(result.vehicle, result.plans, result.powercrmMeta) || undefined
+      result.quoteToken = createQuoteToken(result.vehicle, result.plans, result.powercrmMeta, result.regiao?.uf) || undefined
     }
 
     return NextResponse.json(result)

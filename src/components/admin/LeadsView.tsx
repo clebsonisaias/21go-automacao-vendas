@@ -506,7 +506,14 @@ export function LeadsView() {
                     </td>
                     <td className="px-4 py-3 text-navy-900">{lead.planoEscolhidoNome}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
-                      <div className="text-navy-900">{brl(lead.mensalidadeFinal)}</div>
+                      <div className="text-navy-900">
+                        {brl(lead.mensalidadeFinal)}
+                        {lead.precoRegiao === 'nordeste' && (
+                          <abbr title="Tabela Nordeste" className="ml-1.5 text-xs font-semibold text-muted no-underline">
+                            NE
+                          </abbr>
+                        )}
+                      </div>
                       <div className="text-xs text-muted">
                         adesão {brl(lead.ativacao)}
                         {lead.cupom ? ` · cupom ${lead.cupom.codigo}` : ''}

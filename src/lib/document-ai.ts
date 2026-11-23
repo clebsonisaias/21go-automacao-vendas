@@ -1,5 +1,6 @@
 import sharp from 'sharp'
 import { DocumentAiResult, ExtractedDocType } from './types'
+import { normalizarUf } from './tabela-nordeste'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
 const PRIMARY_MODEL = 'gpt-6-luna'
@@ -183,7 +184,10 @@ function postProcess(parsed: any, model?: string, latencyMs?: number): DocumentA
   }
 
   if (result.address?.uf) {
-    result.address.uf = result.address.uf.toUpperCase().slice(0, 2)
+    // "RN", "rn" ou "Rio Grande do Norte" → "RN"; o que não for UF sai (não vira "RI").
+    const uf = normalizarUf(result.address.uf)
+    if (uf) result.address.uf = uf
+    else delete result.address.uf
   }
 
   return result

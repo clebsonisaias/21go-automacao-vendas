@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Bot, CheckCircle2, Copy, ExternalLink, Loader2, MessageCircle, X } from 'lucide-react'
 import type { StoredLead } from '@/lib/db'
 import { brl } from '@/lib/site'
+import { descreverTabela } from '@/lib/tabela-nordeste'
 import { DocumentAiUploader } from '@/components/common/DocumentAiUploader'
 import type { DocumentAiResult } from '@/lib/types'
 import { StatusLabel } from './lead-status'
@@ -281,6 +282,18 @@ export function LeadDrawer({
             <Field label="CPF">{draft.cpf || '—'}</Field>
             <Field label="E-mail">{draft.email || '—'}</Field>
             <Field label="Cidade">{draft.cidade || '—'}</Field>
+            {(draft.ufDeclarada || draft.uf || draft.regiaoConfirmada) && (
+              <Field label="Estado">
+                {draft.ufDeclarada ? `${draft.ufDeclarada} na cotação` : 'Não informado na cotação'}
+                {draft.regiaoConfirmada?.status === 'conferir'
+                  ? ` · comprovante a conferir: ${draft.regiaoConfirmada.motivo}`
+                  : draft.regiaoConfirmada?.uf
+                    ? ` · ${draft.regiaoConfirmada.uf} no comprovante${draft.regiaoConfirmada.mudouPreco ? ' (o preço mudou)' : ''}`
+                    : draft.uf
+                      ? ` · ${draft.uf} no comprovante`
+                      : ''}
+              </Field>
+            )}
             {endereco && <Field label="Endereço">{endereco}</Field>}
             {assoc?.cnh && <Field label="CNH">{assoc.cnh}</Field>}
           </Section>
@@ -309,6 +322,16 @@ export function LeadDrawer({
           <Section title="Plano e pagamento">
             <Field label="Plano">{draft.planoEscolhidoNome}</Field>
             <Field label="Mensalidade">{brl(draft.mensalidadeFinal)}/mês</Field>
+            {draft.precoRegiao && (
+              <Field label="Preço">
+                {draft.tabelaNordeste
+                  ? `Tabela Nordeste: ${descreverTabela(draft.tabelaNordeste)}`
+                  : 'Nacional (CRM)'}
+                {draft.tabelaNordeste && draft.planoNacional && (
+                  <span className="text-muted"> · nacional {brl(draft.planoNacional.monthly)}</span>
+                )}
+              </Field>
+            )}
             <Field label="Adesão">
               {brl(draft.ativacao)}
               {draft.cupom ? ` (cupom ${draft.cupom.codigo}, de ${brl(draft.ativacaoOriginal ?? draft.ativacao)})` : ''}

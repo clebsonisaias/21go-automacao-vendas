@@ -6,8 +6,9 @@ import { rateLimit } from '@/lib/rate-limit'
 export const dynamic = 'force-dynamic'
 
 /**
- * POST { placa, usoApp?, leilao?, modelo? } → a mesma cotação do site (placa →
+ * POST { placa, usoApp?, leilao?, modelo?, uf?, telefone? } → a mesma cotação do site (placa →
  * veículo → planos), guardada aqui com um número curto para o chat contratar.
+ * `uf` = estado onde o cliente mora; sem ela, vale o DDD do `telefone` da conversa (Tabela Nordeste).
  * Placa com mais de um modelo devolve as opções (`escolherModelo`).
  */
 export async function POST(req: NextRequest) {
@@ -32,6 +33,8 @@ export async function POST(req: NextRequest) {
     usoApp: corpo?.usoApp === true,
     leilao: corpo?.leilao === true,
     modelo: typeof corpo?.modelo === 'string' ? corpo.modelo.trim().slice(0, 40) : '',
+    uf: typeof corpo?.uf === 'string' ? corpo.uf.slice(0, 40) : undefined,
+    telefone: typeof corpo?.telefone === 'string' ? corpo.telefone.slice(0, 20) : undefined,
   })
   return json(r.corpo, r.status)
 }

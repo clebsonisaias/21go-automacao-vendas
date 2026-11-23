@@ -1,4 +1,5 @@
 import { PlanPricing, VehicleInfo } from './types'
+import { precoNordeste } from './tabela-nordeste'
 
 // Coberturas oficiais de cada plano extraídas do bundle da 21Go
 export const PLAN_FEATURES: Record<string, string[]> = {
@@ -101,6 +102,9 @@ export function requiresPresencialInspection(vehicle: VehicleInfo): boolean {
   return patterns.some((regex) => regex.test(text))
 }
 
+/** Ordem dos planos para a adesão e para o plano comparado com a Tabela Nordeste. */
+export const PRIORIDADE_PLANOS = ['vip', 'suv', 'moto-1000', 'moto-400', 'especial', 'premium', 'do-seu-jeito', 'basico']
+
 /**
  * Calcula a taxa de ativação segundo a regra oficial da 21Go
  */
@@ -114,18 +118,8 @@ export function calculateActivationFee(
   }
 
   // Achar o primeiro plano prioritário disponível
-  const priorityOrder = [
-    'vip',
-    'suv',
-    'moto-1000',
-    'moto-400',
-    'especial',
-    'premium',
-    'do-seu-jeito',
-    'basico',
-  ]
   let priorityMonthly = planMonthly
-  for (const pid of priorityOrder) {
+  for (const pid of PRIORIDADE_PLANOS) {
     const found = allPlans.find((p) => p.id === pid)
     if (found) {
       priorityMonthly = found.monthly
@@ -207,6 +201,48 @@ export function enrichPlansWithRules(
       elegivelAdesivo,
       percentualAdesivo: percentualAdesivoReferencia,
       percentualPontualidade,
+    },
+  }
+}
+
+/**
+ * Plano único de quem mora no Nordeste: a mensalidade da Tabela Nordeste no lugar do preço do
+ * CRM, sem pontualidade nem adesivo por cima (a tabela é o preço final). Compara com o VIP do
+ * CRM, ou com o primeiro plano da ordem de prioridade; nome e coberturas são os desse plano,
+ * para o CRM achar o plano pelo nome. Sem faixa na tabela para o veículo, devolve null.
+ */
+export function montarPlanoNordeste(
+  vehicle: VehicleInfo,
+  plans: PlanPricing[],
+  uf: string,
+  tipo: 'carro' | 'moto',
+  utilitarios: string[]
+): PlanPricing | null {
+  const base = PRIORIDADE_PLANOS.map((id) => plans.find((p) => p.id === id)).find(Boolean) || plans[0]
+  if (!base) return null
+  const tabela = precoNordeste({ tipo, modelo: vehicle.modelo, fipe: vehicle.fipeValue }, utilitarios)
+  if (!tabela) return null
+  const mensalidade = tabela.mensalidade
+  const ativacao = calculateActivationFee(vehicle, mensalidade, [{ id: base.id, monthly: mensalidade }])
+  return {
+    id: base.id,
+    name: base.name,
+    monthly: mensalidade,
+    popular: true,
+    ativacao,
+    mensalidadeComPontualidade: mensalidade,
+    mensalidadeComAdesivo: mensalidade,
+    coberturas: base.coberturas,
+    precoNacional: base.monthly,
+    nordeste: {
+      uf,
+      tabela,
+      nacional: {
+        monthly: base.monthly,
+        pontualidade: base.mensalidadeComPontualidade,
+        adesivo: base.mensalidadeComAdesivo,
+        ativacao: base.ativacao,
+      },
     },
   }
 }

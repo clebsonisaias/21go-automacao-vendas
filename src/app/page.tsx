@@ -10,11 +10,13 @@ import {
   Check,
   CheckCircle2,
   ExternalLink,
+  Info,
   Search,
   X,
 } from 'lucide-react'
 import { PlanPricing, QuoteCalculationResult } from '@/lib/types'
 import { brl, money } from '@/lib/site'
+import { UFS } from '@/lib/tabela-nordeste'
 import {
   FloatingWhatsApp,
   SiteFooter,
@@ -89,6 +91,29 @@ export default function HomePage() {
   // FAQ Accordion
   const [openFaq, setOpenFaq] = useState<number | null>(null)
 
+  // Estado onde o cliente mora: no Nordeste a mensalidade sai pela Tabela Nordeste. Lembrado no aparelho.
+  const [uf, setUf] = useState('')
+  const [ufErro, setUfErro] = useState('')
+  useEffect(() => {
+    try {
+      const salvo = localStorage.getItem('21go-uf')
+      if (salvo && salvo in UFS) setUf(salvo)
+    } catch {}
+  }, [])
+  const escolherUf = (v: string) => {
+    setUf(v)
+    if (v) setUfErro('')
+    try {
+      localStorage.setItem('21go-uf', v)
+    } catch {}
+  }
+  const faltaUf = () => {
+    if (uf) return false
+    setUfErro('Escolha o estado onde você mora para ver o preço.')
+    document.getElementById('uf-select')?.focus()
+    return true
+  }
+
   // Carrega marcas e anos quando troca para manual
   useEffect(() => {
     if (searchMode === 'manual') {
@@ -157,6 +182,7 @@ export default function HomePage() {
       setPlateError('Digite a placa completa (7 caracteres).')
       return
     }
+    if (faltaUf()) return
 
     setIsSearchingPlate(true)
     setPlateError('')
@@ -184,6 +210,7 @@ export default function HomePage() {
           modelText: data.modelText,
           year: data.year,
           codFipe: data.codFipe,
+          uf,
         }),
       })
 
@@ -211,6 +238,7 @@ export default function HomePage() {
       setPlateError('Selecione a marca, o ano e o modelo.')
       return
     }
+    if (faltaUf()) return
 
     const brandObj = brands.find((b) => b.code === selectedBrand)
     const modelObj = models.find((m) => m.code === selectedModel)
@@ -233,6 +261,7 @@ export default function HomePage() {
           modelText: modelObj.name,
           year: selectedYear,
           codFipe: modelObj.codFipe,
+          uf,
         }),
       })
 
@@ -400,6 +429,41 @@ export default function HomePage() {
     `min-h-[44px] rounded-lg text-[15px] transition ${
       on ? 'bg-white font-bold text-navy-800 shadow-[0_1px_3px_rgba(26,39,84,0.15)]' : 'font-semibold text-muted'
     }`
+  const ufField = (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor="uf-select" className={labelCls}>
+        Estado onde você mora
+      </label>
+      <select
+        id="uf-select"
+        value={uf}
+        onChange={(e) => escolherUf(e.target.value)}
+        aria-required="true"
+        aria-invalid={ufErro ? true : undefined}
+        aria-describedby={ufErro ? 'uf-erro uf-ajuda' : 'uf-ajuda'}
+        className={`${inputCls} aria-[invalid=true]:border-red-700`}
+      >
+        <option value="">Selecione...</option>
+        {Object.entries(UFS)
+          .sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'))
+          .map(([sigla, nomeUf]) => (
+            <option key={sigla} value={sigla}>
+              {nomeUf}
+            </option>
+          ))}
+      </select>
+      {ufErro && (
+        <span id="uf-erro" className="flex items-start gap-1.5 text-sm font-semibold text-red-700">
+          <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
+          {ufErro}
+        </span>
+      )}
+      <span id="uf-ajuda" className="text-[13px] text-muted">
+        No Nordeste, a mensalidade sai pela Tabela Nordeste. O comprovante de residência confirma o estado.
+      </span>
+    </div>
+  )
+
   const ctaCls =
     'flex min-h-[54px] w-full items-center justify-center gap-2 rounded-lg bg-go-orange text-[17px] font-extrabold text-navy-950 transition hover:-translate-y-px hover:shadow-cta disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none'
 
@@ -500,6 +564,7 @@ export default function HomePage() {
                     </div>
                     <span className="text-[13px] text-muted">Padrão antigo ou Mercosul.</span>
                   </div>
+                  {ufField}
                   <button type="submit" disabled={busy} className={ctaCls}>
                     {busy ? spinner : 'Ver meu preço agora'}
                   </button>
@@ -569,6 +634,7 @@ export default function HomePage() {
                       </select>
                     </div>
                   </div>
+                  {ufField}
                   <button type="submit" disabled={isCalculating || !selectedModel} className={ctaCls}>
                     {isCalculating ? spinner : (<><Search aria-hidden className="h-5 w-5" />Ver meu preço agora</>)}
                   </button>
@@ -622,6 +688,14 @@ export default function HomePage() {
                 </div>
               </div>
 
+              {quoteResult.regiao?.tabela ? (
+                <div className="flex max-w-[380px] flex-col gap-1 rounded-xl border border-line bg-surface-50 px-[18px] py-3.5">
+                  <span className="text-xs font-bold tracking-[1.5px] text-muted">PREÇO DO NORDESTE</span>
+                  <p className="m-0 text-[15px] font-semibold">
+                    Tabela Nordeste para quem mora em {UFS[quoteResult.regiao.uf] ?? quoteResult.regiao.uf}. Já é o preço final.
+                  </p>
+                </div>
+              ) : (
               <fieldset className="m-0 flex flex-col gap-2.5 rounded-xl border border-line bg-surface-50 px-[18px] py-3.5">
                 <legend className="px-1.5 text-xs font-bold tracking-[1.5px] text-muted">SEUS DESCONTOS</legend>
                 {quoteResult.regras.elegivelAdesivo && (
@@ -650,6 +724,7 @@ export default function HomePage() {
                   </span>
                 </label>
               </fieldset>
+              )}
             </div>
 
             {quoteResult.regras.exigeVistoriaPresencial && (
@@ -661,14 +736,29 @@ export default function HomePage() {
               </div>
             )}
 
+            {quoteResult.regiao?.nordeste && !quoteResult.regiao.tabela && (
+              <div role="note" className="flex items-center gap-3 rounded-2xl border border-line bg-surface-50 p-4 text-sm">
+                <Info aria-hidden className="h-5 w-5 shrink-0 text-navy-600" />
+                <span>A FIPE deste veículo passa da Tabela Nordeste, então vale o preço nacional da 21Go.</span>
+              </div>
+            )}
+
             <div className="flex flex-col gap-1.5">
-              <h2 className="m-0 text-[28px] font-extrabold tracking-[-0.6px]">Escolha o seu plano</h2>
+              <h2 className="m-0 text-[28px] font-extrabold tracking-[-0.6px]">
+                {quoteResult.regiao?.tabela ? 'Seu plano' : 'Escolha o seu plano'}
+              </h2>
               <p className="m-0 text-base text-muted">
-                Valores oficiais da 21Go para este veículo. Sem fidelidade nem multa de cancelamento.
+                {quoteResult.regiao?.tabela
+                  ? `Preço da Tabela Nordeste para quem mora em ${UFS[quoteResult.regiao.uf] ?? quoteResult.regiao.uf}. Sem fidelidade nem multa de cancelamento.`
+                  : 'Valores oficiais da 21Go para este veículo. Sem fidelidade nem multa de cancelamento.'}
               </p>
             </div>
 
-            <div className="grid items-stretch gap-5 [grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))]">
+            <div
+              className={`grid items-stretch gap-5 [grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))] ${
+                quoteResult.regiao?.tabela ? 'max-w-[420px]' : ''
+              }`}
+            >
               {quoteResult.plans.map((plan) => {
                 const price = priceFor(plan)
                 const hasDiscount = price < plan.monthly
@@ -688,7 +778,7 @@ export default function HomePage() {
                         <h3 className="m-0 text-[21px] font-extrabold">{plan.name}</h3>
                         {pop && (
                           <span className="rounded-full bg-go-orange px-2.5 py-1 text-[11px] font-extrabold tracking-wider text-navy-950">
-                            MAIS ESCOLHIDO
+                            {plan.nordeste ? 'PREÇO DO NORDESTE' : 'MAIS ESCOLHIDO'}
                           </span>
                         )}
                       </div>
@@ -697,10 +787,21 @@ export default function HomePage() {
                         <span className="text-[42px] font-extrabold leading-none tracking-[-1.5px]">{money(price)}</span>
                         <span className={`text-sm ${muted}`}>/mês</span>
                       </div>
-                      {hasDiscount && (
-                        <span className={`text-sm ${muted}`}>
-                          Sem descontos: <s>R$ {money(plan.monthly)}</s>
-                        </span>
+                      {plan.precoNacional && plan.precoNacional > price ? (
+                        <>
+                          <span className={`text-sm ${muted}`}>
+                            Preço nacional: <s>R$ {money(plan.precoNacional)}</s>
+                          </span>
+                          <span className={`text-sm font-bold ${pop ? 'text-go-orange' : 'text-go-orange-dark'}`}>
+                            Economia de R$ {money(plan.precoNacional - price)} por mês
+                          </span>
+                        </>
+                      ) : (
+                        hasDiscount && (
+                          <span className={`text-sm ${muted}`}>
+                            Sem descontos: <s>R$ {money(plan.monthly)}</s>
+                          </span>
+                        )
                       )}
                       <span className={`text-sm ${muted}`}>
                         Ativação no Pix: <strong>{brl(plan.ativacao)}</strong>
@@ -909,7 +1010,12 @@ export default function HomePage() {
                     {quoteResult.vehicle.marca} {quoteResult.vehicle.modelo} ({quoteResult.vehicle.ano})
                   </dd>
                   <dt className="text-muted-soft">Mensalidade</dt>
-                  <dd className="m-0 text-right font-bold">R$ {money(priceFor(selectedPlan))}/mês</dd>
+                  <dd className="m-0 text-right font-bold">
+                    {selectedPlan.precoNacional && selectedPlan.precoNacional > priceFor(selectedPlan) && (
+                      <s className="block font-normal text-muted-soft">R$ {money(selectedPlan.precoNacional)}</s>
+                    )}
+                    <span className="whitespace-nowrap">R$ {money(priceFor(selectedPlan))}/mês</span>
+                  </dd>
                   <dt className="text-muted-soft">Ativação (uma vez, no Pix)</dt>
                   <dd className="m-0 text-right">
                     {cupomInfo ? (

@@ -5,6 +5,7 @@ import { MAX_FILE_BYTES, VISTORIA_SLOTS, VistoriaSlot, saveVistoriaFile, sniffTy
 import { sendTelegramNotification, esc } from '@/lib/telegram'
 import { sendWhatsAppVistoriaConfirmation } from '@/lib/citchat'
 import { gerarLinkVistoria } from '@/lib/crm-vistoria'
+import { conferirRegiao } from '@/lib/regiao-comprovante'
 
 /**
  * Documentos do cadastro (CNH ou RG, CRLV e comprovante de residência), iguais para a
@@ -158,5 +159,9 @@ export async function concluirDocumentos(
 
   // Gera o link da vistoria no CRM 21Go em segundo plano; quem acompanha vê quando sair.
   void gerarLinkVistoria(lead.ref)
+  // O comprovante confirma o estado e, com ele, o preço (Tabela Nordeste ou nacional).
+  void conferirRegiao(lead.ref).catch((e: unknown) =>
+    console.error('[regiao] conferência do comprovante falhou:', e instanceof Error ? e.message : e)
+  )
   return { ok: true }
 }
