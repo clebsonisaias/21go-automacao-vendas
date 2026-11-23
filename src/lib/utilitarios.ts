@@ -4,7 +4,7 @@ import { DATA_DIR } from '@/lib/db'
 import { UTILITARIOS_PADRAO, normalizarModelo } from '@/lib/tabela-nordeste'
 
 /**
- * Lista de modelos que usam a tabela de utilitário no Nordeste (picapes médias e grandes e
+ * Lista de modelos que usam a faixa de utilitário da tabela regional (picapes médias e grandes e
  * SUVs), editada no /admin. Sem arquivo ainda, vale a lista inicial do código.
  */
 

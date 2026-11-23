@@ -1,4 +1,5 @@
-import { StoredLead, updateLead } from './db'
+import { StoredLead, findLeadByRef, updateLead } from './db'
+import { liberarPixDaRegiao } from './regiao-comprovante'
 import { sendWhatsAppAdesaoLiberada, sendWhatsAppVistoriaAprovada } from './citchat'
 import { absolute, pagamentoPath } from './links'
 import { esc, sendTelegramNotification } from './telegram'
@@ -15,6 +16,16 @@ export async function aprovarVistoria(
   lead: StoredLead,
   origem: OrigemAprovacao
 ): Promise<{ ok: boolean; lead?: StoredLead; whatsappEnviado?: boolean; message: string }> {
+  // Preço da tabela regional (RN, PB, CE) só segue com o estado confirmado pelo comprovante:
+  // sem isso, o Pix fica segurado até a equipe decidir no /admin (avisada uma vez).
+  if (lead.status === 'vistoria_enviada') {
+    const regiao = await liberarPixDaRegiao(lead.ref)
+    if (!regiao.ok) {
+      return { ok: false, message: `Pix segurado: ${regiao.motivo}. Decida o preço no cadastro e aprove de novo.` }
+    }
+    lead = findLeadByRef(lead.ref) ?? lead
+  }
+
   // Decide pelo cadastro do momento da gravação (um cupom pode ter entrado agora mesmo).
   // Adesão zerada por cupom (100%): não existe Pix de R$ 0; vale como paga na aprovação.
   let adesaoGratis = false

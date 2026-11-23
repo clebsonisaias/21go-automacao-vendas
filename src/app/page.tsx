@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   AlertTriangle,
@@ -16,7 +16,8 @@ import {
 } from 'lucide-react'
 import { PlanPricing, QuoteCalculationResult } from '@/lib/types'
 import { brl, money } from '@/lib/site'
-import { UFS } from '@/lib/tabela-nordeste'
+import { UFS, estadoPelaPosicao } from '@/lib/tabela-nordeste'
+import { CONTORNOS } from '@/lib/contornos-tabela'
 import {
   FloatingWhatsApp,
   SiteFooter,
@@ -91,17 +92,40 @@ export default function HomePage() {
   // FAQ Accordion
   const [openFaq, setOpenFaq] = useState<number | null>(null)
 
-  // Estado onde o cliente mora: no Nordeste a mensalidade sai pela Tabela Nordeste. Lembrado no aparelho.
+  // Estado onde o cliente mora: no RN, na PB e no CE a mensalidade sai pela tabela regional.
+  // Lembrado no aparelho; sem ele, pede a localização ao abrir e preenche só se a pessoa estiver
+  // num desses três estados (a conta é feita aqui no aparelho: a localização não sai dele).
   const [uf, setUf] = useState('')
   const [ufErro, setUfErro] = useState('')
+  const [ufPelaLocalizacao, setUfPelaLocalizacao] = useState(false)
+  const ufAtual = useRef('')
+  useEffect(() => {
+    ufAtual.current = uf
+  }, [uf])
   useEffect(() => {
     try {
       const salvo = localStorage.getItem('21go-uf')
-      if (salvo && salvo in UFS) setUf(salvo)
+      if (salvo && salvo in UFS) {
+        setUf(salvo)
+        return
+      }
     } catch {}
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const achado = estadoPelaPosicao(pos.coords.latitude, pos.coords.longitude, CONTORNOS)
+        // Quem já escolheu o estado enquanto a localização chegava não é atropelado.
+        if (!achado || ufAtual.current) return
+        setUf(achado)
+        setUfPelaLocalizacao(true)
+      },
+      () => {},
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 10 * 60 * 1000 }
+    )
   }, [])
   const escolherUf = (v: string) => {
     setUf(v)
+    setUfPelaLocalizacao(false)
     if (v) setUfErro('')
     try {
       localStorage.setItem('21go-uf', v)
@@ -459,7 +483,9 @@ export default function HomePage() {
         </span>
       )}
       <span id="uf-ajuda" className="text-[13px] text-muted">
-        No Nordeste, a mensalidade sai pela Tabela Nordeste. O comprovante de residência confirma o estado.
+        {ufPelaLocalizacao ? 'Preenchido pela sua localização: troque se você mora em outro estado. ' : ''}
+        No Rio Grande do Norte, na Paraíba e no Ceará, a mensalidade sai pela tabela regional. O comprovante de residência
+        confirma o estado.
       </span>
     </div>
   )
@@ -690,9 +716,9 @@ export default function HomePage() {
 
               {quoteResult.regiao?.tabela ? (
                 <div className="flex max-w-[380px] flex-col gap-1 rounded-xl border border-line bg-surface-50 px-[18px] py-3.5">
-                  <span className="text-xs font-bold tracking-[1.5px] text-muted">PREÇO DO NORDESTE</span>
+                  <span className="text-xs font-bold tracking-[1.5px] text-muted">PREÇO REGIONAL</span>
                   <p className="m-0 text-[15px] font-semibold">
-                    Tabela Nordeste para quem mora em {UFS[quoteResult.regiao.uf] ?? quoteResult.regiao.uf}. Já é o preço final.
+                    Tabela regional para quem mora em {UFS[quoteResult.regiao.uf] ?? quoteResult.regiao.uf}. Já é o preço final.
                   </p>
                 </div>
               ) : (
@@ -736,10 +762,10 @@ export default function HomePage() {
               </div>
             )}
 
-            {quoteResult.regiao?.nordeste && !quoteResult.regiao.tabela && (
+            {quoteResult.regiao?.regional && !quoteResult.regiao.tabela && (
               <div role="note" className="flex items-center gap-3 rounded-2xl border border-line bg-surface-50 p-4 text-sm">
                 <Info aria-hidden className="h-5 w-5 shrink-0 text-navy-600" />
-                <span>A FIPE deste veículo passa da Tabela Nordeste, então vale o preço nacional da 21Go.</span>
+                <span>A FIPE deste veículo passa da tabela regional, então vale o preço nacional da 21Go.</span>
               </div>
             )}
 
@@ -749,7 +775,7 @@ export default function HomePage() {
               </h2>
               <p className="m-0 text-base text-muted">
                 {quoteResult.regiao?.tabela
-                  ? `Preço da Tabela Nordeste para quem mora em ${UFS[quoteResult.regiao.uf] ?? quoteResult.regiao.uf}. Sem fidelidade nem multa de cancelamento.`
+                  ? `Preço da tabela regional para quem mora em ${UFS[quoteResult.regiao.uf] ?? quoteResult.regiao.uf}. Sem fidelidade nem multa de cancelamento.`
                   : 'Valores oficiais da 21Go para este veículo. Sem fidelidade nem multa de cancelamento.'}
               </p>
             </div>
@@ -778,7 +804,7 @@ export default function HomePage() {
                         <h3 className="m-0 text-[21px] font-extrabold">{plan.name}</h3>
                         {pop && (
                           <span className="rounded-full bg-go-orange px-2.5 py-1 text-[11px] font-extrabold tracking-wider text-navy-950">
-                            {plan.nordeste ? 'PREÇO DO NORDESTE' : 'MAIS ESCOLHIDO'}
+                            {plan.regional ? 'PREÇO REGIONAL' : 'MAIS ESCOLHIDO'}
                           </span>
                         )}
                       </div>

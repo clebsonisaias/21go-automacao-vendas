@@ -74,11 +74,13 @@ export function aplicarCotacao(payload: LeadSubmissionPayload): string | null {
   // Região e preço regional só vêm do token, nunca do pedido.
   delete payload.ufDeclarada
   delete payload.tabelaNordeste
+  delete payload.planoBaseId
   payload.estado = verified.uf
   if (verified.uf) payload.ufDeclarada = verified.uf
-  const ne = verified.plan.nordeste
+  if (verified.base) payload.planoBaseId = verified.base
+  const ne = verified.plan.regional
   if (ne) {
-    payload.precoRegiao = 'nordeste'
+    payload.precoRegiao = 'regional'
     payload.tabelaNordeste = ne.tabela
     payload.planoNacional = ne.nacional
     // A tabela é o preço final: não há desconto do adesivo por cima.

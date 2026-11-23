@@ -39,12 +39,28 @@ export interface StoredLead {
   /** UF que o cliente informou na cotação. */
   ufDeclarada?: string
   /** Preço da Tabela Nordeste ou o nacional (do CRM); ver preco-regional.ts. */
-  precoRegiao?: 'nordeste' | 'nacional'
+  precoRegiao?: 'regional' | 'nacional'
   tabelaNordeste?: PrecoNordeste
-  /** Valores do plano no CRM, para voltar a eles se o comprovante for de fora do Nordeste. */
+  /** Valores do plano no CRM, para voltar a eles se o comprovante for de fora da região da tabela. */
   planoNacional?: PlanoNacional
   /** Região conferida pelo comprovante (leitura feita no servidor). */
-  regiaoConfirmada?: { status: 'nordeste' | 'fora' | 'conferir'; uf?: string; motivo?: string; em: string; mudouPreco?: boolean; sha256?: string }
+  regiaoConfirmada?: {
+    status: 'regional' | 'fora' | 'conferir'
+    uf?: string
+    motivo?: string
+    em: string
+    mudouPreco?: boolean
+    /** Comprovante conferido (o mesmo arquivo não é conferido de novo). Vazio = falha técnica, tenta de novo. */
+    sha256?: string
+    /** Releitura antes de liberar o Pix (uma vez). */
+    releituraEm?: string
+    /** Pix segurado por falta de confirmação do estado (aviso à equipe uma vez). */
+    pixSeguradoEm?: string
+    /** Decidido pela equipe no /admin. */
+    porEquipe?: boolean
+  }
+  /** Plano que a tabela substitui nesta cotação (ver quote-token.ts). */
+  planoBaseId?: string
   /** Endereço do comprovante lido no servidor (o sha256 diz de qual arquivo). */
   comprovanteLido?: { sha256: string; uf?: string; cep?: string; em: string }
   veiculoTrabalho?: boolean
@@ -199,6 +215,7 @@ export function saveNewLead(
     ...(payload.precoRegiao ? { precoRegiao: payload.precoRegiao } : {}),
     ...(payload.tabelaNordeste ? { tabelaNordeste: payload.tabelaNordeste } : {}),
     ...(payload.planoNacional ? { planoNacional: payload.planoNacional } : {}),
+    ...(payload.planoBaseId ? { planoBaseId: payload.planoBaseId } : {}),
     veiculoTrabalho: payload.veiculoTrabalho,
     placa: payload.placa || payload.vehicle.placa,
     planoEscolhidoId: payload.planoEscolhidoId,

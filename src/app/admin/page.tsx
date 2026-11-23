@@ -19,7 +19,7 @@ type Tab = 'cadastros' | 'cupons' | 'nordeste' | 'instagram' | 'lucro' | 'hinova
 const TABS: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: 'cadastros', label: 'Cadastros', icon: Users },
   { id: 'cupons', label: 'Cupons', icon: TicketPercent },
-  { id: 'nordeste', label: 'Tabela Nordeste', icon: MapPin },
+  { id: 'nordeste', label: 'Tabela regional', icon: MapPin },
   { id: 'instagram', label: 'Instagram', icon: Camera },
   { id: 'lucro', label: 'Simulador de lucro', icon: Calculator },
   { id: 'hinova', label: 'Consulta Hinova', icon: FileText },

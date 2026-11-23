@@ -5,14 +5,16 @@ import {
   TABELAS_NORDESTE,
   categoriaNordeste,
   cilindrada,
-  ehNordeste,
   ehUtilitario,
+  estadoPelaPosicao,
+  naRegiaoDaTabela,
   normalizarUf,
   precoNordeste,
   regiaoDoComprovante,
   ufDoCep,
   ufDoDdd,
 } from '../src/lib/tabela-nordeste.ts'
+import { CONTORNOS } from '../src/lib/contornos-tabela.ts'
 
 /** Transcrito à parte, linha por linha, do PDF (FIPE até → total da mensalidade). */
 const PDF: Record<string, [number, number][]> = {
@@ -81,10 +83,16 @@ test('categoria pelo modelo', () => {
   assert.equal(categoriaNordeste(moto('XRE 300/ XRE 300 RALLY', 25000)), 'moto')
   assert.equal(categoriaNordeste(moto('CG 160 FAN ESDi', 14000)), 'moto')
   assert.equal(categoriaNordeste(moto('MT-07 689cc', 45000)), 'moto_especial')
-  assert.equal(categoriaNordeste(moto('Sem número', 25000)), 'moto')
+  assert.equal(categoriaNordeste(moto('Sem número', 18000)), 'moto')
+  assert.equal(categoriaNordeste(moto('MT-03 ABS', 24000)), 'moto_especial', 'sem cilindrada e FIPE acima de 20 mil: especial')
   assert.equal(categoriaNordeste(moto('Sem número', 35000)), 'moto_especial')
+  assert.equal(categoriaNordeste({ ...moto('FAT BOY 114', 25000), marca: 'HARLEY-DAVIDSON' }), 'moto_especial')
   assert.equal(cilindrada('S 1000 RR'), 1000)
+  assert.equal(cilindrada('CBR 1.000RR'), 1000)
   assert.equal(cilindrada('MT-03'), null)
+  assert.equal(ehUtilitario('HRV EXL 1.8'), 'HR-V', 'sem hífen também casa')
+  assert.equal(ehUtilitario('X-TRAIL SL 2.5'), 'X-Trail')
+  assert.equal(ehUtilitario('ix35 GLS 2.0'), 'ix35')
 })
 
 test('UF, DDD e CEP', () => {
@@ -92,8 +100,9 @@ test('UF, DDD e CEP', () => {
   assert.equal(normalizarUf('Rio Grande do Norte'), 'RN')
   assert.equal(normalizarUf('Ceará'), 'CE')
   assert.equal(normalizarUf('XX'), null)
-  assert.ok(ehNordeste('PE'))
-  assert.ok(!ehNordeste('RJ'))
+  assert.ok(naRegiaoDaTabela('RN') && naRegiaoDaTabela('pb') && naRegiaoDaTabela('Ceará'))
+  assert.ok(!naRegiaoDaTabela('PE'), 'Pernambuco não cola no RN: preço do CRM')
+  assert.ok(!naRegiaoDaTabela('BA') && !naRegiaoDaTabela('RJ'))
   assert.equal(ufDoDdd('84999990000'), 'RN')
   assert.equal(ufDoDdd('+55 (21) 99999-0000'), 'RJ')
   assert.equal(ufDoDdd('5598988887777'), 'MA')
@@ -105,10 +114,28 @@ test('UF, DDD e CEP', () => {
 })
 
 test('região pelo comprovante', () => {
-  assert.deepEqual(regiaoDoComprovante({ uf: 'RN', cep: '59280-000' }), { status: 'nordeste', uf: 'RN' })
+  assert.deepEqual(regiaoDoComprovante({ uf: 'RN', cep: '59280-000' }), { status: 'regional', uf: 'RN' })
+  assert.deepEqual(regiaoDoComprovante({ uf: 'PE', cep: '50030-000' }), { status: 'fora', uf: 'PE' })
   assert.deepEqual(regiaoDoComprovante({ uf: 'RJ', cep: '22041-001' }), { status: 'fora', uf: 'RJ' })
   assert.equal(regiaoDoComprovante({ uf: 'RN', cep: '22041-001' }).status, 'conferir')
   assert.equal(regiaoDoComprovante({ uf: 'RN' }).status, 'conferir')
   assert.equal(regiaoDoComprovante({ cep: '59280-000' }).status, 'conferir')
   assert.equal(regiaoDoComprovante(null).status, 'conferir')
+})
+
+test('estado pela localização (só RN, PB e CE)', () => {
+  const casos: [string, number, number, string | null][] = [
+    ['Natal', -5.79, -35.21, 'RN'],
+    ['Mossoró', -5.19, -37.34, 'RN'],
+    ['Macaíba', -5.86, -35.35, 'RN'],
+    ['João Pessoa', -7.12, -34.86, 'PB'],
+    ['Campina Grande', -7.23, -35.88, 'PB'],
+    ['Fortaleza', -3.73, -38.52, 'CE'],
+    ['Juazeiro do Norte', -7.21, -39.31, 'CE'],
+    ['Recife', -8.05, -34.9, null],
+    ['Teresina', -5.09, -42.8, null],
+    ['Rio de Janeiro', -22.9, -43.2, null],
+  ]
+  for (const [nome, lat, lng, uf] of casos) assert.equal(estadoPelaPosicao(lat, lng, CONTORNOS), uf, nome)
+  assert.equal(estadoPelaPosicao(NaN, 1, CONTORNOS), null)
 })

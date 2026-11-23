@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Loader2, Plus } from 'lucide-react'
 import { NOMES_CATEGORIA, type CategoriaNordeste, type FaixaNordeste } from '@/lib/tabela-nordeste'
 
-// Aba "Tabela Nordeste" do /admin (padrão Configuração): as faixas da tabela (só leitura) e a lista de
+// Aba "Tabela regional" do /admin (padrão Configuração): as faixas da tabela (só leitura) e a lista de
 // modelos que usam a tabela de utilitário, que a equipe acrescenta e tira.
 // A regra fica no servidor (src/lib/tabela-nordeste.ts, preco-regional.ts e regiao-comprovante.ts).
 
@@ -129,10 +129,11 @@ export function TabelaNordestePanel() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="m-0 text-2xl font-semibold tracking-tight text-navy-900">Tabela Nordeste</h1>
+        <h1 className="m-0 text-2xl font-semibold tracking-tight text-navy-900">Tabela regional</h1>
         <p className="m-0 mt-1 max-w-[70ch] text-sm text-muted">
-          Quem informa um estado do Nordeste na cotação paga a mensalidade desta tabela, pela faixa da FIPE, no lugar do
-          preço do CRM. O comprovante de residência confirma o estado. FIPE acima da última faixa fica com o preço do CRM.
+          Quem mora no Rio Grande do Norte, na Paraíba ou no Ceará paga a mensalidade desta tabela, pela faixa da FIPE, no
+          lugar do preço do CRM; o resto do Brasil paga o preço do CRM. O comprovante de residência confirma o estado, e
+          FIPE acima da última faixa fica com o preço do CRM.
         </p>
       </div>
 
@@ -243,7 +244,7 @@ export function TabelaNordestePanel() {
 
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
-            <caption className="sr-only">Tabela Nordeste: {NOMES_CATEGORIA[categoria]}</caption>
+            <caption className="sr-only">Tabela regional: {NOMES_CATEGORIA[categoria]}</caption>
             <thead>
               <tr className="border-b border-line text-left text-xs font-semibold uppercase tracking-wide text-muted">
                 <th scope="col" className="px-2 py-2 sm:px-3">Cota</th>

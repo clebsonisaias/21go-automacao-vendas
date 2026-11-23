@@ -10,8 +10,8 @@ export interface PlanoNacional {
   ativacao: number
 }
 
-/** Plano com o preço da Tabela Nordeste (ver tabela-nordeste.ts e preco-regional.ts). */
-export interface PlanoNordeste {
+/** Plano com o preço da Tabela Nordeste, para quem mora onde ela vale (ver preco-regional.ts). */
+export interface PlanoRegional {
   uf: string
   tabela: PrecoNordeste
   nacional: PlanoNacional
@@ -39,7 +39,7 @@ export interface PlanPricing {
   coberturas: string[]
   /** Mensalidade do mesmo plano no CRM, quando este plano tem o preço da Tabela Nordeste. */
   precoNacional?: number
-  nordeste?: PlanoNordeste
+  regional?: PlanoRegional
 }
 
 export interface QuoteCalculationResult {
@@ -57,8 +57,8 @@ export interface QuoteCalculationResult {
     percentualAdesivo: number
     percentualPontualidade: number
   }
-  /** Estado informado na cotação; `tabela` = os planos foram trocados pelo da Tabela Nordeste. */
-  regiao?: { uf: string; nordeste: boolean; tabela: boolean }
+  /** Estado informado na cotação; `regional` = a tabela vale lá; `tabela` = os planos foram trocados pelo da tabela. */
+  regiao?: { uf: string; regional: boolean; tabela: boolean }
   /** Assinado pelo servidor; reenviado no cadastro para o servidor fixar os valores cobrados. */
   quoteToken?: string
   error?: string
@@ -101,9 +101,11 @@ export interface LeadSubmissionPayload {
   }
   /** Daqui para baixo, só o servidor preenche (em `aplicarCotacao`, a partir do token). */
   ufDeclarada?: string
-  precoRegiao?: 'nordeste' | 'nacional'
+  precoRegiao?: 'regional' | 'nacional'
   tabelaNordeste?: PrecoNordeste
   planoNacional?: PlanoNacional
+  /** Plano que a tabela substitui nesta cotação (o comprovante só troca o preço sozinho nele). */
+  planoBaseId?: string
 }
 
 export type ExtractedDocType = 'cnh' | 'crlv' | 'comprovante_residencia' | 'desconhecido'

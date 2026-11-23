@@ -1,5 +1,6 @@
 import crypto from 'node:crypto'
-import { PlanPricing, PlanoNordeste, VehicleInfo } from './types'
+import { PlanPricing, PlanoRegional, VehicleInfo } from './types'
+import { planoBase } from './pricing'
 
 // Token assinado devolvido pela cotação. O navegador o reenvia no cadastro, e o servidor
 // usa os valores que ELE mesmo calculou (taxa de adesão, mensalidades). Sem isso, qualquer
@@ -15,7 +16,7 @@ interface QuotePlanSnapshot {
   ad: number
   n: string
   /** Plano com o preço da Tabela Nordeste: faixa e valores do CRM (para voltar a eles). */
-  ne?: PlanoNordeste
+  ne?: PlanoRegional
 }
 
 type PowercrmMeta = { brandId: number | string; modelId: number | string; yearId: number | string }
@@ -30,6 +31,8 @@ interface QuoteTokenPayload {
   meta?: PowercrmMeta
   /** Estado que o cliente informou na cotação. */
   uf?: string
+  /** Plano que a Tabela Nordeste substitui (o comprovante só troca o preço sozinho nesse plano). */
+  base?: string
 }
 
 // Reserva: se nenhuma variável foi definida, usa um segredo aleatório gerado na subida do servidor.
@@ -67,6 +70,7 @@ export function createQuoteToken(vehicle: VehicleInfo, plans: PlanPricing[], met
     },
     meta,
     ...(uf ? { uf } : {}),
+    ...(planoBase(plans) ? { base: planoBase(plans)!.id } : {}),
     plans: Object.fromEntries(
       plans.map((p) => [
         p.id,
@@ -76,7 +80,7 @@ export function createQuoteToken(vehicle: VehicleInfo, plans: PlanPricing[], met
           a: p.mensalidadeComAdesivo,
           ad: p.ativacao,
           n: p.name,
-          ...(p.nordeste ? { ne: p.nordeste } : {}),
+          ...(p.regional ? { ne: p.regional } : {}),
         },
       ])
     ),
@@ -90,6 +94,7 @@ export interface VerifiedQuote {
   vehicle?: VehicleInfo
   meta?: PowercrmMeta
   uf?: string
+  base?: string
   plan: {
     id: string
     name: string
@@ -97,7 +102,7 @@ export interface VerifiedQuote {
     pontualidade: number
     adesivo: number
     ativacao: number
-    nordeste?: PlanoNordeste
+    regional?: PlanoRegional
   }
 }
 
@@ -121,6 +126,7 @@ export function verifyQuoteToken(token: unknown, planId: string): VerifiedQuote 
       vehicle: payload.veh,
       meta: payload.meta,
       uf: payload.uf,
+      base: payload.base,
       plan: {
         id: planId,
         name: plan.n,
@@ -128,7 +134,7 @@ export function verifyQuoteToken(token: unknown, planId: string): VerifiedQuote 
         pontualidade: plan.p,
         adesivo: plan.a,
         ativacao: plan.ad,
-        ...(plan.ne ? { nordeste: plan.ne } : {}),
+        ...(plan.ne ? { regional: plan.ne } : {}),
       },
     }
   } catch {

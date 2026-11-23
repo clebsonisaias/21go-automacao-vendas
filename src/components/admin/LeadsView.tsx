@@ -508,9 +508,9 @@ export function LeadsView() {
                     <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
                       <div className="text-navy-900">
                         {brl(lead.mensalidadeFinal)}
-                        {lead.precoRegiao === 'nordeste' && (
-                          <abbr title="Tabela Nordeste" className="ml-1.5 text-xs font-semibold text-muted no-underline">
-                            NE
+                        {lead.precoRegiao === 'regional' && (
+                          <abbr title="Tabela regional (RN, PB e CE)" className="ml-1.5 text-xs font-semibold text-muted no-underline">
+                            Reg.
                           </abbr>
                         )}
                       </div>

@@ -1,8 +1,10 @@
 /**
- * Tabela Nordeste MT Motors 2025: mensalidade de quem mora no Nordeste.
+ * Tabela Nordeste MT Motors 2025: mensalidade da regional Rio Grande do Norte.
  *
- * Quem mora no Nordeste paga a mensalidade desta tabela (faixa da FIPE + tipo do veículo), no
- * lugar do preço do CRM. Quem mora fora paga o preço do CRM, como sempre. Valores transcritos
+ * Quem mora no Rio Grande do Norte ou nos estados colados a ele (Paraíba e Ceará) paga a
+ * mensalidade desta tabela (faixa da FIPE + tipo do veículo), no lugar do preço do CRM. O resto
+ * do Brasil, inclusive os outros estados do Nordeste, paga o preço do CRM (decisão do Clebson,
+ * 23/11/2026). No código, "regional" = estado onde a tabela vale. Valores transcritos
  * do PDF "Tabela Nordeste MT Motors 2025" (coluna "Valor total mensalidade"); o teste
  * `tests/tabela-nordeste.test.mts` confere cada linha.
  *
@@ -170,6 +172,26 @@ export const UTILITARIOS_PADRAO: string[] = [
   '3008',
   'C4 Cactus',
   'Aircross',
+  'ix35',
+  'Grand Cherokee',
+  'Wrangler',
+  'X-Trail',
+  'Koleos',
+  'Vitara',
+  'Forester',
+  'XC60',
+  'XC40',
+  'Q3',
+  'Q5',
+  'X1',
+  'X3',
+  'GLA',
+  'Evoque',
+  '5008',
+  'Haval',
+  'Song',
+  'Jimny',
+  'Discovery',
 ]
 
 /** Maiúsculas, sem acento, espaços simples: para comparar nomes de modelo. */
@@ -186,18 +208,21 @@ const escapar = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 /** O modelo casa com um item da lista como palavra inteira ("RAM" não casa com "RAMPAGE"). */
 export function ehUtilitario(modelo: string, lista: string[] = UTILITARIOS_PADRAO): string | null {
-  const m = normalizarModelo(modelo)
+  // Sem hífen dos dois lados: "HRV" casa com "HR-V", "X-Trail" com "XTRAIL".
+  const semHifen = (v: unknown) => normalizarModelo(v).replace(/-/g, '')
+  const m = semHifen(modelo)
   if (!m) return null
   for (const item of lista) {
-    const n = normalizarModelo(item)
+    const n = semHifen(item)
     if (n && new RegExp(`(^|[^A-Z0-9])${escapar(n)}([^A-Z0-9]|$)`).test(m)) return item
   }
   return null
 }
 
-/** Cilindrada lida no nome da moto ("CB 500F", "MT-07 689cc", "S 1000 RR"), ou null. */
+/** Cilindrada lida no nome da moto ("CB 500F", "MT-07 689cc", "S 1000 RR", "CBR 1.000RR"), ou null. */
 export function cilindrada(modelo: string): number | null {
-  const m = normalizarModelo(modelo)
+  // "1.000" é mil, não 1 seguido de 000.
+  const m = normalizarModelo(modelo).replace(/\b(\d)\.(\d{3})(?!\d)/g, '$1$2')
   const cc = m.match(/(\d{2,4})\s*CC\b/)
   if (cc) return Number(cc[1])
   for (const x of m.matchAll(/(?:^|[^\d.,])(\d{3,4})(?![\d.,])/g)) {
@@ -211,13 +236,21 @@ export interface VeiculoParaTabela {
   tipo: 'carro' | 'moto'
   modelo: string
   fipe: number
+  /** Marca, quando se sabe: Harley-Davidson é sempre acima de 300 cc (o número no nome é polegada cúbica). */
+  marca?: string
 }
 
+/**
+ * Moto acima de 300 cc usa a tabela de moto especial (que começa em FIPE de R$ 20 mil). Sem a
+ * cilindrada no nome ("MT-03", "XJ6 N"), moto de FIPE acima de R$ 20 mil vai para a especial:
+ * na dúvida, a faixa mais alta (o comprovante e a vistoria não conferem cilindrada).
+ */
 export function categoriaNordeste(v: VeiculoParaTabela, utilitarios: string[] = UTILITARIOS_PADRAO): CategoriaNordeste {
   if (v.tipo === 'moto') {
+    if (/HARLEY/.test(normalizarModelo(v.marca))) return 'moto_especial'
     const cc = cilindrada(v.modelo)
     if (cc !== null) return cc > 300 ? 'moto_especial' : 'moto'
-    return v.fipe > 30_000 ? 'moto_especial' : 'moto'
+    return v.fipe > 20_000 ? 'moto_especial' : 'moto'
   }
   return ehUtilitario(v.modelo, utilitarios) ? 'utilitario' : 'passeio'
 }
@@ -242,7 +275,9 @@ export function precoNordeste(v: VeiculoParaTabela, utilitarios: string[] = UTIL
 
 // ---------- Estados, DDD e CEP ----------
 
-export const NORDESTE_UFS = ['MA', 'PI', 'CE', 'RN', 'PB', 'PE', 'AL', 'SE', 'BA'] as const
+/** Estados onde a tabela vale: o Rio Grande do Norte e os colados a ele. */
+export const UFS_DA_TABELA = ['RN', 'PB', 'CE'] as const
+export const ESTADOS_DA_TABELA = 'Rio Grande do Norte, Paraíba e Ceará'
 
 export const UFS: Record<string, string> = {
   AC: 'Acre',
@@ -283,9 +318,9 @@ export function normalizarUf(v: unknown): string | null {
   return null
 }
 
-export function ehNordeste(uf: unknown): boolean {
+export function naRegiaoDaTabela(uf: unknown): boolean {
   const u = normalizarUf(uf)
-  return !!u && (NORDESTE_UFS as readonly string[]).includes(u)
+  return !!u && (UFS_DA_TABELA as readonly string[]).includes(u)
 }
 
 const DDD_UF: Record<string, string> = {}
@@ -370,7 +405,7 @@ export function ufDoCep(cep: unknown): string | null {
 }
 
 export type RegiaoDoComprovante =
-  | { status: 'nordeste' | 'fora'; uf: string }
+  | { status: 'regional' | 'fora'; uf: string }
   | { status: 'conferir'; motivo: string }
 
 /**
@@ -384,7 +419,7 @@ export function regiaoDoComprovante(endereco: { uf?: unknown; cep?: unknown } | 
   if (!uf) return { status: 'conferir', motivo: `não deu para ler o estado do comprovante (CEP de ${ufCep})` }
   if (!ufCep) return { status: 'conferir', motivo: `não deu para ler o CEP do comprovante (estado ${uf})` }
   if (uf !== ufCep) return { status: 'conferir', motivo: `o estado do comprovante (${uf}) não bate com o CEP (${ufCep})` }
-  return { status: ehNordeste(uf) ? 'nordeste' : 'fora', uf }
+  return { status: naRegiaoDaTabela(uf) ? 'regional' : 'fora', uf }
 }
 
 // ---------- Textos ----------
@@ -399,4 +434,33 @@ export function descreverTabela(t: PrecoNordeste): string {
 /** Linha da observação do CRM e do Telegram: tabela, estado e o preço nacional que ela substitui. */
 export function linhaTabelaNordeste(t: PrecoNordeste, uf: string | undefined, nacional?: number): string {
   return `${FONTE_TABELA}${uf ? ` (${uf})` : ''}: ${descreverTabela(t)}${nacional ? ` (preço nacional ${brl(nacional)})` : ''}`
+}
+
+// ---------- Estado pela localização ----------
+
+/** O ponto (longitude, latitude) está dentro do polígono? (raio que cruza as arestas) */
+function dentro(lng: number, lat: number, anel: [number, number][]): boolean {
+  let d = false
+  for (let i = 0, j = anel.length - 1; i < anel.length; j = i++) {
+    const [xi, yi] = anel[i]
+    const [xj, yj] = anel[j]
+    if (yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) d = !d
+  }
+  return d
+}
+
+/**
+ * Estado onde a tabela vale (RN, PB ou CE) em que está a localização, ou null (fora deles, ou
+ * coordenada inválida). Recebe os contornos para esta função continuar pura e testável.
+ */
+export function estadoPelaPosicao(
+  lat: number,
+  lng: number,
+  contornos: Record<string, [number, number][][]>
+): string | null {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  for (const [uf, aneis] of Object.entries(contornos)) {
+    if (aneis.some((a) => dentro(lng, lat, a))) return uf
+  }
+  return null
 }

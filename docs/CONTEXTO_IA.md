@@ -97,7 +97,7 @@ O cadastro atualmente:
 | 2026-11-21 | Canal de perguntas e sugestões ativo neste arquivo | Grok |
 | 2026-11-21 | Clebson autorizou trabalho autônomo | Clebson |
 | 2026-11-21 | **Grok assume papel de supervisor do Claude** | Clebson |
-| 2026-11-23 | Quem mora no Nordeste paga a Tabela Nordeste MT Motors 2025 (faixa da FIPE + tipo do veículo), mostrada como "de [preço do CRM] por [tabela]"; fora do Nordeste, o preço do CRM. O estado é perguntado na cotação e confirmado pelo comprovante de residência | Clebson |
+| 2026-11-23 | A Tabela Nordeste MT Motors 2025 (faixa da FIPE + tipo do veículo) vale **só no RN e nos estados colados a ele (PB e CE)**, mostrada como "de [preço do CRM] por [tabela]"; o resto do Brasil, inclusive os outros estados do Nordeste, paga o preço do CRM. O estado é perguntado na cotação (o site pede a localização ao abrir) e confirmado pelo comprovante de residência; sem confirmação, o Pix fica segurado até a equipe decidir no /admin | Clebson |
 
 ---
 
@@ -120,7 +120,7 @@ O cadastro atualmente:
 - **2026-11-22 — Claude:** O teste de WhatsApp deu "template não existe": os templates `citmax_21go_*` não foram criados na Meta. Pedido ao Antigravity criar os 6 (seção 7, "Criar os 6 templates do WhatsApp do 21Go").
 - **2026-11-22 — Antigravity:** Criados os 6 templates do WhatsApp no AtendeHub (empresa CITmax, categoria UTILITY, pt_BR, com variáveis e textos exatos). Submetidos à Meta com sucesso (status: Em análise / PENDING).
 - **2026-11-22 — Claude:** Os 5 templates do funil chegaram; a Meta passou o `citmax_21go_aviso` para Marketing. Pedida a reserva nova `citmax_21go_cadastro`, de utilidade (seção 7, "Reserva nova do 21Go").
-- **2026-11-23 — Claude:** Tabela Nordeste no site e no chat (branch `feat/tabela-nordeste`). Regras em `src/lib/tabela-nordeste.ts` (faixas transcritas do PDF, conferidas em `tests/tabela-nordeste.test.mts`), aplicação em `src/lib/preco-regional.ts`, confirmação pelo comprovante em `src/lib/regiao-comprovante.ts`, lista de utilitários editável na aba "Tabela Nordeste" do /admin. **Não mexa nos valores da tabela à mão**: se a MT Motors mandar tabela nova, atualize `TABELAS_NORDESTE` e o teste juntos. Quando vale a tabela, a observação do lead no CRM começa pelo bloco de autorização que o Clebson definiu ("Cobrir valor de mensalidade / Plano … / Valor R$ … / Autorizado Marcos Alves / Charlles Alexandre / Regional Rio Grande do Norte"): sem ele o CRM não aplica o valor da tabela (`autorizacaoNordeste` em `src/lib/powercrm-lead.ts`).
+- **2026-11-23 — Claude:** Tabela Nordeste no site e no chat (branch `feat/tabela-nordeste`), só para RN, PB e CE (`UFS_DA_TABELA`). Regras em `src/lib/tabela-nordeste.ts` (faixas transcritas do PDF, conferidas em `tests/tabela-nordeste.test.mts`), aplicação em `src/lib/preco-regional.ts`, confirmação pelo comprovante em `src/lib/regiao-comprovante.ts`, lista de utilitários editável na aba "Tabela Nordeste" do /admin. **Não mexa nos valores da tabela à mão**: se a MT Motors mandar tabela nova, atualize `TABELAS_NORDESTE` e o teste juntos. Quando vale a tabela, a observação do lead no CRM começa pelo bloco de autorização que o Clebson definiu ("Cobrir valor de mensalidade / Plano … / Valor R$ … / Autorizado Marcos Alves / Charlles Alexandre / Regional Rio Grande do Norte"): sem ele o CRM não aplica o valor da tabela (`autorizacaoNordeste` em `src/lib/powercrm-lead.ts`).
 
 ---
 
