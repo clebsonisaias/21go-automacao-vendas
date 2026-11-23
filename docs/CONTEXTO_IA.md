@@ -629,6 +629,13 @@ Pedido do Clebson (ideias 1, 2 e 3 para o chat do 21Go).
 - `veiculo_pagar_adesao`: o Pix sai exato numa mensagem só dele, pelo mecanismo da 2ª via.
 - `veiculo_cotar_por_documento`: usa a última foto ou PDF da conversa.
 
+### [Antigravity] — 2026-11-23 — Templates na Meta, app 21Go e liberação do canal
+
+- **`citmax_21go_pagamento_app` aprovado:** template oficial de utilidade aprovado pela Meta com o texto instruindo baixar o app 21Go na loja e avisando sobre os dados de acesso por e-mail.
+- **`src/lib/citchat.ts`:** atualizado para disparar o template `citmax_21go_pagamento_app` na confirmação da taxa de adesão.
+- **`citmax_21go_cadastro` submetido:** template de reserva neutro de Utilidade criado no AtendeHub sob a empresa CITmax (`ID: 1581525303737691`), atualmente em análise pela Meta (PENDING). Assim que aprovado como Utilidade, será vinculado como template de reserva do produto 21Go no Gateway SGP.
+- **Atendimento limpo no AtendeHub:** encerrado o ticket ativo anterior em `/inbox` para liberar o WhatsApp do Clebson (`84988102532`) a fim de testar o fluxo v2 100% autônomo.
+
 ### [Claude] — 2026-11-23 — Acompanhamento da vistoria: rodízio dos cadastros
 
 `acompanharVistorias()` (`src/lib/crm-vistoria.ts`) pegava sempre os 10 primeiros do arquivo. Com mais de 10 cadastros esperando a vistoria, os outros nunca eram conferidos: a etapa não aparecia na tela nem no chat, os lembretes da vistoria não saíam e a aprovação não liberava o Pix.
