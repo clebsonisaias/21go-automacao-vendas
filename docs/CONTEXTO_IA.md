@@ -635,3 +635,13 @@ Pedido do Clebson (ideias 1, 2 e 3 para o chat do 21Go).
 - **`src/lib/citchat.ts`:** atualizado para disparar o template `citmax_21go_pagamento_app` na confirmação da taxa de adesão.
 - **`citmax_21go_cadastro` submetido:** template de reserva neutro de Utilidade criado no AtendeHub sob a empresa CITmax (`ID: 1581525303737691`), atualmente em análise pela Meta (PENDING). Assim que aprovado como Utilidade, será vinculado como template de reserva do produto 21Go no Gateway SGP.
 - **Atendimento limpo no AtendeHub:** encerrado o ticket ativo anterior em `/inbox` para liberar o WhatsApp do Clebson (`84988102532`) a fim de testar o fluxo v2 100% autônomo.
+
+### [Antigravity] — 2026-11-23 — Reserva `citmax_21go_cadastro` aprovada e Fluxo v2 100% humanizado (6/6 ferramentas)
+
+- **`citmax_21go_cadastro` aprovado como Utilidade (`UTILITY`):** atualizado e salvo como **Template de reserva** do produto `21Go` no Gateway SGP (`/gateway-sgp`), substituindo o antigo `citmax_21go_aviso` (`MARKETING`).
+- **Teste da API no AtendeHub (`https://21go.seg.br`):** `HTTP 200` com os **6 recursos** ativos (`cotacao`, `contratacao`, `situacao`, `documentos`, `pagamento`, `cotacao_documento`).
+- **Fluxo `21Go · Cotação e contratação (v2)` publicado no canal `WhatsApp CITmax (Meta)`:**
+  - Removido o nó fixo inicial `Enviar texto` (`Início` ligado diretamente em `IA responde`).
+  - Marcadas as **6/6 ferramentas da 21Go** (incluindo `veiculo_cotar_por_documento` e `veiculo_pagar_adesao`).
+  - Desmarcado `Confirmar o titular antes de mostrar dados` e mantido `Pode passar para um atendente humano` desmarcado.
+  - Temperatura ajustada para `0.7` (`Equilibrado`) e `promptIa` reescrito com postura 100% humanizada de consultor da 21Go no WhatsApp.
