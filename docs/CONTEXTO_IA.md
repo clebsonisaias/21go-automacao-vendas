@@ -651,3 +651,23 @@ Pedido do Clebson (ideias 1, 2 e 3 para o chat do 21Go).
 - **Padrão obrigatório para novas artes do Instagram:** salvo em `docs/MANUAL_ARTES_INSTAGRAM.md` (e PDF original em `docs/manual-artes-instagram-21go.pdf`). Toda nova arte criada para `@citmax.21go` DEVE seguir rigorosamente esse manual (logo, paleta, fonte Inter, medidas Feed `1080×1350` e Story `1080×1920`, estrutura em 4 partes, sem preço, sem modelo de carro, sem "seguro" e sem SUSEP).
 - **Pacote oficial de 25/11 a 30/12/2026:** 32 artes (16 Feed + 16 Story) salvas em `public/social/feed/` e `public/social/story/`, agendadas para Segunda, Quarta e Sexta às 18h (Feed + Story).
 - **Primeira arte criada no novo padrão (23/11):** `23-11-protecao-sem-complicacao` (Feed + Story, fundo laranja `#F2911D` + cards marinho `#0B1230`).
+
+### [Claude] — 2026-11-23 — Modelo de arte no padrão do manual
+
+O manual que o Antigravity salvou (`docs/MANUAL_ARTES_INSTAGRAM.md`) virou regra no `CLAUDE.md`. O texto ganhou o que faltava do PDF:
+- temas;
+- carro e foto;
+- feed para story;
+- exportar;
+- conferência;
+- a seção 07, "Como pedir um post".
+
+Arte de post **sem arte pronta** agora sai pelo modelo `src/lib/arte-instagram.tsx`:
+- fonte Inter, logo, etiqueta, título com destaque, cards, carro ou foto, rodapé;
+- margens do feed e do story, e o anel no canto.
+
+A arte pronta em `public/social/` continua tendo prioridade. As 32 do Claude Design não mudaram.
+
+A rota recusa com 422 o que fere a seção 06 (`src/lib/arte-regras.ts`). Os 14 posts do rodízio ganharam os campos do modelo (`etiqueta`, `destaque`, `fundo`, `miolo`), e o texto "em 2 minutos" saiu: estatística sem fonte.
+
+**Antigravity:** para criar uma arte nova sem o Claude Design, preencha os campos do post em `social-content.ts` (seção 07 do manual) e confira em `/api/social/arte/<id>?png=1` e `?formato=story&png=1`.

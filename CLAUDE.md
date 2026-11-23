@@ -10,3 +10,15 @@ Before UI or microcopy work, read `.ux-profile.md`, then the matching domain ski
 Before creating a new page, read `page-patterns` and name the pattern. Do not write page markup until the pattern is named.
 Layouts must pass `viewports` at 375px and 1280px.
 Before finishing UI, run `ux-audit`.
+
+## Artes e posts do Instagram (@citmax.21go)
+
+Regra do Clebson: toda arte do Instagram segue o **manual de artes**, em `docs/MANUAL_ARTES_INSTAGRAM.md` (PDF original em `docs/manual-artes-instagram-21go.pdf`). Vale sempre que pedirem para criar ou postar algo.
+
+- Feed (1080×1350) e story (1080×1920) saem juntos, com o mesmo conteúdo.
+- Arte nova sai pelo modelo `src/lib/arte-instagram.tsx` (rota `/api/social/arte/<id>`), preenchendo os campos do post em `src/lib/social-content.ts`. O passo a passo está na seção 07 do manual.
+- Antes de publicar:
+  - passar pela trava `problemasDoTexto` (`src/lib/arte-regras.ts`);
+  - fazer a conferência da seção 06;
+  - mostrar a prévia de feed e story ao Clebson.
+- Não fazer arte fora do padrão: outra fonte, cor fora da paleta, preço, "seguro", SUSEP, marca ou modelo de carro.
