@@ -3,7 +3,7 @@ import { extractDocumentWithAi } from '@/lib/document-ai'
 import { readVistoriaFile } from '@/lib/vistoria-files'
 import { calcularDesconto } from '@/lib/cupons'
 import { calculateActivationFee } from '@/lib/pricing'
-import { linhasRegiao } from '@/lib/powercrm-lead'
+import { autorizacaoNordeste } from '@/lib/powercrm-lead'
 import { sendTelegramNotification, esc } from '@/lib/telegram'
 import { sendCitchatMessage } from '@/lib/citchat'
 import { utilitariosParaCotacao } from '@/lib/utilitarios'
@@ -157,9 +157,12 @@ export async function conferirRegiao(ref: string): Promise<void> {
     case 'voltou_nacional':
     case 'ganhou_nordeste': {
       const ganhou = r.acao === 'ganhou_nordeste'
-      const obs = linhasRegiao(atual).join(' | ')
+      const aut = autorizacaoNordeste(atual)
+      const crm = ganhou && aut
+        ? `📝 Ponha no topo das observações do lead no CRM (sem isso o CRM não aplica o valor da tabela):\n<code>${esc(aut)}</code>`
+        : '📝 Tire das observações do lead no CRM a autorização da Tabela Nordeste: vale o preço nacional.'
       await sendTelegramNotification(
-        `📍 <b>Preço mudou pelo comprovante (${esc(nomeUf(r.uf))})</b>\n\n👤 ${cliente}\n${esc(declarado)}; o comprovante é ${ganhou ? 'do Nordeste' : 'de fora do Nordeste'}.\n💵 Mensalidade: ${brl(r.antes.m)} → <b>${brl(r.depois.m)}</b>\n⚡ Adesão: ${brl(r.antes.a)} → <b>${brl(r.depois.a)}</b>${atual.cupom ? ` (com o cupom ${esc(atual.cupom.codigo)})` : ''}\n\n📝 Atualize a observação no CRM:\n<code>${esc(obs || 'Preço nacional (CRM)')}</code>`
+        `📍 <b>Preço mudou pelo comprovante (${esc(nomeUf(r.uf))})</b>\n\n👤 ${cliente}\n${esc(declarado)}; o comprovante é ${ganhou ? 'do Nordeste' : 'de fora do Nordeste'}.\n💵 Mensalidade: ${brl(r.antes.m)} → <b>${brl(r.depois.m)}</b>\n⚡ Adesão: ${brl(r.antes.a)} → <b>${brl(r.depois.a)}</b>${atual.cupom ? ` (com o cupom ${esc(atual.cupom.codigo)})` : ''}\n\n${crm}`
       )
       const t = atual.tabelaNordeste
       const nac = atual.planoNacional?.monthly
