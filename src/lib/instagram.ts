@@ -76,8 +76,26 @@ export function localNow(): { date: string; hour: number } {
   return { date: `${get('year')}-${get('month')}-${get('day')}`, hour: Number(get('hour')) % 24 }
 }
 
-/** Próximo conteúdo do rodízio: o que vem depois do último publicado. */
+/** Próximo post agendado na programação oficial (SOCIAL_SCHEDULE) que ainda não foi publicado. */
+export function nextScheduledItem(state = readState()): { content: SocialContent; at: string } | null {
+  const nowMs = process.env.IG_TEST_NOW ? new Date(process.env.IG_TEST_NOW).getTime() : Date.now()
+  const sorted = [...SOCIAL_SCHEDULE].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
+  for (const item of sorted) {
+    const atMs = new Date(item.at).getTime()
+    // Ignora agendamentos muito antigos (> 6h atrás)
+    if (atMs + 6 * 3600 * 1000 < nowMs) continue
+    const already = state.posts.some((p) => p.contentId === item.contentId && (p.kind || 'feed') === 'feed' && p.status === 'publicado')
+    if (already) continue
+    const content = contentById(item.contentId)
+    if (content) return { content, at: item.at }
+  }
+  return null
+}
+
+/** Próximo conteúdo: prioriza a programação oficial (Feed + Story); depois entra o rodízio diário. */
 export function nextContent(state = readState()): SocialContent {
+  const sched = nextScheduledItem(state)
+  if (sched) return sched.content
   const last = state.posts.find((p) => p.status === 'publicado' && SOCIAL_CONTENT.some((c) => c.id === p.contentId))
   const i = last ? SOCIAL_CONTENT.findIndex((c) => c.id === last.contentId) : -1
   return SOCIAL_CONTENT[(i + 1) % SOCIAL_CONTENT.length]
@@ -228,25 +246,58 @@ export async function fetchInstagramMedia(limit = 20): Promise<IgMediaItem[]> {
   }
 }
 
-/** Lista dos próximos posts do rodízio diário com dia e hora programados (fuso Natal/RN). */
-export function upcomingSchedule(state = readState(), count = SOCIAL_CONTENT.length): UpcomingPost[] {
-  const now = localNow()
-  const hour = postHour()
-  const postedToday = state.posts.some(
-    (p) => p.date === now.date && p.status === 'publicado' && SOCIAL_CONTENT.some((c) => c.id === p.contentId)
-  )
-  const startOffsetDays = postedToday || now.hour >= hour ? 1 : 0
-  const first = nextContent(state)
-  const startIdx = Math.max(0, SOCIAL_CONTENT.findIndex((c) => c.id === first.id))
-  const [y, m, d] = now.date.split('-').map(Number)
-  const baseUtc = Date.UTC(y, m - 1, d, 12, 0, 0)
-  const hh = String(hour).padStart(2, '0')
+/** Lista dos próximos posts prontos (prioriza a programação oficial Feed + Story até 30/12; depois rodízio). */
+export function upcomingSchedule(state = readState(), count = 16): UpcomingPost[] {
+  const nowMs = process.env.IG_TEST_NOW ? new Date(process.env.IG_TEST_NOW).getTime() : Date.now()
   const fmtDia = new Intl.DateTimeFormat('pt-BR', {
     timeZone: TZ,
     weekday: 'short',
     day: '2-digit',
     month: '2-digit',
   })
+  const fmtHora = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+
+  const scheduled: UpcomingPost[] = []
+  const sorted = [...SOCIAL_SCHEDULE].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
+  for (const item of sorted) {
+    const atMs = new Date(item.at).getTime()
+    if (atMs + 6 * 3600 * 1000 < nowMs) continue
+    const already = state.posts.some((p) => p.contentId === item.contentId && (p.kind || 'feed') === 'feed' && p.status === 'publicado')
+    if (already) continue
+    const content = contentById(item.contentId)
+    if (!content) continue
+    const dt = new Date(atMs)
+    const dia = fmtDia.format(dt).replace('.', '')
+    const hora = fmtHora.format(dt)
+    scheduled.push({
+      id: content.id,
+      kicker: content.kicker,
+      title: content.title,
+      caption: content.caption,
+      date: item.at.slice(0, 10),
+      scheduledAt: item.at,
+      dateLabel: `${dia} às ${hora} · Feed + Story`,
+    })
+  }
+  if (scheduled.length > 0) return scheduled
+
+  // Fallback após encerrar a programação datada: rodízio diário automático
+  const now = localNow()
+  const hour = postHour()
+  const postedToday = state.posts.some(
+    (p) => p.date === now.date && p.status === 'publicado' && SOCIAL_CONTENT.some((c) => c.id === p.contentId)
+  )
+  const startOffsetDays = postedToday || now.hour >= hour ? 1 : 0
+  const last = state.posts.find((p) => p.status === 'publicado' && SOCIAL_CONTENT.some((c) => c.id === p.contentId))
+  const startIdx = last ? (SOCIAL_CONTENT.findIndex((c) => c.id === last.contentId) + 1) % SOCIAL_CONTENT.length : 0
+  const [y, m, d] = now.date.split('-').map(Number)
+  const baseUtc = Date.UTC(y, m - 1, d, 12, 0, 0)
+  const hh = String(hour).padStart(2, '0')
 
   const out: UpcomingPost[] = []
   for (let i = 0; i < count; i++) {
@@ -301,9 +352,11 @@ async function scheduledTick(): Promise<boolean> {
 
 export async function socialTick(): Promise<void> {
   if (!igConfigured()) return
-  if (await scheduledTick()) return
   const state = readState()
   if (state.paused) return
+  if (await scheduledTick()) return
+  // Enquanto houver programação oficial (Seg/Qua/Sex até 30/12), não sobrepõe com o rodízio genérico.
+  if (nextScheduledItem(state)) return
   const now = localNow()
   if (now.hour < postHour()) return
   // Uma tentativa por dia (com sucesso ou erro): não insiste em repetir a falha a cada ciclo.

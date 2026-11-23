@@ -31,6 +31,21 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!c) return new Response('Não encontrado', { status: 404 })
 
   const story = new URL(req.url).searchParams.get('formato') === 'story'
+
+  // Se existe arte pronta (exportada do Claude Design) em public/social/<feed|story>/<id>.jpg, serve ela direto.
+  if (/^[a-z0-9-]+$/i.test(id)) {
+    const readyPath = path.join(process.cwd(), 'public', 'social', story ? 'story' : 'feed', `${id}.jpg`)
+    if (fs.existsSync(readyPath)) {
+      const jpg = fs.readFileSync(readyPath)
+      return new Response(new Uint8Array(jpg), {
+        headers: {
+          'Content-Type': 'image/jpeg',
+          'Cache-Control': 'public, max-age=86400',
+        },
+      })
+    }
+  }
+
   const width = 1080
   const height = story ? 1920 : 1350
   const pad = story

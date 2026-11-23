@@ -52,7 +52,11 @@ export async function POST(req: NextRequest) {
     if (body?.action === 'pause') setPaused(true)
     else if (body?.action === 'resume') setPaused(false)
     else if (body?.action === 'publish') {
-      const r = await publishContent(nextContent().id)
+      const target = nextContent()
+      const r = await publishContent(target.id, 'feed')
+      if (r.status === 'publicado' && target.oneOff) {
+        await publishContent(target.id, 'story').catch(() => undefined)
+      }
       invalidateMediaCache()
       if (r.status !== 'publicado') {
         return NextResponse.json({ ...(await snapshot()), success: false, error: r.error }, { status: 502 })
