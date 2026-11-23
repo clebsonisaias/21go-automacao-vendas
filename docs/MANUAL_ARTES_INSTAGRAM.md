@@ -101,3 +101,90 @@ Toda arte sai em **duas versões no mesmo dia (Feed + Story)** com o mesmo conte
 
 - **Sempre:** chamada para `21go.seg.br` em toda arte; reforçar cotação pela placa e tudo pelo celular; ao listar coberturas, incluir *"As coberturas variam conforme o plano"*; linguagem simples na segunda pessoa (*"seu veículo"*).
 - **Nunca:** preço, *"a partir de"*, porcentagem de desconto/economia; marca, modelo ou ano de veículo; chamar de *"seguro"* ou citar SUSEP; estatística sem fonte; endereço da loja como chamada principal; promessa fora do regulamento.
+
+### Temas que funcionam
+
+| Tipo | Etiqueta | Exemplo de título |
+|---|---|---|
+| Dúvida frequente | `DÚVIDA FREQUENTE` | Posso cancelar quando quiser? |
+| Passo a passo | `PASSO A PASSO` | Proteja o seu veículo em 4 passos. |
+| Coberturas e assistência | `COBERTURAS` · `ASSISTÊNCIA 24H` | O que a proteção veicular cobre? |
+| Chamada para cotação | `COTAÇÃO GRÁTIS` | Quanto custa proteger o seu veículo? |
+| Datas e estações | `FÉRIAS` · `BOAS FESTAS` | Vai pegar estrada? |
+| Quem somos | `GRUPO CITMAX · 21GO` | Quem está por trás. |
+
+### Carro e foto (complemento da seção 05)
+
+- **Carro:** ilustração plana, carro branco, vidros `#22337A`, rodas `#070C22`, farol verde-limão e lanterna laranja. Largura de `760` a `820 px`, no centro. Sem marca nem modelo reconhecível.
+- **Foto:**
+  - só fotos próprias (equipe, loja, clientes com autorização);
+  - a foto ocupa a parte de cima ou o fundo, com película marinho por cima;
+  - texto nunca sobre rosto;
+  - não usar foto de banco com marca de carro em destaque.
+
+### Do feed para o story
+
+- Mesmo texto e mesmas cores.
+- Fundo e formas decorativas vão até as bordas.
+- Centralizar o miolo na área útil. Para preencher a altura, aumentar o respiro entre os cards em vez de aumentar a letra.
+- No app, colar o adesivo de link para `21go.seg.br` perto do botão.
+
+### Exportar
+
+- PNG, na medida exata, sem borda.
+- Nome: `dia-mês-tema-feed.png` e `dia-mês-tema-story.png` (ex.: `04-12-cotacao-gratis-pela-placa-feed.png`).
+- No site, a arte pronta vai em JPEG para `public/social/feed/` e `public/social/story/`, com o `id` do post como nome.
+
+### Conferência antes de publicar
+
+- [ ] Logo no canto superior esquerdo, com o pino verde; em placa marinho se o fundo for laranja ou claro.
+- [ ] Só cores da paleta e só a fonte Inter.
+- [ ] Estrutura completa: topo, título, miolo e rodapé com `21go.seg.br`.
+- [ ] Margem de `80 px` respeitada; no story, nada nos `250 px` de cima nem nos `320 px` de baixo.
+- [ ] Nenhum texto menor que `28 px`; anel e formas não encostam no texto.
+- [ ] Sem preço, sem modelo de veículo, sem "seguro", sem SUSEP.
+- [ ] Versão feed (`1080 × 1350`) e versão story (`1080 × 1920`) prontas, com o nome no padrão.
+- [ ] Português revisado por uma segunda pessoa.
+
+---
+
+## 07 · Como pedir um post (modelo pronto do site)
+
+Toda arte nova sai pelo modelo `src/lib/arte-instagram.tsx`, que já segue este manual:
+- Inter em `public/fonts/inter/`;
+- logo, etiqueta, título com destaque, miolo e rodapé;
+- margens do feed e do story;
+- anel no canto.
+
+A rota `/api/social/arte/<id>` serve a arte pronta, se existir em `public/social/`. Sem ela, desenha pelo modelo:
+- `?formato=story` dá o story;
+- `?png=1` dá PNG (sem ele, sai JPEG para o Instagram).
+
+**1. Escrever o post** em `src/lib/social-content.ts`: em `SOCIAL_ONE_OFFS`, com a data em `SOCIAL_SCHEDULE`, ou no rodízio `SOCIAL_CONTENT`.
+
+| Campo | O que é |
+|---|---|
+| `id` | `dia-mês-tema`, ex.: `04-12-cotacao-gratis-pela-placa` |
+| `etiqueta` | Tema da tabela acima, em maiúsculas |
+| `title` | Até 8 palavras, frase normal |
+| `destaque` | 1 a 3 palavras do título que ficam laranja |
+| `body` ou `subtitulo` | Uma frase de apoio |
+| `fundo` | `marinho`, `laranja` ou `claro`, alternando ao longo da semana |
+| `miolo` | Um só recurso: `{ tipo: 'cards', cards: [...], numerados? }` (até 5), `{ tipo: 'carro' }` ou `{ tipo: 'foto', arquivo }` |
+| `observacao` | Ex.: "As coberturas variam conforme o plano." |
+| `botao` | Com verbo; padrão "Cote pela placa" |
+| `caption` | Legenda do post (pode ter emoji; a arte não) |
+
+**2. Conferir.** A rota recusa (422) o post que fere a seção 06 (`problemasDoTexto` em `src/lib/arte-regras.ts`):
+- preço, "a partir de" ou porcentagem;
+- "seguro" ou SUSEP;
+- marca ou modelo de carro;
+- título com mais de 8 palavras;
+- mais de 5 cards;
+- destaque que não está no título.
+
+**3. Prévia.** Gerar feed e story no servidor local e mostrar ao Clebson junto com a conferência acima.
+
+**4. Publicar.** Com o OK dele: PR, merge e deploy. O agendador (`src/lib/instagram.ts`) publica feed e story no dia e na hora marcados.
+
+Logo: usar `public/brand/logo-21go.png` até chegar o `21go-logo-vetor.svg`.

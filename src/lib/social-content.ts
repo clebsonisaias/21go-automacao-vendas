@@ -13,27 +13,252 @@ export interface SocialContent {
   caption: string
   /** Post avulso: fica fora do rodízio diário. */
   oneOff?: boolean
+  /*
+   * Campos do modelo de arte (src/lib/arte-instagram.tsx, padrão de docs/MANUAL_ARTES_INSTAGRAM.md).
+   * Só valem para post sem arte pronta em public/social/<feed|story>/<id>.jpg.
+   */
+  /** Etiqueta (pílula) do topo, com o tema: COTAÇÃO GRÁTIS, PASSO A PASSO… Sem ela, vale o kicker. */
+  etiqueta?: string
+  /** Trecho do título (1 a 3 palavras) que fica em laranja. */
+  destaque?: string
+  /** Fundo da arte; sem ele, alterna pelos três. */
+  fundo?: 'marinho' | 'laranja' | 'claro'
+  /** Subtítulo da arte; sem ele, vale o body. */
+  subtitulo?: string
+  /** Um recurso só no meio: cards (até 5), o carro ou uma foto própria de public/social/fotos/. */
+  miolo?:
+    | { tipo: 'cards'; cards: { titulo: string; texto?: string }[]; numerados?: boolean }
+    | { tipo: 'carro' }
+    | { tipo: 'foto'; arquivo: string }
+  /** Observação de 28 px abaixo do miolo (ex.: "As coberturas variam conforme o plano."). */
+  observacao?: string
+  /** Texto do botão, com verbo. Padrão: "Cote pela placa". */
+  botao?: string
 }
 
-const CTA = 'Faça sua cotação em 2 minutos pelo link da bio. 👆'
+// Sem tempo em minutos: o manual não aceita estatística sem fonte.
+const CTA = 'Faça sua cotação grátis pela placa, no link da bio. 👆'
 const TAGS = '#protecaoveicular #21go #citmax #natalrn #parnamirim #macaiba #carro #moto'
 const cap = (text: string) => `${text}\n\n${CTA}\n\n${TAGS}`
 
 export const SOCIAL_CONTENT: SocialContent[] = [
-  { id: 'cotacao-online', kicker: 'Cotação online', title: 'Saiba o valor da sua proteção em 2 minutos', body: 'Informe a placa ou o modelo e veja os planos na hora, sem falar com ninguém.', caption: cap('Quer saber quanto custa proteger seu carro ou sua moto? No nosso site você informa a placa ou o modelo e vê os planos na hora.') },
-  { id: 'sem-spc', kicker: 'Sem burocracia', title: 'Sem consulta ao SPC e Serasa', body: 'Nome negativado não impede você de proteger o seu veículo.', caption: cap('Na proteção veicular não fazemos consulta ao SPC e Serasa para a adesão. O que conta é o veículo.') },
-  { id: 'sem-perfil', kicker: 'Mesmo valor para todos', title: 'Sem análise de perfil do condutor', body: 'Idade e tempo de habilitação não mudam a sua mensalidade.', caption: cap('Aqui não existe análise de perfil do condutor. A mensalidade depende do veículo e do plano escolhido.') },
-  { id: 'roubo-furto', kicker: 'Cobertura', title: 'Proteção contra roubo e furto', body: 'Coberturas conforme o plano contratado e o regulamento.', caption: cap('Roubo e furto estão entre as coberturas dos nossos planos, conforme o plano contratado e o regulamento da associação.') },
-  { id: 'colisao', kicker: 'Cobertura', title: 'Bateu? Você não fica sozinho', body: 'Planos com cobertura de colisão, conforme o regulamento.', caption: cap('Imprevistos acontecem. Nossos planos incluem cobertura de colisão, conforme o plano contratado e o regulamento.') },
-  { id: 'assistencia-24h', kicker: 'Assistência 24h', title: 'Guincho, chaveiro e socorro a qualquer hora', body: 'Atendimento em todo o Brasil, 24 horas por dia.', caption: cap('Pane, pneu furado ou chave trancada dentro do carro: a assistência 24h atende em todo o Brasil, conforme o plano.') },
-  { id: 'vistoria-celular', kicker: 'Tudo pelo celular', title: 'Vistoria digital, sem sair de casa', body: 'Você envia os documentos e as fotos do veículo pelo nosso site.', caption: cap('A vistoria é digital: você envia os documentos e as fotos do veículo pelo celular, direto no nosso site.') },
-  { id: 'app-taxi', kicker: 'Motorista de aplicativo', title: 'Trabalha com o carro? Temos proteção', body: 'Aceitamos veículos de aplicativo e táxi. Informe na cotação.', caption: cap('Veículo de aplicativo ou táxi também pode ser protegido. É só marcar essa opção na hora da cotação.') },
-  { id: 'motos', kicker: 'Para motos', title: 'Sua moto também merece proteção', body: 'Planos para motos com cotação online na hora.', caption: cap('Tem moto? Faça a cotação online e veja os planos disponíveis para o seu modelo.') },
-  { id: 'como-funciona', kicker: 'Como funciona', title: 'Proteção veicular é mutualismo', body: 'Os associados dividem os custos dos eventos do grupo. Não é seguro.', caption: cap('Proteção veicular funciona por mutualismo: os associados contribuem para um fundo que cobre os eventos do grupo. Não é seguro e não é vendida por seguradora.') },
-  { id: 'pix-adesao', kicker: 'Adesão simples', title: 'Adesão online com pagamento por Pix', body: 'Cotação, cadastro e pagamento da adesão no mesmo lugar.', caption: cap('Você faz a cotação, o cadastro e paga a adesão por Pix, tudo pelo site. Depois é só enviar a vistoria.') },
-  { id: 'atendimento', kicker: 'Fale com a gente', title: 'Dúvidas? Atendimento pelo WhatsApp', body: 'Nossa equipe em Natal e região responde você.', caption: cap('Ficou com dúvida sobre planos ou coberturas? Chame a nossa equipe no WhatsApp pelo link da bio.') },
-  { id: 'carro-antigo', kicker: 'Carro com mais idade', title: 'Seu carro não é novo? Faça a cotação', body: 'Veja na hora se o seu modelo e ano são aceitos.', caption: cap('Muita gente acha que carro mais antigo não tem proteção. Faça a cotação e veja na hora se o seu modelo e ano são aceitos.') },
-  { id: 'regiao', kicker: 'Grande Natal', title: 'Atendemos Natal, Parnamirim e Macaíba', body: 'E a assistência 24h vale em todo o Brasil.', caption: cap('Somos a franquia CITmax da 21Go na Grande Natal. A assistência 24h acompanha você em todo o Brasil, conforme o plano.') },
+  {
+    id: 'cotacao-online',
+    kicker: 'Cotação online',
+    etiqueta: 'COTAÇÃO GRÁTIS',
+    title: 'Quanto custa proteger o seu veículo?',
+    destaque: 'seu veículo',
+    body: 'O valor sai na hora, pela placa. Sem compromisso e sem sair de casa.',
+    fundo: 'marinho',
+    miolo: { tipo: 'carro' },
+    caption: cap('Quer saber quanto custa proteger seu carro ou sua moto? No nosso site você informa a placa e vê os planos na hora.'),
+  },
+  {
+    id: 'sem-spc',
+    kicker: 'Sem burocracia',
+    etiqueta: 'SEM BUROCRACIA',
+    title: 'Sem consulta ao SPC e Serasa',
+    destaque: 'SPC e Serasa',
+    body: 'Nome negativado não impede você de proteger o seu veículo.',
+    fundo: 'laranja',
+    miolo: {
+      tipo: 'cards',
+      cards: [
+        { titulo: 'Nome com restrição não impede', texto: 'A adesão não passa por consulta de crédito.' },
+        { titulo: 'O que conta é o veículo', texto: 'Cotação pela placa, no site.' },
+      ],
+    },
+    caption: cap('Na proteção veicular não fazemos consulta ao SPC e Serasa para a adesão. O que conta é o veículo.'),
+  },
+  {
+    id: 'sem-perfil',
+    kicker: 'Mesmo valor para todos',
+    etiqueta: 'MESMO VALOR PARA TODOS',
+    title: 'Sem análise de perfil do condutor',
+    destaque: 'perfil do condutor',
+    body: 'Idade e tempo de habilitação não mudam a sua mensalidade.',
+    fundo: 'claro',
+    miolo: {
+      tipo: 'cards',
+      cards: [
+        { titulo: 'Idade não muda o valor' },
+        { titulo: 'Tempo de habilitação também não' },
+        { titulo: 'O valor depende do veículo', texto: 'E do plano que você escolher.' },
+      ],
+    },
+    caption: cap('Aqui não existe análise de perfil do condutor. A mensalidade depende do veículo e do plano escolhido.'),
+  },
+  {
+    id: 'roubo-furto',
+    kicker: 'Cobertura',
+    etiqueta: 'COBERTURAS',
+    title: 'Proteção contra roubo e furto',
+    destaque: 'roubo e furto',
+    body: 'Uma das coberturas dos planos da 21Go.',
+    fundo: 'marinho',
+    miolo: { tipo: 'carro' },
+    observacao: 'As coberturas variam conforme o plano.',
+    caption: cap('Roubo e furto estão entre as coberturas dos nossos planos, conforme o plano contratado e o regulamento da associação.'),
+  },
+  {
+    id: 'colisao',
+    kicker: 'Cobertura',
+    etiqueta: 'COBERTURAS',
+    title: 'Bateu? Você não fica sozinho',
+    destaque: 'não fica sozinho',
+    body: 'Planos com cobertura de colisão e assistência 24h.',
+    fundo: 'laranja',
+    miolo: {
+      tipo: 'cards',
+      cards: [
+        { titulo: 'Colisão', texto: 'Batidas e acidentes de trânsito.' },
+        { titulo: 'Assistência 24h', texto: 'Guincho e socorro em todo o Brasil.' },
+      ],
+    },
+    observacao: 'As coberturas variam conforme o plano.',
+    caption: cap('Imprevistos acontecem. Nossos planos incluem cobertura de colisão, conforme o plano contratado e o regulamento.'),
+  },
+  {
+    id: 'assistencia-24h',
+    kicker: 'Assistência 24h',
+    etiqueta: 'ASSISTÊNCIA 24H',
+    title: 'Guincho, chaveiro e socorro a qualquer hora',
+    destaque: 'qualquer hora',
+    body: 'Atendimento em todo o Brasil, 24 horas por dia.',
+    fundo: 'claro',
+    miolo: {
+      tipo: 'cards',
+      cards: [{ titulo: 'Guincho' }, { titulo: 'Chaveiro' }, { titulo: 'Pane e pneu furado' }],
+    },
+    observacao: 'As coberturas variam conforme o plano.',
+    caption: cap('Pane, pneu furado ou chave trancada dentro do carro: a assistência 24h atende em todo o Brasil, conforme o plano.'),
+  },
+  {
+    id: 'vistoria-celular',
+    kicker: 'Tudo pelo celular',
+    etiqueta: 'TUDO PELO CELULAR',
+    title: 'Vistoria digital, sem sair de casa',
+    destaque: 'Vistoria digital',
+    body: 'Você envia os documentos e as fotos do veículo pelo celular.',
+    fundo: 'marinho',
+    miolo: {
+      tipo: 'cards',
+      numerados: true,
+      cards: [
+        { titulo: 'Documentos', texto: 'CNH, documento do carro e comprovante.' },
+        { titulo: 'Fotos do veículo', texto: 'Pelo link que chega no WhatsApp.' },
+      ],
+    },
+    caption: cap('A vistoria é digital: você envia os documentos e as fotos do veículo pelo celular, sem sair de casa.'),
+  },
+  {
+    id: 'app-taxi',
+    kicker: 'Motorista de aplicativo',
+    etiqueta: 'MOTORISTA DE APLICATIVO',
+    title: 'Trabalha com o carro? Temos proteção',
+    destaque: 'Temos proteção',
+    body: 'Aceitamos veículos de aplicativo e táxi. Informe na cotação.',
+    fundo: 'laranja',
+    miolo: { tipo: 'carro' },
+    caption: cap('Veículo de aplicativo ou táxi também pode ser protegido. É só marcar essa opção na hora da cotação.'),
+  },
+  {
+    id: 'motos',
+    kicker: 'Para motos',
+    etiqueta: 'PARA MOTOS',
+    title: 'Sua moto também merece proteção',
+    destaque: 'moto',
+    body: 'Planos para motos, com cotação pela placa.',
+    fundo: 'claro',
+    miolo: {
+      tipo: 'cards',
+      cards: [
+        { titulo: 'Cotação pela placa', texto: 'Os planos aparecem na hora.' },
+        { titulo: 'Tudo pelo celular', texto: 'Sem sair de casa.' },
+      ],
+    },
+    caption: cap('Tem moto? Faça a cotação pela placa e veja os planos disponíveis para ela.'),
+  },
+  {
+    id: 'como-funciona',
+    kicker: 'Como funciona',
+    etiqueta: 'COMO FUNCIONA',
+    title: 'Proteção veicular é mutualismo',
+    destaque: 'mutualismo',
+    body: 'Os associados dividem os custos dos eventos do grupo.',
+    fundo: 'marinho',
+    miolo: {
+      tipo: 'cards',
+      cards: [
+        { titulo: 'Os associados contribuem', texto: 'Para um fundo comum do grupo.' },
+        { titulo: 'O fundo cobre os eventos', texto: 'Conforme o plano e o regulamento.' },
+      ],
+    },
+    caption: cap('Proteção veicular funciona por mutualismo: os associados contribuem para um fundo que cobre os eventos do grupo. Não é seguro e não é vendida por seguradora.'),
+  },
+  {
+    id: 'pix-adesao',
+    kicker: 'Adesão simples',
+    etiqueta: 'PASSO A PASSO',
+    title: 'Adesão online com pagamento por Pix',
+    destaque: 'por Pix',
+    body: 'Tudo pelo celular. A adesão é o último passo.',
+    fundo: 'laranja',
+    miolo: {
+      tipo: 'cards',
+      numerados: true,
+      cards: [
+        { titulo: 'Cotação pela placa' },
+        { titulo: 'Documentos pelo celular' },
+        { titulo: 'Vistoria pelas fotos' },
+        { titulo: 'Adesão por Pix' },
+      ],
+    },
+    caption: cap('Você faz a cotação, o cadastro e a vistoria pelo celular. A adesão é paga por Pix no fim, depois da vistoria aprovada.'),
+  },
+  {
+    id: 'atendimento',
+    kicker: 'Fale com a gente',
+    etiqueta: 'DÚVIDA FREQUENTE',
+    title: 'Dúvidas? Atendimento pelo WhatsApp',
+    destaque: 'pelo WhatsApp',
+    body: 'Cotação, cadastro e situação do seu cadastro na conversa.',
+    fundo: 'claro',
+    botao: 'Link na bio',
+    miolo: {
+      tipo: 'cards',
+      cards: [{ titulo: 'Cotação e planos' }, { titulo: 'Documentos e vistoria' }, { titulo: 'Pagamento da adesão' }],
+    },
+    caption: cap('Ficou com dúvida sobre planos ou coberturas? Chame no WhatsApp pelo link da bio.'),
+  },
+  {
+    id: 'carro-antigo',
+    kicker: 'Carro com mais idade',
+    etiqueta: 'COTAÇÃO GRÁTIS',
+    title: 'Seu carro não é novo? Faça a cotação',
+    destaque: 'Faça a cotação',
+    body: 'Veja na hora se o seu veículo é aceito.',
+    fundo: 'marinho',
+    miolo: { tipo: 'carro' },
+    caption: cap('Muita gente acha que carro mais antigo não tem proteção. Faça a cotação e veja na hora se o seu veículo é aceito.'),
+  },
+  {
+    id: 'regiao',
+    kicker: 'Grande Natal',
+    etiqueta: 'GRUPO CITMAX · 21GO',
+    title: 'Atendemos Natal, Parnamirim e Macaíba',
+    destaque: 'Parnamirim e Macaíba',
+    body: 'E a assistência 24h vale em todo o Brasil.',
+    fundo: 'laranja',
+    miolo: {
+      tipo: 'cards',
+      cards: [
+        { titulo: 'Atendimento na Grande Natal' },
+        { titulo: 'Assistência 24h em todo o Brasil', texto: 'Conforme o plano.' },
+      ],
+    },
+    caption: cap('Somos a franquia CITmax da 21Go na Grande Natal. A assistência 24h acompanha você em todo o Brasil, conforme o plano.'),
+  },
 ]
 
 // Posts oficiais com arte pronta (Feed + Story) e dia/hora marcados (horário de Natal/RN).
