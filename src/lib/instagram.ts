@@ -167,6 +167,116 @@ export async function publishContent(contentId: string, kind: 'feed' | 'story' =
   return record
 }
 
+export interface IgMediaItem {
+  id: string
+  caption: string
+  mediaType: string
+  imageUrl?: string
+  permalink?: string
+  timestamp: string
+  likeCount: number
+  commentsCount: number
+}
+
+export interface UpcomingPost {
+  id: string
+  kicker: string
+  title: string
+  caption: string
+  date: string
+  scheduledAt: string
+  dateLabel: string
+}
+
+let mediaCache: { at: number; items: IgMediaItem[] } | null = null
+
+export function invalidateMediaCache() {
+  mediaCache = null
+}
+
+/** Busca os posts reais já publicados em @citmax.21go (curtidas, comentários, link e miniatura). */
+export async function fetchInstagramMedia(limit = 20): Promise<IgMediaItem[]> {
+  if (!igConfigured()) return []
+  if (mediaCache && Date.now() - mediaCache.at < 60_000) return mediaCache.items
+  try {
+    const userId = process.env.IG_USER_ID!
+    const data = await ig('GET', `${userId}/media`, {
+      fields: 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count',
+      limit: String(limit),
+    })
+    const rows = Array.isArray(data?.data) ? data.data : []
+    const items: IgMediaItem[] = rows.map((m: Record<string, unknown>) => ({
+      id: String(m.id || ''),
+      caption: typeof m.caption === 'string' ? m.caption : '',
+      mediaType: typeof m.media_type === 'string' ? m.media_type : 'IMAGE',
+      imageUrl:
+        typeof m.thumbnail_url === 'string'
+          ? m.thumbnail_url
+          : typeof m.media_url === 'string'
+            ? m.media_url
+            : undefined,
+      permalink: typeof m.permalink === 'string' ? m.permalink : undefined,
+      timestamp: typeof m.timestamp === 'string' ? m.timestamp : '',
+      likeCount: typeof m.like_count === 'number' ? m.like_count : 0,
+      commentsCount: typeof m.comments_count === 'number' ? m.comments_count : 0,
+    }))
+    mediaCache = { at: Date.now(), items }
+    return items
+  } catch (err) {
+    console.warn('[Instagram] Não foi possível buscar mídias:', err instanceof Error ? err.message : err)
+    return mediaCache?.items ?? []
+  }
+}
+
+/** Lista dos próximos posts do rodízio diário com dia e hora programados (fuso Natal/RN). */
+export function upcomingSchedule(state = readState(), count = SOCIAL_CONTENT.length): UpcomingPost[] {
+  const now = localNow()
+  const hour = postHour()
+  const postedToday = state.posts.some(
+    (p) => p.date === now.date && p.status === 'publicado' && SOCIAL_CONTENT.some((c) => c.id === p.contentId)
+  )
+  const startOffsetDays = postedToday || now.hour >= hour ? 1 : 0
+  const first = nextContent(state)
+  const startIdx = Math.max(0, SOCIAL_CONTENT.findIndex((c) => c.id === first.id))
+  const [y, m, d] = now.date.split('-').map(Number)
+  const baseUtc = Date.UTC(y, m - 1, d, 12, 0, 0)
+  const hh = String(hour).padStart(2, '0')
+  const fmtDia = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: TZ,
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+  })
+
+  const out: UpcomingPost[] = []
+  for (let i = 0; i < count; i++) {
+    const offset = startOffsetDays + i
+    const dt = new Date(baseUtc + offset * 86_400_000)
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: TZ,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(dt)
+    const get = (t: string) => parts.find((p) => p.type === t)?.value || ''
+    const date = `${get('year')}-${get('month')}-${get('day')}`
+    const content = SOCIAL_CONTENT[(startIdx + i) % SOCIAL_CONTENT.length]
+    const prefix = offset === 0 ? 'Hoje' : offset === 1 ? 'Amanhã' : fmtDia.format(dt).replace('.', '')
+    const ddmm = `${get('day')}/${get('month')}`
+    const dateLabel = offset <= 1 ? `${prefix}, ${ddmm} às ${hh}:00` : `${prefix} (${ddmm}) às ${hh}:00`
+    out.push({
+      id: content.id,
+      kicker: content.kicker,
+      title: content.title,
+      caption: content.caption,
+      date,
+      scheduledAt: `${date}T${hh}:00:00-03:00`,
+      dateLabel,
+    })
+  }
+  return out
+}
+
 /** Chamado a cada poucos minutos: publica o post do dia, uma vez, a partir da hora configurada. */
 /** Posts avulsos com hora marcada: saem uma vez (feed e story), até 6 h depois da hora. */
 async function scheduledTick(): Promise<boolean> {
