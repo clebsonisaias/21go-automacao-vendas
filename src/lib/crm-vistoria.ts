@@ -440,34 +440,49 @@ export async function gerarLinksPendentes(): Promise<void> {
   for (const l of pendentes.slice(0, 5)) await gerarLinkVistoria(l.ref)
 }
 
+/** Consultas de vistoria ao CRM por rodada (1 rodada por minuto). */
+const MAX_POR_RODADA = 10
+
 /**
  * Acompanha no CRM a vistoria dos cadastros que já receberam o link:
  * criada → em_andamento (fotos) → aguardando_revisao (time analisando) → aprovada.
  * Guarda a etapa (a tela do cliente mostra) e, em "aprovada", libera o Pix da adesão sozinho.
+ *
+ * Rodízio: até 10 por rodada, os conferidos há mais tempo primeiro (`crmVistoria.conferidoEm`,
+ * gravado em toda conferência, mesmo sem mudança ou com erro). Assim todos têm a vez:
+ * com N cadastros, cada um é conferido pelo menos a cada ⌈N/10⌉ rodadas.
  */
 export async function acompanharVistorias(): Promise<void> {
   if (!crmVistoriaEnabled()) return
-  const ativos = getStoredLeads().filter(
-    (l) => l.status === 'vistoria_enviada' && l.appVistoUrl && l.crmVistoria?.negId && l.crmVistoria?.cotacaoId
-  )
-  for (const l of ativos.slice(0, 10)) {
+  const conferidoEm = (l: StoredLead) => Date.parse(l.crmVistoria?.conferidoEm || '') || 0
+  const ativos = getStoredLeads()
+    .filter((l) => l.status === 'vistoria_enviada' && l.appVistoUrl && l.crmVistoria?.negId && l.crmVistoria?.cotacaoId)
+    .sort((a, b) => conferidoEm(a) - conferidoEm(b))
+  for (const l of ativos.slice(0, MAX_POR_RODADA)) {
     try {
       const v = await estadoVistoria(l.crmVistoria!.negId!, l.crmVistoria!.cotacaoId!)
       const st = (v as { status?: string } | null)?.status || ''
-      if (st && st !== l.crmVistoria?.vistoriaStatus) {
-        updateLead(l.ref, (x) => {
-          if (x.crmVistoria) {
-            x.crmVistoria.vistoriaStatus = st
-            x.crmVistoria.statusLidoEm = new Date().toISOString()
-          }
-        })
-        console.log(`[Vistoria CRM] ${l.ref}: vistoria ${st}`)
-      }
+      let mudou = false
+      updateLead(l.ref, (x) => {
+        if (!x.crmVistoria) return
+        const agora = new Date().toISOString()
+        x.crmVistoria.conferidoEm = agora
+        if (st && st !== x.crmVistoria.vistoriaStatus) {
+          x.crmVistoria.vistoriaStatus = st
+          x.crmVistoria.statusLidoEm = agora
+          mudou = true
+        }
+      })
+      if (mudou) console.log(`[Vistoria CRM] ${l.ref}: vistoria ${st}`)
       if (st === 'aprovada') {
         const fresh = findLeadByRef(l.ref)
         if (fresh) await aprovarVistoria(fresh, 'crm')
       }
     } catch (err) {
+      // Com erro também conta como conferido: senão o cadastro fica na frente da fila e tira a vez dos outros.
+      updateLead(l.ref, (x) => {
+        if (x.crmVistoria) x.crmVistoria.conferidoEm = new Date().toISOString()
+      })
       console.warn(`[Vistoria CRM] ${l.ref}: não li a situação da vistoria —`, err instanceof Error ? err.message : err)
     }
   }

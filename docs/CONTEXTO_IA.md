@@ -628,3 +628,12 @@ Pedido do Clebson (ideias 1, 2 e 3 para o chat do 21Go).
 **No AtendeHub** (clebsonisaias/atendehub#130), duas ferramentas que valem quando marcadas no nó:
 - `veiculo_pagar_adesao`: o Pix sai exato numa mensagem só dele, pelo mecanismo da 2ª via.
 - `veiculo_cotar_por_documento`: usa a última foto ou PDF da conversa.
+
+### [Claude] — 2026-11-23 — Acompanhamento da vistoria: rodízio dos cadastros
+
+`acompanharVistorias()` (`src/lib/crm-vistoria.ts`) pegava sempre os 10 primeiros do arquivo. Com mais de 10 cadastros esperando a vistoria, os outros nunca eram conferidos: a etapa não aparecia na tela nem no chat, os lembretes da vistoria não saíam e a aprovação não liberava o Pix.
+- Agora continua com até 10 consultas ao CRM por rodada (1 por minuto), mas em rodízio: vão primeiro os conferidos há mais tempo.
+- `crmVistoria.conferidoEm` é gravado em toda conferência, com mudança de etapa ou não, e também quando o CRM dá erro (senão um cadastro com erro ficaria sempre na frente).
+- `crmVistoria.statusLidoEm` continua sendo a hora em que a etapa mudou.
+- Com N cadastros, cada um é conferido pelo menos a cada ⌈N/10⌉ minutos.
+- Teste com CRM falso local, sem chamar o CRM de verdade: `npx --yes tsx scripts/teste-acompanhar-vistorias.ts` (25 cadastros em 3 rodadas). Com `--tempo-real`, usa o agendador de verdade (~3 min).
