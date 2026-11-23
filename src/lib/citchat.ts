@@ -253,14 +253,14 @@ export async function sendWhatsAppAdesaoConfirmada(params: {
           `👉 ${params.vistoriaUrl}`,
         ]
       : [
-          `🎉 Seu cadastro está completo. A 21Go envia os seus dados de acesso por e-mail e WhatsApp. 🤝`,
+          `🎉 Seu cadastro está completo. Os seus dados de acesso foram enviados para o seu e-mail cadastrado. Baixe o aplicativo 21Go na loja do seu celular para acompanhar sua proteção. 🤝`,
         ]),
   ].join('\n')
 
   return sendCitchatMessage(
     params.telefone,
     message,
-    params.vistoriaUrl ? undefined : { template: 'citmax_21go_pagamento', params: [reais(params.valor)] }
+    params.vistoriaUrl ? undefined : { template: 'citmax_21go_pagamento_app', params: [reais(params.valor)] }
   )
 }
 
