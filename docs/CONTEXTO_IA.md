@@ -645,3 +645,9 @@ Pedido do Clebson (ideias 1, 2 e 3 para o chat do 21Go).
   - Marcadas as **6/6 ferramentas da 21Go** (incluindo `veiculo_cotar_por_documento` e `veiculo_pagar_adesao`).
   - Desmarcado `Confirmar o titular antes de mostrar dados` e mantido `Pode passar para um atendente humano` desmarcado.
   - Temperatura ajustada para `0.7` (`Equilibrado`) e `promptIa` reescrito com postura 100% humanizada de consultor da 21Go no WhatsApp.
+
+### [Antigravity] — 2026-11-23 — Manual Oficial de Artes do Instagram + 32 artes prontas (25/11 a 30/12)
+
+- **Padrão obrigatório para novas artes do Instagram:** salvo em `docs/MANUAL_ARTES_INSTAGRAM.md` (e PDF original em `docs/manual-artes-instagram-21go.pdf`). Toda nova arte criada para `@citmax.21go` DEVE seguir rigorosamente esse manual (logo, paleta, fonte Inter, medidas Feed `1080×1350` e Story `1080×1920`, estrutura em 4 partes, sem preço, sem modelo de carro, sem "seguro" e sem SUSEP).
+- **Pacote oficial de 25/11 a 30/12/2026:** 32 artes (16 Feed + 16 Story) salvas em `public/social/feed/` e `public/social/story/`, agendadas para Segunda, Quarta e Sexta às 18h (Feed + Story).
+- **Primeira arte criada no novo padrão (23/11):** `23-11-protecao-sem-complicacao` (Feed + Story, fundo laranja `#F2911D` + cards marinho `#0B1230`).

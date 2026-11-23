@@ -49,6 +49,14 @@ export const SOCIAL_ONE_OFFS: SocialContent[] = [
       'Chegamos ao Rio Grande do Norte! 🧡\nA partir de hoje, a proteção veicular da 21Go tem atendimento potiguar, com o Grupo CITmax.\nCarro ou moto, a cotação é grátis e sai pela placa.\n👉 Link na bio ou www.21go.seg.br\n\n#21Go #ProteçãoVeicular #RioGrandeDoNorte #Natal #RN #GrupoCITmax',
   },
   {
+    id: '23-11-protecao-sem-complicacao',
+    oneOff: true,
+    kicker: '23/11 (seg) · Feed + Story',
+    title: 'Proteção veicular sem complicação',
+    body: 'Tudo resolvido pelo celular, sem sair de casa.',
+    caption: cap('Proteger o seu veículo não precisa ser complicado. Na 21Go você faz a cotação pela placa em minutos, sem consulta ao SPC ou Serasa, sem análise de perfil de condutor e com assistência 24h em todo o Brasil (as coberturas variam conforme o plano).'),
+  },
+  {
     id: '25-11-quem-esta-por-tras',
     oneOff: true,
     kicker: '25/11 (qua) · Feed + Story',
