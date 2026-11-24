@@ -682,3 +682,13 @@ A rota recusa com 422 o que fere a seção 06 (`src/lib/arte-regras.ts`). Os 14 
 - **Modelos:** `OPENROUTER_MODELS` (lista separada por vírgula). Sem a variável, valem os gratuitos, nesta ordem: `nvidia/nemotron-3-ultra-550b-a55b:free`, `google/gemma-4-31b-it:free`, `openrouter/free`. Os gratuitos são lentos (cerca de 40 s num teste), por isso há espera de até 45 s por modelo e de 1 minuto no total.
 - **Documentos nunca vão ao OpenRouter.** No plano gratuito, quem roda o modelo pode guardar o que recebe. A leitura de CNH, CRLV e comprovante continua só na OpenAI, com o Gemini de reserva (`document-ai.ts`).
 - **De passagem:** `/api/ai/luna` agora só aceita as mensagens `user` e `assistant` vindas do navegador, no máximo 12, com até 2000 caracteres cada. Antes, uma mensagem `system` mandada pelo navegador mudava as regras da Luna.
+
+### [Claude] — 2026-11-24 — PDF digital lido por código, sem IA
+
+- **O quê:** quando o documento chega em **PDF digital** (CRLV-e, CNH digital, conta em PDF), o site tira o texto com o `pdftotext` (`src/lib/pdf-texto.ts`, poppler-utils no `Dockerfile`) e lê os campos por código (`src/lib/documento-pdf.ts`), sem chamar a IA. Foto e PDF escaneado continuam indo à IA, como antes. O resultado sai com `model: 'pdf-texto'`.
+- **O que o código lê, e só com certeza:**
+  - CRLV: a placa (exatamente uma; com "placa anterior" vai para a IA), o chassi e o renavam (dígito verificador, sem confundir com CPF), estes dois só quando há um valor único;
+  - CNH ou RG: um CPF válido e o nome (rótulo "NOME" ou "NOME E SOBRENOME");
+  - conta: **um único CEP** no documento (conta com o endereço da empresa vai para a IA), com "CIDADE - UF" junto e a UF batendo com o CEP.
+- **Na dúvida vai para a IA.** O log mostra só o tipo ou o motivo (`[Document AI] PDF para a IA: mais de um CEP`), nunca dado do documento. Esses motivos servem para ajustar as regras com PDFs reais.
+- **Desligar sem mexer no código:** `DOCUMENTO_PDF_CODIGO=off` no Coolify.
