@@ -674,3 +674,11 @@ A arte pronta em `public/social/` continua tendo prioridade. As 32 do Claude Des
 A rota recusa com 422 o que fere a seção 06 (`src/lib/arte-regras.ts`). Os 14 posts do rodízio ganharam os campos do modelo (`etiqueta`, `destaque`, `fundo`, `miolo`), e o texto "em 2 minutos" saiu: estatística sem fonte.
 
 **Antigravity:** para criar uma arte nova sem o Claude Design, preencha os campos do post em `social-content.ts` (seção 07 do manual) e confira em `/api/social/arte/<id>?png=1` e `?formato=story&png=1`.
+
+### [Claude] — 2026-11-24 — OpenRouter como reserva da Luna
+
+- **O quê:** quando a OpenAI falha ou fica sem crédito, a Luna (chat do site e texto de venda do painel) responde pelo OpenRouter (`src/lib/openrouter.ts`). Sem as duas IAs, continua a resposta pronta de `/api/ai/luna`.
+- **Chave:** `OPENROUTER_API_KEY` no Coolify do `21go-cotacao`. Hoje é a mesma conta gratuita do Macaíba Gospel, ou seja, os dois sites dividem cerca de 50 pedidos por dia nos modelos gratuitos. Quando o Clebson mandar uma chave só da 21Go, basta trocar o valor no Coolify.
+- **Modelos:** `OPENROUTER_MODELS` (lista separada por vírgula). Sem a variável, valem os gratuitos, nesta ordem: `nvidia/nemotron-3-ultra-550b-a55b:free`, `google/gemma-4-31b-it:free`, `openrouter/free`. Os gratuitos são lentos (cerca de 40 s num teste), por isso há espera de até 45 s por modelo e de 1 minuto no total.
+- **Documentos nunca vão ao OpenRouter.** No plano gratuito, quem roda o modelo pode guardar o que recebe. A leitura de CNH, CRLV e comprovante continua só na OpenAI, com o Gemini de reserva (`document-ai.ts`).
+- **De passagem:** `/api/ai/luna` agora só aceita as mensagens `user` e `assistant` vindas do navegador, no máximo 12, com até 2000 caracteres cada. Antes, uma mensagem `system` mandada pelo navegador mudava as regras da Luna.

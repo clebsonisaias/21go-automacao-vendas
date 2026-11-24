@@ -1,6 +1,9 @@
 /**
- * Motor oficial da IA Luna (21Go CITmax) via OpenAI GPT
+ * Motor oficial da IA Luna (21Go CITmax): OpenAI GPT e, quando ela falha ou fica sem crédito,
+ * a reserva do OpenRouter (src/lib/openrouter.ts, modelos gratuitos).
  */
+
+import { conversarOpenRouter, openRouterConfigurado } from './openrouter'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini'
@@ -37,37 +40,61 @@ export interface LunaChatMessage {
   content: string
 }
 
-export async function chatWithLuna(messages: LunaChatMessage[]): Promise<string> {
-  if (!OPENAI_API_KEY) {
-    throw new Error('Chave OPENAI_API_KEY não configurada no servidor.')
-  }
+/**
+ * Só o que o próprio site manda: mensagens do cliente e da Luna, as mais recentes, com tamanho
+ * limitado. Uma mensagem "system" vinda do navegador mudaria as regras da Luna, então fica de fora.
+ */
+export function limparConversa(messages: unknown): LunaChatMessage[] {
+  if (!Array.isArray(messages)) return []
+  return messages
+    .filter(
+      (m): m is { role: 'user' | 'assistant'; content: string } =>
+        !!m &&
+        typeof m === 'object' &&
+        ((m as { role?: unknown }).role === 'user' || (m as { role?: unknown }).role === 'assistant') &&
+        typeof (m as { content?: unknown }).content === 'string' &&
+        (m as { content: string }).content.trim() !== ''
+    )
+    .slice(-12)
+    .map((m) => ({ role: m.role, content: m.content.slice(0, 2000) }))
+}
 
-  const payload = {
-    model: OPENAI_MODEL,
-    messages: [
-      { role: 'system', content: LUNA_SYSTEM_PROMPT },
-      ...messages,
-    ],
-    temperature: 0.7,
-    max_tokens: 800,
-  }
-
-  const res = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
+async function chatOpenAI(conversa: LunaChatMessage[]): Promise<string> {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${OPENAI_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ model: OPENAI_MODEL, messages: conversa, temperature: 0.7, max_tokens: 800 }),
+    signal: AbortSignal.timeout(30_000),
   })
-
-  if (!res.ok) {
-    const errorText = await res.text()
-    throw new Error(`OpenAI API error (${res.status}): ${errorText}`)
-  }
-
+  if (!res.ok) throw new Error(`OpenAI HTTP ${res.status}`)
   const data = await res.json()
-  return data.choices?.[0]?.message?.content || 'Desculpe, não consegui processar a resposta agora.'
+  const texto = data.choices?.[0]?.message?.content
+  if (typeof texto !== 'string' || !texto.trim()) throw new Error('OpenAI devolveu resposta vazia')
+  return texto
+}
+
+export async function chatWithLuna(messages: LunaChatMessage[]): Promise<string> {
+  const historico = limparConversa(messages)
+  if (!historico.some((m) => m.role === 'user')) throw new Error('Conversa sem mensagem do cliente.')
+  const conversa: LunaChatMessage[] = [{ role: 'system', content: LUNA_SYSTEM_PROMPT }, ...historico]
+
+  if (OPENAI_API_KEY) {
+    try {
+      return await chatOpenAI(conversa)
+    } catch (err) {
+      if (!openRouterConfigurado()) throw err
+      console.warn('[Luna] OpenAI falhou, usando o OpenRouter:', err instanceof Error ? err.message : err)
+    }
+  }
+  if (openRouterConfigurado()) {
+    const { texto, modelo } = await conversarOpenRouter(conversa, { maxTokens: 1200, temperatura: 0.7 })
+    console.log(`[Luna] respondida pelo OpenRouter (${modelo})`)
+    return texto
+  }
+  throw new Error('Nenhuma IA configurada no servidor (OPENAI_API_KEY ou OPENROUTER_API_KEY).')
 }
 
 export async function generateLunaPitch({
