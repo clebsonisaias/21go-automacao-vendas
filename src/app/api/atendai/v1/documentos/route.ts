@@ -14,6 +14,7 @@ import {
 import { limitePorChave } from '@/lib/rate-limit'
 import { DocumentAiResult } from '@/lib/types'
 import { MAX_FILE_BYTES, sniffType } from '@/lib/vistoria-files'
+import { guardarComprovanteLido } from '@/lib/regiao-comprovante'
 
 export const dynamic = 'force-dynamic'
 
@@ -180,6 +181,8 @@ async function processar(ref: string, arquivos: File[]): Promise<{ dados: Record
       continue
     }
     aplicarLeitura(ref, leitura)
+    // Lido aqui no servidor: vale para conferir o estado e o preço (regiao-comprovante.ts).
+    if (slot === 'comprovanteResidencia') guardarComprovanteLido(ref, leitura, hashDoArquivo(buf))
     recebidos.add(NOME[slot])
     lead = findLeadByRef(ref) || lead
   }

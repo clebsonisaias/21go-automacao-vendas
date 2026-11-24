@@ -1,4 +1,5 @@
 import { LeadSubmissionPayload } from './types'
+import { linhaTabelaNordeste } from './tabela-nordeste'
 
 // Envio de leads ao Power CRM pelo formulário dinâmico oficial (o mesmo que o cotacao.me usa).
 // Formato espelhado do script oficial: resources.powercrm.com.br/assets/external/js/script.pwrcrm.js
@@ -110,6 +111,37 @@ export function maskPhone(raw: string): string {
   return d
 }
 
+/**
+ * Autorização da Tabela Nordeste, no topo da observação do lead (texto do Clebson, 23/11/2026).
+ * O CRM só aplica o valor da tabela com este bloco preenchido com o valor que veio dela.
+ */
+export function autorizacaoNordeste(
+  payload: Pick<LeadSubmissionPayload, 'tabelaNordeste' | 'planoEscolhidoNome'>
+): string | null {
+  const t = payload.tabelaNordeste
+  if (!t) return null
+  return [
+    'Cobrir valor de mensalidade',
+    `Plano ${payload.planoEscolhidoNome}`,
+    `Valor R$ ${t.mensalidade.toFixed(2).replace('.', ',')}`,
+    'Autorizado Marcos Alves',
+    'Charlles Alexandre',
+    'Regional Rio Grande do Norte',
+  ].join('\n')
+}
+
+/** Linhas do preço por região no corpo da observação (a faixa da tabela, ou o estado informado). */
+export function linhasRegiao(payload: Pick<LeadSubmissionPayload, 'tabelaNordeste' | 'ufDeclarada' | 'planoNacional'>): string[] {
+  if (payload.tabelaNordeste) return [linhaTabelaNordeste(payload.tabelaNordeste, payload.ufDeclarada, payload.planoNacional?.monthly)]
+  return payload.ufDeclarada ? [`Estado informado: ${payload.ufDeclarada} (preço nacional)`] : []
+}
+
+/** Observação do lead: a autorização da Tabela Nordeste em cima (quando vale) e os dados do site embaixo. */
+function observacao(corpo: string, payload: Pick<LeadSubmissionPayload, 'tabelaNordeste' | 'planoEscolhidoNome'>): string {
+  const aut = autorizacaoNordeste(payload)
+  return aut ? `${aut}\n\n${corpo}` : corpo
+}
+
 /** Monta o corpo exatamente como o formulário oficial, com os IDs reais da cotação (powercrmMeta). */
 export async function buildPowerCrmBody(payload: LeadSubmissionPayload): Promise<Record<string, unknown>> {
   const form = await getFormConfig()
@@ -137,7 +169,7 @@ export async function buildPowerCrmBody(payload: LeadSubmissionPayload): Promise
     ...(meta?.modelId ? { vehicleModel: String(meta.modelId) } : {}),
     ...(year ? { vehicleYear: year } : {}),
     vehicleIsWork: Boolean(payload.veiculoTrabalho),
-    observation: [
+    observation: observacao([
       `Site 21go.seg.br`,
       `Veículo: ${payload.vehicle.marca} ${payload.vehicle.modelo} ${payload.vehicle.ano}`,
       `FIPE ${payload.vehicle.fipeCode}: ${brl(payload.vehicle.fipeValue || 0)}`,
@@ -146,10 +178,11 @@ export async function buildPowerCrmBody(payload: LeadSubmissionPayload): Promise
       payload.cupom
         ? `Adesão: ${brl(payload.ativacao)} (cupom ${payload.cupom.codigo}, de ${brl(payload.ativacaoOriginal ?? payload.ativacao)})`
         : `Adesão: ${brl(payload.ativacao)}`,
+      ...linhasRegiao(payload),
       `CPF: ${payload.cpf || 'não informado'}`,
       `Cidade: ${payload.cidade || 'não informada'}`,
       `Trabalho/app: ${payload.veiculoTrabalho ? 'SIM' : 'NÃO'}`,
-    ].join(' | '),
+    ].join(' | '), payload),
     utmParameters: {},
   }
 }

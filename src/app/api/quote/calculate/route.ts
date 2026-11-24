@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchOfficialPricing } from '@/lib/powercrm'
 import { createQuoteToken } from '@/lib/quote-token'
+import { aplicarPrecoRegional, conferirVeiculo } from '@/lib/preco-regional'
+import { naRegiaoDaTabela } from '@/lib/tabela-nordeste'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { tipo, brandId, brandText, modelId, modelText, year, codFipe, leilao, carroApp } = body
+    const { tipo, brandId, brandText, modelId, modelText, year, codFipe, leilao, carroApp, uf } = body
 
     if (!brandId || !modelId || !year || !codFipe) {
       return NextResponse.json(
@@ -28,8 +30,13 @@ export async function POST(req: NextRequest) {
       carroApp: carroApp || 'nao',
     })
 
+    // Quem mora no RN, na PB ou no CE paga a Tabela Nordeste (ver preco-regional.ts), com o
+    // veículo conferido no servidor (o nome que vem do navegador não decide a faixa).
+    const veiculo = result.success && naRegiaoDaTabela(uf) ? await conferirVeiculo({ tipo, brandId, modelId, year, codFipe }) : null
+    aplicarPrecoRegional(result, uf, veiculo)
+
     if (result.success && result.plans.length) {
-      result.quoteToken = createQuoteToken(result.vehicle, result.plans, result.powercrmMeta) || undefined
+      result.quoteToken = createQuoteToken(result.vehicle, result.plans, result.powercrmMeta, result.regiao?.uf) || undefined
     }
 
     return NextResponse.json(result)

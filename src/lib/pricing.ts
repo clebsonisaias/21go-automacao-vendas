@@ -1,4 +1,5 @@
 import { PlanPricing, VehicleInfo } from './types'
+import { precoNordeste, type VeiculoParaTabela } from './tabela-nordeste'
 
 // Coberturas oficiais de cada plano extraídas do bundle da 21Go
 export const PLAN_FEATURES: Record<string, string[]> = {
@@ -101,6 +102,14 @@ export function requiresPresencialInspection(vehicle: VehicleInfo): boolean {
   return patterns.some((regex) => regex.test(text))
 }
 
+/** Ordem dos planos para a adesão e para o plano comparado com a Tabela Nordeste. */
+export const PRIORIDADE_PLANOS = ['vip', 'suv', 'moto-1000', 'moto-400', 'especial', 'premium', 'do-seu-jeito', 'basico']
+
+/** O plano que a Tabela Nordeste substitui: o primeiro da ordem de prioridade que o CRM deu. */
+export function planoBase<T extends { id: string }>(plans: T[]): T | undefined {
+  return PRIORIDADE_PLANOS.map((id) => plans.find((p) => p.id === id)).find(Boolean) || plans[0]
+}
+
 /**
  * Calcula a taxa de ativação segundo a regra oficial da 21Go
  */
@@ -114,18 +123,8 @@ export function calculateActivationFee(
   }
 
   // Achar o primeiro plano prioritário disponível
-  const priorityOrder = [
-    'vip',
-    'suv',
-    'moto-1000',
-    'moto-400',
-    'especial',
-    'premium',
-    'do-seu-jeito',
-    'basico',
-  ]
   let priorityMonthly = planMonthly
-  for (const pid of priorityOrder) {
+  for (const pid of PRIORIDADE_PLANOS) {
     const found = allPlans.find((p) => p.id === pid)
     if (found) {
       priorityMonthly = found.monthly
@@ -207,6 +206,48 @@ export function enrichPlansWithRules(
       elegivelAdesivo,
       percentualAdesivo: percentualAdesivoReferencia,
       percentualPontualidade,
+    },
+  }
+}
+
+/**
+ * Plano único de quem mora onde a Tabela Nordeste vale (RN, PB e CE): a mensalidade da Tabela Nordeste no lugar do preço do
+ * CRM, sem pontualidade nem adesivo por cima (a tabela é o preço final). Compara com o VIP do
+ * CRM, ou com o primeiro plano da ordem de prioridade; nome e coberturas são os desse plano,
+ * para o CRM achar o plano pelo nome. Sem faixa na tabela para o veículo, devolve null.
+ */
+export function montarPlanoNordeste(
+  vehicle: VehicleInfo,
+  plans: PlanPricing[],
+  uf: string,
+  veiculo: Omit<VeiculoParaTabela, 'fipe'>,
+  utilitarios: string[]
+): PlanPricing | null {
+  const base = planoBase(plans)
+  if (!base) return null
+  const tabela = precoNordeste({ ...veiculo, fipe: vehicle.fipeValue }, utilitarios)
+  if (!tabela) return null
+  const mensalidade = tabela.mensalidade
+  const ativacao = calculateActivationFee(vehicle, mensalidade, [{ id: base.id, monthly: mensalidade }])
+  return {
+    id: base.id,
+    name: base.name,
+    monthly: mensalidade,
+    popular: true,
+    ativacao,
+    mensalidadeComPontualidade: mensalidade,
+    mensalidadeComAdesivo: mensalidade,
+    coberturas: base.coberturas,
+    precoNacional: base.monthly,
+    regional: {
+      uf,
+      tabela,
+      nacional: {
+        monthly: base.monthly,
+        pontualidade: base.mensalidadeComPontualidade,
+        adesivo: base.mensalidadeComAdesivo,
+        ativacao: base.ativacao,
+      },
     },
   }
 }

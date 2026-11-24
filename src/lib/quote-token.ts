@@ -1,5 +1,6 @@
 import crypto from 'node:crypto'
-import { PlanPricing, VehicleInfo } from './types'
+import { PlanPricing, PlanoRegional, VehicleInfo } from './types'
+import { planoBase } from './pricing'
 
 // Token assinado devolvido pela cotação. O navegador o reenvia no cadastro, e o servidor
 // usa os valores que ELE mesmo calculou (taxa de adesão, mensalidades). Sem isso, qualquer
@@ -14,6 +15,8 @@ interface QuotePlanSnapshot {
   a: number
   ad: number
   n: string
+  /** Plano com o preço da Tabela Nordeste: faixa e valores do CRM (para voltar a eles). */
+  ne?: PlanoRegional
 }
 
 type PowercrmMeta = { brandId: number | string; modelId: number | string; yearId: number | string }
@@ -26,6 +29,10 @@ interface QuoteTokenPayload {
   veh?: VehicleInfo
   /** IDs do Power CRM (marca/modelo/ano), usados no envio do lead. */
   meta?: PowercrmMeta
+  /** Estado que o cliente informou na cotação. */
+  uf?: string
+  /** Plano que a Tabela Nordeste substitui (o comprovante só troca o preço sozinho nesse plano). */
+  base?: string
 }
 
 // Reserva: se nenhuma variável foi definida, usa um segredo aleatório gerado na subida do servidor.
@@ -47,7 +54,7 @@ function sign(data: string, key: string): string {
   return crypto.createHmac('sha256', key).update(data).digest('base64url')
 }
 
-export function createQuoteToken(vehicle: VehicleInfo, plans: PlanPricing[], meta?: PowercrmMeta): string | null {
+export function createQuoteToken(vehicle: VehicleInfo, plans: PlanPricing[], meta?: PowercrmMeta, uf?: string): string | null {
   const key = secret()
   const payload: QuoteTokenPayload = {
     exp: Date.now() + TTL_MS,
@@ -62,10 +69,19 @@ export function createQuoteToken(vehicle: VehicleInfo, plans: PlanPricing[], met
       combustivel: vehicle.combustivel,
     },
     meta,
+    ...(uf ? { uf } : {}),
+    ...(planoBase(plans) ? { base: planoBase(plans)!.id } : {}),
     plans: Object.fromEntries(
       plans.map((p) => [
         p.id,
-        { m: p.monthly, p: p.mensalidadeComPontualidade, a: p.mensalidadeComAdesivo, ad: p.ativacao, n: p.name },
+        {
+          m: p.monthly,
+          p: p.mensalidadeComPontualidade,
+          a: p.mensalidadeComAdesivo,
+          ad: p.ativacao,
+          n: p.name,
+          ...(p.regional ? { ne: p.regional } : {}),
+        },
       ])
     ),
   }
@@ -77,7 +93,17 @@ export interface VerifiedQuote {
   fipe: string
   vehicle?: VehicleInfo
   meta?: PowercrmMeta
-  plan: { id: string; name: string; monthly: number; pontualidade: number; adesivo: number; ativacao: number }
+  uf?: string
+  base?: string
+  plan: {
+    id: string
+    name: string
+    monthly: number
+    pontualidade: number
+    adesivo: number
+    ativacao: number
+    regional?: PlanoRegional
+  }
 }
 
 /** Valida assinatura e validade; devolve o plano escolhido com os valores do servidor. */
@@ -99,7 +125,17 @@ export function verifyQuoteToken(token: unknown, planId: string): VerifiedQuote 
       fipe: payload.fipe,
       vehicle: payload.veh,
       meta: payload.meta,
-      plan: { id: planId, name: plan.n, monthly: plan.m, pontualidade: plan.p, adesivo: plan.a, ativacao: plan.ad },
+      uf: payload.uf,
+      base: payload.base,
+      plan: {
+        id: planId,
+        name: plan.n,
+        monthly: plan.m,
+        pontualidade: plan.p,
+        adesivo: plan.a,
+        ativacao: plan.ad,
+        ...(plan.ne ? { regional: plan.ne } : {}),
+      },
     }
   } catch {
     return null

@@ -14,7 +14,7 @@ const NAO_LEU =
   'Não consegui ler a placa nesta foto. Peça ao cliente uma foto mais nítida do documento do carro (CRLV), sem reflexo e com a placa aparecendo, ou que digite a placa.'
 
 /**
- * POST multipart { telefone, arquivo, usoApp?, leilao? } → cotação a partir da foto ou PDF do
+ * POST multipart { telefone, arquivo, usoApp?, leilao?, uf? } → cotação a partir da foto ou PDF do
  * documento do carro (CRLV): a IA do site lê a placa e a cotação segue igual à da placa digitada.
  *
  * O arquivo não é gravado e a resposta não traz o dono nem o CPF do documento (o carro pode
@@ -77,6 +77,13 @@ export async function POST(req: NextRequest) {
   }
   if (!PLACA.test(placa)) return json({ erro: NAO_LEU }, 422)
 
-  const r = await cotacaoDoChat({ placa, usoApp: sim(form.get('usoApp')), leilao: sim(form.get('leilao')), modelo: '' })
+  const r = await cotacaoDoChat({
+    placa,
+    usoApp: sim(form.get('usoApp')),
+    leilao: sim(form.get('leilao')),
+    modelo: '',
+    uf: String(form.get('uf') ?? '').slice(0, 40),
+    telefone: String(form.get('telefone') ?? ''),
+  })
   return json({ placaLida: placa, ...r.corpo }, r.status)
 }

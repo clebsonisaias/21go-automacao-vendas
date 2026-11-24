@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Bot, CheckCircle2, Copy, ExternalLink, Loader2, MessageCircle, X } from 'lucide-react'
 import type { StoredLead } from '@/lib/db'
 import { brl } from '@/lib/site'
+import { descreverTabela } from '@/lib/tabela-nordeste'
 import { DocumentAiUploader } from '@/components/common/DocumentAiUploader'
 import type { DocumentAiResult } from '@/lib/types'
 import { StatusLabel } from './lead-status'
@@ -77,6 +78,7 @@ export function LeadDrawer({
   const closeRef = useRef<HTMLButtonElement>(null)
   const [approving, setApproving] = useState(false)
   const [closing, setClosing] = useState<'idle' | 'confirm' | 'busy'>('idle')
+  const [regiao, setRegiao] = useState<'idle' | 'confirmar-nacional' | 'busy'>('idle')
   const [appVisto, setAppVisto] = useState(lead.appVistoUrl || '')
   const [sendingVisto, setSendingVisto] = useState(false)
   const [generating, setGenerating] = useState(false)
@@ -86,6 +88,15 @@ export function LeadDrawer({
   onCloseRef.current = onClose
 
   useEffect(() => setDraft(lead), [lead])
+  // A tabela só substitui o plano-base da cotação (o VIP, quase sempre).
+  const tabelaPossivel = !(draft.planoBaseId && draft.planoEscolhidoId !== draft.planoBaseId)
+  // Preço por região a decidir pela equipe: comprovante não confirmou, e ainda dá para mudar (antes do Pix).
+  const regiaoPendente =
+    !!draft.precoRegiao &&
+    !draft.pagamento &&
+    ['pendente_vistoria', 'vistoria_enviada'].includes(draft.status) &&
+    (draft.regiaoConfirmada?.status === 'conferir' ||
+      (draft.precoRegiao === 'regional' && draft.regiaoConfirmada?.status !== 'regional' && !!draft.vistoriaData?.enviadoEm))
 
   // Foco: entra no botão fechar, fica preso no painel e volta para quem abriu.
   useEffect(() => {
@@ -177,6 +188,34 @@ export function LeadDrawer({
       notify('Sem conexão. Tente de novo.', 'error')
     } finally {
       setClosing('idle')
+    }
+  }
+
+  const decidirRegiao = async (decisao: 'regional' | 'nacional') => {
+    // Trocar da tabela para o nacional muda o preço: pede confirmação. Manter o nacional, não.
+    if (decisao === 'nacional' && draft.precoRegiao === 'regional' && regiao === 'idle') {
+      setRegiao('confirmar-nacional')
+      return
+    }
+    setRegiao('busy')
+    try {
+      const res = await fetch('/api/admin/regiao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ref: lead.ref, decisao }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        if (data.lead) setDraft(data.lead)
+        notify(data.message || 'Preço decidido.')
+        await onApproved()
+      } else {
+        notify(data?.error || 'Não foi possível mudar o preço. Tente de novo.', 'error')
+      }
+    } catch {
+      notify('Sem conexão. Tente de novo.', 'error')
+    } finally {
+      setRegiao('idle')
     }
   }
 
@@ -281,6 +320,18 @@ export function LeadDrawer({
             <Field label="CPF">{draft.cpf || '—'}</Field>
             <Field label="E-mail">{draft.email || '—'}</Field>
             <Field label="Cidade">{draft.cidade || '—'}</Field>
+            {(draft.ufDeclarada || draft.uf || draft.regiaoConfirmada) && (
+              <Field label="Estado">
+                {draft.ufDeclarada ? `${draft.ufDeclarada} na cotação` : 'Não informado na cotação'}
+                {draft.regiaoConfirmada?.status === 'conferir'
+                  ? ` · comprovante a conferir: ${draft.regiaoConfirmada.motivo}`
+                  : draft.regiaoConfirmada?.uf
+                    ? ` · ${draft.regiaoConfirmada.uf} no comprovante${draft.regiaoConfirmada.mudouPreco ? ' (o preço mudou)' : ''}`
+                    : draft.uf
+                      ? ` · ${draft.uf} no comprovante`
+                      : ''}
+              </Field>
+            )}
             {endereco && <Field label="Endereço">{endereco}</Field>}
             {assoc?.cnh && <Field label="CNH">{assoc.cnh}</Field>}
           </Section>
@@ -309,6 +360,76 @@ export function LeadDrawer({
           <Section title="Plano e pagamento">
             <Field label="Plano">{draft.planoEscolhidoNome}</Field>
             <Field label="Mensalidade">{brl(draft.mensalidadeFinal)}/mês</Field>
+            {draft.precoRegiao && (
+              <Field label="Preço">
+                {draft.tabelaNordeste
+                  ? `Tabela regional: ${descreverTabela(draft.tabelaNordeste)}`
+                  : 'Nacional (CRM)'}
+                {draft.tabelaNordeste && draft.planoNacional && (
+                  <span className="text-muted"> · nacional {brl(draft.planoNacional.monthly)}</span>
+                )}
+              </Field>
+            )}
+            {regiaoPendente && (
+              <div role="note" className="my-2 flex flex-col gap-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                <p className="m-0">
+                  <strong>Preço a decidir.</strong>{' '}
+                  {draft.regiaoConfirmada?.motivo
+                    ? `O comprovante não confirmou sozinho: ${draft.regiaoConfirmada.motivo}.`
+                    : 'O comprovante ainda não confirmou o estado.'}
+                  {draft.precoRegiao === 'regional' ? ' O Pix só sai depois desta decisão.' : ''}
+                </p>
+                {regiao === 'confirmar-nacional' ? (
+                  <div className="flex flex-col gap-2">
+                    <p className="m-0">
+                      Trocar para o preço nacional
+                      {draft.planoNacional && draft.precoRegiao === 'regional'
+                        ? `: mensalidade ${brl(draft.planoNacional.pontualidade)}, adesão ${brl(draft.planoNacional.ativacao)} antes do cupom`
+                        : ''}
+                      ? O cliente é avisado no WhatsApp.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => decidirRegiao('nacional')}
+                        className="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-red-700 px-3 font-semibold text-white hover:bg-red-800"
+                      >
+                        Trocar para o preço nacional
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRegiao('idle')}
+                        className="inline-flex min-h-[44px] items-center rounded-lg border border-line bg-white px-3 font-semibold text-navy-800 hover:bg-surface-100"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {tabelaPossivel && (
+                    <button
+                      type="button"
+                      disabled={regiao === 'busy'}
+                      onClick={() => decidirRegiao('regional')}
+                      className="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-navy-900 px-3 font-semibold text-white hover:bg-navy-800 disabled:opacity-60"
+                    >
+                      {regiao === 'busy' && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
+                      Confirmar a tabela regional
+                    </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={regiao === 'busy'}
+                      onClick={() => decidirRegiao('nacional')}
+                      className="inline-flex min-h-[44px] items-center rounded-lg border border-line bg-white px-3 font-semibold text-navy-800 hover:bg-surface-100 disabled:opacity-60"
+                    >
+                      {draft.precoRegiao === 'regional' ? 'Usar o preço nacional' : 'Manter o preço nacional'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             <Field label="Adesão">
               {brl(draft.ativacao)}
               {draft.cupom ? ` (cupom ${draft.cupom.codigo}, de ${brl(draft.ativacaoOriginal ?? draft.ativacao)})` : ''}
