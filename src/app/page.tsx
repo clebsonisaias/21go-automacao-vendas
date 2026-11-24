@@ -9,6 +9,7 @@ import {
   Car,
   Check,
   CheckCircle2,
+  BadgePercent,
   ExternalLink,
   Info,
   Search,
@@ -419,6 +420,9 @@ export default function HomePage() {
     }
   }
 
+  // Plano em promoção pela tabela regional (RN, PB, CE): vem primeiro e em destaque.
+  const planoPromocao = quoteResult?.plans.find((p) => p.regional)
+
   // Mensalidade exibida conforme os descontos marcados
   const priceFor = (plan: PlanPricing) => {
     if (comAdesivo && quoteResult?.regras.elegivelAdesivo) return plan.mensalidadeComAdesivo
@@ -714,14 +718,6 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {quoteResult.regiao?.tabela ? (
-                <div className="flex max-w-[380px] flex-col gap-1 rounded-xl border border-line bg-surface-50 px-[18px] py-3.5">
-                  <span className="text-xs font-bold tracking-[1.5px] text-muted">PREÇO REGIONAL</span>
-                  <p className="m-0 text-[15px] font-semibold">
-                    Tabela regional para quem mora em {UFS[quoteResult.regiao.uf] ?? quoteResult.regiao.uf}. Já é o preço final.
-                  </p>
-                </div>
-              ) : (
               <fieldset className="m-0 flex flex-col gap-2.5 rounded-xl border border-line bg-surface-50 px-[18px] py-3.5">
                 <legend className="px-1.5 text-xs font-bold tracking-[1.5px] text-muted">SEUS DESCONTOS</legend>
                 {quoteResult.regras.elegivelAdesivo && (
@@ -750,7 +746,6 @@ export default function HomePage() {
                   </span>
                 </label>
               </fieldset>
-              )}
             </div>
 
             {quoteResult.regras.exigeVistoriaPresencial && (
@@ -769,22 +764,24 @@ export default function HomePage() {
               </div>
             )}
 
+            {quoteResult.regiao?.tabela && planoPromocao && (
+              <div role="note" className="flex items-start gap-3 rounded-2xl border-2 border-go-orange bg-white p-4 text-[15px] shadow-card">
+                <BadgePercent aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-go-orange-dark" />
+                <span>
+                  <strong>Promoção para quem mora em {UFS[quoteResult.regiao.uf] ?? quoteResult.regiao.uf}:</strong> o plano{' '}
+                  {planoPromocao.name} sai pela tabela regional, já com o preço final. Os outros planos seguem o preço nacional.
+                </span>
+              </div>
+            )}
+
             <div className="flex flex-col gap-1.5">
-              <h2 className="m-0 text-[28px] font-extrabold tracking-[-0.6px]">
-                {quoteResult.regiao?.tabela ? 'Seu plano' : 'Escolha o seu plano'}
-              </h2>
+              <h2 className="m-0 text-[28px] font-extrabold tracking-[-0.6px]">Escolha o seu plano</h2>
               <p className="m-0 text-base text-muted">
-                {quoteResult.regiao?.tabela
-                  ? `Preço da tabela regional para quem mora em ${UFS[quoteResult.regiao.uf] ?? quoteResult.regiao.uf}. Sem fidelidade nem multa de cancelamento.`
-                  : 'Valores oficiais da 21Go para este veículo. Sem fidelidade nem multa de cancelamento.'}
+                Valores oficiais da 21Go para este veículo. Sem fidelidade nem multa de cancelamento.
               </p>
             </div>
 
-            <div
-              className={`grid items-stretch gap-5 [grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))] ${
-                quoteResult.regiao?.tabela ? 'max-w-[420px]' : ''
-              }`}
-            >
+            <div className="grid items-stretch gap-5 [grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))]">
               {quoteResult.plans.map((plan) => {
                 const price = priceFor(plan)
                 const hasDiscount = price < plan.monthly
@@ -804,7 +801,7 @@ export default function HomePage() {
                         <h3 className="m-0 text-[21px] font-extrabold">{plan.name}</h3>
                         {pop && (
                           <span className="rounded-full bg-go-orange px-2.5 py-1 text-[11px] font-extrabold tracking-wider text-navy-950">
-                            {plan.regional ? 'PREÇO REGIONAL' : 'MAIS ESCOLHIDO'}
+                            {plan.regional ? (plan.precoNacional && plan.precoNacional > price ? 'PROMOÇÃO' : 'PREÇO REGIONAL') : 'MAIS ESCOLHIDO'}
                           </span>
                         )}
                       </div>
@@ -821,6 +818,9 @@ export default function HomePage() {
                           <span className={`text-sm font-bold ${pop ? 'text-go-orange' : 'text-go-orange-dark'}`}>
                             Economia de R$ {money(plan.precoNacional - price)} por mês
                           </span>
+                          {plan.regional && (
+                            <span className={`text-sm ${muted}`}>Tabela regional: já é o preço final, sem outros descontos.</span>
+                          )}
                         </>
                       ) : (
                         hasDiscount && (

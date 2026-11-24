@@ -151,7 +151,7 @@ function mensagemRegiao(
     : ''
   if (regiao.tabela && plano) {
     const de = plano.precoNacional && plano.precoNacional > plano.monthly ? `de ${brl(plano.precoNacional)} (preço nacional) por ` : ''
-    return `Cliente de ${nome}: mensalidade da tabela regional, ${de}${brl(plano.monthly)} por mês, já é o preço final (sem desconto de pontualidade nem de adesivo). O comprovante de residência confirma o estado.${confirmar}`
+    return `Cliente de ${nome}: o VIP está em promoção pela tabela regional, ${de}${brl(plano.monthly)} por mês, já o preço final (sem desconto de pontualidade nem de adesivo). Ofereça o VIP primeiro, em destaque. Os outros planos seguem o preço nacional, com os descontos de sempre. O comprovante de residência confirma o estado.${confirmar}`
   }
   if (regiao.regional) {
     return `Cliente de ${nome}, mas a FIPE deste veículo passa da tabela regional: vale o preço nacional.${confirmar}`
