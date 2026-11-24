@@ -4,6 +4,7 @@
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini'
+const OPENAI_BASE_URL = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '')
 
 export const LUNA_SYSTEM_PROMPT = `Você é a Luna, a Inteligência Artificial consultora de vendas e atendimento oficial da 21Go Proteção Veicular (Franquia CITmax).
 Seu tom é acolhedor, profissional, consultivo, seguro e persuasivo. Você fala em português brasileiro claro e direto.
@@ -51,7 +52,7 @@ export async function chatWithLuna(messages: LunaChatMessage[]): Promise<string>
     max_tokens: 800,
   }
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const res = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${OPENAI_API_KEY}`,

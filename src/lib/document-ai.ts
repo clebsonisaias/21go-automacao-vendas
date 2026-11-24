@@ -3,6 +3,7 @@ import { DocumentAiResult, ExtractedDocType } from './types'
 import { normalizarUf } from './tabela-nordeste'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
+const OPENAI_BASE_URL = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '')
 const PRIMARY_MODEL = 'gpt-6-luna'
 const BACKUP_MODEL = 'gpt-6-sol'
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
@@ -207,7 +208,7 @@ async function tryOpenAIModel(
     : { type: 'image_url', image_url: { url: dataUri, detail: 'high' } }
   const start = Date.now()
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${OPENAI_API_KEY}`,
