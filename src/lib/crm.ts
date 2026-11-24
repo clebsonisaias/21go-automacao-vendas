@@ -224,15 +224,8 @@ export async function syncCrmLeadsToDatabase(): Promise<{
     const cardsData = await cardsRes.json()
     const cards = Array.isArray(cardsData.data) ? cardsData.data : []
 
-    const existingLeads = getStoredLeads()
-    const siteGeneratedLeads = existingLeads.filter(
-      (l) => !l.id.includes('-') || l.id.startsWith('lead_')
-    )
-
-    const leadsMap = new Map<string, StoredLead>()
-    for (const l of siteGeneratedLeads) {
-      leadsMap.set(l.id, l)
-    }
+    // Cards lidos do CRM nesta sincronização. Os leads do site só são lidos no fim (ver abaixo).
+    const crmLeads: StoredLead[] = []
 
     let updatedOrImportedCount = 0
 
@@ -377,11 +370,26 @@ export async function syncCrmLeadsToDatabase(): Promise<{
           },
         }
 
-        leadsMap.set(card.id, leadItem)
+        crmLeads.push(leadItem)
         updatedOrImportedCount++
       } catch (itemErr) {
         console.warn(`[CRM Sync] Falha ao sincronizar card ${cardSummary.id}:`, itemErr)
       }
+    }
+
+    // Relê o arquivo só agora: o loop acima faz uma chamada ao CRM por card e pode levar
+    // dezenas de segundos. Nesse meio-tempo o site pode ter gravado cadastros, pagamentos
+    // (webhook do Mercado Pago), cupons, documentos e mudanças de status. Mantém a versão
+    // atual de cada lead gerado pelo site e só acrescenta ou atualiza os cards do CRM.
+    // Não pode haver await entre esta leitura e o writeLeads (que grava de forma atômica).
+    const leadsMap = new Map<string, StoredLead>()
+    for (const l of getStoredLeads()) {
+      if (!l.id.includes('-') || l.id.startsWith('lead_')) {
+        leadsMap.set(l.id, l)
+      }
+    }
+    for (const l of crmLeads) {
+      leadsMap.set(l.id, l)
     }
 
     const finalLeads = Array.from(leadsMap.values())
