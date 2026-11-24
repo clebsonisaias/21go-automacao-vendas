@@ -57,7 +57,7 @@ export interface QuoteCalculationResult {
     percentualAdesivo: number
     percentualPontualidade: number
   }
-  /** Estado informado na cotação; `regional` = a tabela vale lá; `tabela` = os planos foram trocados pelo da tabela. */
+  /** Estado informado na cotação; `regional` = a tabela vale lá; `tabela` = o VIP veio com o preço da tabela (os outros planos, com o do CRM). */
   regiao?: { uf: string; regional: boolean; tabela: boolean }
   /** Assinado pelo servidor; reenviado no cadastro para o servidor fixar os valores cobrados. */
   quoteToken?: string

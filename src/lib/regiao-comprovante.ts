@@ -21,7 +21,7 @@ import type { DocumentAiResult } from '@/lib/types'
  * O comprovante de residência confirma onde o cliente mora, e com isso o preço:
  * - declarou RN, PB ou CE e o comprovante é de fora: volta ao preço nacional (do CRM);
  * - declarou fora e o comprovante é de RN, PB ou CE: passa para a Tabela Nordeste, se a FIPE tem
- *   faixa e o plano escolhido é o que a tabela substitui;
+ *   faixa e o plano escolhido é o que a tabela substitui (o VIP); outro plano fica no preço do CRM;
  * - estado e CEP que não batem, ou que não deu para ler: o preço não muda e a equipe decide no /admin.
  *
  * Só vale leitura feita no servidor (a do navegador, na página /vistoria, pode ser editada).
@@ -153,6 +153,8 @@ export function aplicarRegiao(ref: string, regiao: RegiaoDoComprovante, sha256: 
     if (!regional) {
       if (!paraNacional(l)) return void (r = { acao: 'bloqueado', uf: regiao.uf, motivo: 'faltam os valores do CRM no cadastro' })
     } else {
+      // Mora na região, mas escolheu outro plano: fica no preço do CRM, como escolheu (sem alerta).
+      if (l.planoBaseId && l.planoEscolhidoId !== l.planoBaseId) return void (r = { acao: 'confirmado' })
       const motivo = paraRegional(l)
       if (motivo) {
         // Comprovante da região, mas a troca não é automática: a equipe decide (o preço segue o nacional).
