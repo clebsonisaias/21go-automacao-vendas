@@ -1,6 +1,8 @@
 import sharp from 'sharp'
 import { DocumentAiResult, ExtractedDocType } from './types'
-import { normalizarUf } from './tabela-nordeste'
+import { normalizarUf, ufDoCep } from './tabela-nordeste'
+import { cpfValido, lerTextoDoDocumento } from './documento-pdf'
+import { textoDoPdf } from './pdf-texto'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
 const OPENAI_BASE_URL = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '')
@@ -60,24 +62,6 @@ export function formatCep(raw: string): string {
   const digits = raw.replace(/\D/g, '')
   if (digits.length !== 8) return raw
   return digits.replace(/(\d{5})(\d{3})/, '$1-$2')
-}
-
-/**
- * Valida CPF (algoritmo dos dígitos verificadores)
- */
-function isValidCpf(cpf: string): boolean {
-  const digits = cpf.replace(/\D/g, '')
-  if (digits.length !== 11 || /^(\d)\1+$/.test(digits)) return false
-  let sum = 0
-  for (let i = 0; i < 9; i++) sum += parseInt(digits[i]) * (10 - i)
-  let rest = (sum * 10) % 11
-  if (rest === 10 || rest === 11) rest = 0
-  if (rest !== parseInt(digits[9])) return false
-  sum = 0
-  for (let i = 0; i < 10; i++) sum += parseInt(digits[i]) * (11 - i)
-  rest = (sum * 10) % 11
-  if (rest === 10 || rest === 11) rest = 0
-  return rest === parseInt(digits[10])
 }
 
 /**
@@ -166,7 +150,7 @@ function postProcess(parsed: any, model?: string, latencyMs?: number): DocumentA
 
   if (result.personal?.cpf) {
     result.personal.cpf = formatCpf(result.personal.cpf)
-    if (!isValidCpf(result.personal.cpf)) {
+    if (!cpfValido(result.personal.cpf)) {
       delete result.personal.cpf
       result.confidence = Math.max(0.5, (result.confidence || 0.8) - 0.1)
     }
@@ -257,8 +241,42 @@ async function tryOpenAIModel(
 }
 
 /**
+ * PDF digital lido sem IA (documento-pdf.ts). Depois da mesma normalização da IA, confere de novo
+ * o que cada documento precisa; faltando algo, devolve null e o PDF vai à IA como antes.
+ * O log leva só o tipo ou o motivo, nunca dado do documento.
+ */
+async function lerPdfPorCodigo(buf: Buffer, docTypeHint?: ExtractedDocType): Promise<DocumentAiResult | null> {
+  const inicio = Date.now()
+  const texto = await textoDoPdf(buf)
+  if (texto === null) return null
+  const { parsed, motivo } = lerTextoDoDocumento(texto, docTypeHint)
+  if (!parsed) {
+    console.log(`[Document AI] PDF para a IA: ${motivo}`)
+    return null
+  }
+  const ms = Date.now() - inicio
+  const r = postProcess(JSON.parse(JSON.stringify(parsed)), 'pdf-texto', ms)
+  const completo =
+    r.documentType === 'crlv'
+      ? Boolean(r.vehicle?.placa)
+      : r.documentType === 'cnh'
+        ? Boolean(r.personal?.cpf && r.personal?.nome)
+        : r.documentType === 'comprovante_residencia'
+          ? Boolean(r.address?.uf && r.address?.cep && ufDoCep(r.address.cep) === r.address.uf)
+          : false
+  if (!completo) {
+    console.log(`[Document AI] PDF para a IA: ${r.documentType} incompleto depois da conferência`)
+    return null
+  }
+  r.confidence = 0.95
+  recordLatency('pdf-texto', ms)
+  console.log(`[Document AI] PDF lido por código (${r.documentType})`)
+  return r
+}
+
+/**
  * Processa a imagem ou PDF.
- * Prioridade: gpt-6-luna → gpt-6-sol (backup) → Gemini
+ * Prioridade: PDF digital lido por código → gpt-6-luna → gpt-6-sol (backup) → Gemini
  */
 export async function extractDocumentWithAi(params: {
   imageBase64: string
@@ -279,6 +297,12 @@ export async function extractDocumentWithAi(params: {
     }
   }
   const dataUri = `data:${mimeType};base64,${rawBase64}`
+
+  // 0. PDF digital: o texto já está no arquivo. O código lê o que tem certeza; o resto vai à IA.
+  if (mimeType === 'application/pdf') {
+    const porCodigo = await lerPdfPorCodigo(Buffer.from(rawBase64, 'base64'), docTypeHint)
+    if (porCodigo) return porCodigo
+  }
 
   // 1. Tenta gpt-6-luna (principal, mais barato)
   if (OPENAI_API_KEY) {

@@ -44,6 +44,9 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# pdftotext: lê o texto dos PDFs digitais (CRLV-e, CNH digital, contas) sem IA (src/lib/pdf-texto.ts)
+RUN apk add --no-cache poppler-utils
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
