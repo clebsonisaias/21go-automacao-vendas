@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Copy, Link2, MessageCircle, X } from 'lucide-react'
 import { linkDoCupom, textoDoCupom, type CupomParaCompartilhar } from '@/lib/cupom-compartilhar'
 import { SITE } from '@/lib/site'
+import { ArteDoCupom } from '@/components/admin/ArteDoCupom'
 
 // Caixa "Compartilhar" da aba Cupons: o texto sai pronto dos dados do cupom (o que dá, até quando
 // vale, link que já preenche o cupom no cadastro). A equipe ajusta e manda pelo WhatsApp.
@@ -25,6 +26,7 @@ async function copiar(texto: string): Promise<boolean> {
 }
 
 export function CompartilharCupom({
+  cupomId,
   cupom,
   descricao,
   valendo,
@@ -32,6 +34,7 @@ export function CompartilharCupom({
   pixLigado,
   aoFechar,
 }: {
+  cupomId: string
   cupom: CupomParaCompartilhar
   descricao?: string
   valendo: boolean
@@ -149,6 +152,8 @@ export function CompartilharCupom({
       <p aria-live="polite" className="m-0 min-h-[20px] text-sm text-navy-800">
         {aviso}
       </p>
+
+      <ArteDoCupom cupomId={cupomId} cupom={cupom} paraQuem={paraQuem} />
     </section>
   )
 }

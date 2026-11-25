@@ -825,3 +825,16 @@ Conferido só pela estrutura (nomes de campos), sem imprimir dados de cliente:
   - A home guarda o código no aparelho por 30 dias (`cupom21go`) e preenche o campo do cupom no cadastro.
   - Quando o plano é escolhido, confere o cupom sozinho, para o desconto já aparecer no resumo.
   - O código é apagado do aparelho depois do cadastro feito. Código fora do formato não é guardado.
+
+### [Claude] — 2026-11-25 — Arte do cupom (modelo do manual, textos da IA)
+
+- **Onde:** na caixa Compartilhar da aba Cupons, o bloco "Arte para mandar junto" (`ArteDoCupom.tsx`), com:
+  - título, palavras em laranja, subtítulo e fundo (Marinho, Laranja ou Claro);
+  - prévia de feed e story, que se atualiza sozinha 600 ms depois de mexer;
+  - **Baixar** em PNG (1080×1350 e 1080×1920).
+- **A arte segue o modelo do manual** (`arte-instagram.tsx`), escolha do Clebson em vez de uma imagem desenhada pela IA. Leva logo, a etiqueta "CUPOM NET21GO", o título com destaque, o subtítulo, o passo a passo numerado (cote pela placa, escolha o plano, use o cupom) e o rodapé com 21go.seg.br.
+- **Sem preço nem porcentagem na arte** (regra do manual): o cupom de 100% vira "Adesão grátis"; os outros, "Desconto na adesão". O valor fica no texto da mensagem.
+- **Texto padrão** sem IA (`textosPadraoDoCupom`, em `src/lib/cupom-arte.ts`, puro, testes em `tests/cupom-arte.test.mts`). Ele acompanha o "Para quem" até a pessoa mexer.
+- **"Escrever com a IA"** (`cupom-arte-ia.ts`, rota `POST /api/admin/cupons/{id}/arte-ia`): só texto (código, desconto e público). Passa por `problemasDaArte` + `problemasDoTexto`, com uma nova tentativa; se falhar, volta o padrão com o aviso.
+- **Imagem:** `GET /api/admin/cupons/{id}/arte?titulo&destaque&subtitulo&fundo&formato[&baixar=1]`, só admin. Confere as regras de novo no servidor (422 se ferir).
+- **Pedido à OpenAI em JSON** virou `src/lib/openai-json.ts` (`gpt-6-luna`, `gpt-6-sol` de reserva), usado pela legenda das artes oficiais e pela arte do cupom.
