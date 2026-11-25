@@ -51,7 +51,7 @@ export const SOCIAL_CONTENT: SocialContent[] = [
     body: 'O valor sai na hora, pela placa. Sem compromisso e sem sair de casa.',
     fundo: 'marinho',
     miolo: { tipo: 'carro' },
-    caption: cap('Quer saber quanto custa proteger seu carro ou sua moto? No nosso site você informa a placa e vê os planos na hora.'),
+    caption: cap('Quer saber quanto custa proteger seu carro ou sua moto? No nosso site você informa a placa e vê os planos na hora. Para carro, o destaque é o plano VIP, em promoção para quem mora no RN, na Paraíba e no Ceará.'),
   },
   {
     id: 'sem-spc',
@@ -295,7 +295,7 @@ export const SOCIAL_ONE_OFFS: SocialContent[] = [
     kicker: '27/11 (sex) · Feed + Story',
     title: 'Da placa ao preço em 30s',
     body: 'Digite a placa do seu veículo e veja os planos na hora, sem burocracia.',
-    caption: cap('Da placa ao preço em 30 segundos! Sem formulário gigante e sem espera: você informa a placa do seu carro ou moto e já vê os planos disponíveis na hora.'),
+    caption: cap('Da placa ao preço em 30 segundos! Sem formulário gigante e sem espera: você informa a placa do seu carro ou moto e já vê os planos disponíveis na hora. Para carro, o destaque é o plano VIP, em promoção para quem mora no RN, na Paraíba e no Ceará.'),
   },
   {
     id: '30-11-seguradora-disse-nao',
@@ -327,7 +327,7 @@ export const SOCIAL_ONE_OFFS: SocialContent[] = [
     kicker: '07/12 (seg) · Feed + Story',
     title: 'Seu nome não importa. Seu carro importa',
     body: 'Sem consulta ao SPC e Serasa para a adesão.',
-    caption: cap('Aqui o que importa é proteger o seu patrimônio. Na 21Go não fazemos consulta ao SPC ou Serasa para adesão — confira os planos disponíveis para o seu veículo.'),
+    caption: cap('Aqui o que importa é proteger o seu patrimônio. Na 21Go não fazemos consulta ao SPC ou Serasa para adesão — confira os planos disponíveis para o seu veículo. Para carro, o destaque é o plano VIP, em promoção para quem mora no RN, na Paraíba e no Ceará.'),
   },
   {
     id: '09-12-motorista-de-aplicativo',
@@ -383,7 +383,7 @@ export const SOCIAL_ONE_OFFS: SocialContent[] = [
     kicker: '23/12 (qua) · Feed + Story',
     title: 'O que a proteção veicular cobre?',
     body: 'Roubo, furto, colisão, incêndio, terceiros e muito mais conforme o plano.',
-    caption: cap('Roubo, furto, colisão, incêndio, danos a terceiros e assistência 24h: compare os 4 planos da 21Go e escolha a proteção ideal para o seu veículo.'),
+    caption: cap('Roubo, furto, colisão, incêndio, danos a terceiros e assistência 24h: compare os 4 planos da 21Go e escolha a proteção ideal para o seu veículo. Para carro, o destaque é o plano VIP, em promoção para quem mora no RN, na Paraíba e no Ceará.'),
   },
   {
     id: '25-12-feliz-natal',

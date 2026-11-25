@@ -33,3 +33,10 @@ test('código do link e link do cupom', () => {
   assert.equal(codigoDoLink(null), '')
   assert.equal(linkDoCupom('https://21go.seg.br//', 'NET21GO'), 'https://21go.seg.br/?cupom=NET21GO#cotacao')
 })
+
+test('texto do cupom divulga o plano VIP (para carro, RN, PB e CE), sem preço', () => {
+  const t = textoDoCupom(NET, { siteUrl: 'https://21go.seg.br', paraQuem: 'Colaboradores da Netgo' })
+  assert.match(t, /💡 Dica: para carro, escolha o plano VIP, que está em promoção para quem mora no RN, na Paraíba e no Ceará\./)
+  assert.match(t, /2\. Escolha o plano e faça o cadastro/)
+  assert.doesNotMatch(t, /R\$|\d+\s*%/)
+})

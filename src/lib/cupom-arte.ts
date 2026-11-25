@@ -53,7 +53,8 @@ export function conteudoDaArte(codigo: string, t: TextosDaArte, fundo: FundoCupo
       numerados: true,
       cards: [
         { titulo: 'Cote pela placa', texto: 'No site 21go.seg.br' },
-        { titulo: 'Escolha o plano', texto: 'E faça o cadastro' },
+        // O plano em promoção (tabela regional): pedido do Clebson, 25/11/2026.
+        { titulo: 'Escolha o plano VIP', texto: 'Em promoção no RN, PB e CE' },
         { titulo: `Use o cupom ${codigo}`, texto: 'Na taxa de adesão' },
       ],
     },
@@ -105,6 +106,7 @@ export function promptDaArteDoCupom(c: CupomParaCompartilhar, paraQuem: string, 
     '- Proteção veicular não é seguro: nunca use "seguro" nem cite a SUSEP.',
     '- Sem marca ou modelo de veículo, sem emoji e sem hashtag.',
     '- Não prometa nada além do desconto na adesão.',
+    '- Se citar plano, cite o plano VIP (em promoção para quem mora no RN, na Paraíba e no Ceará) e nenhum outro pelo nome.',
     ...(problemasAnteriores.length ? ['', `A versão anterior foi recusada por: ${problemasAnteriores.join(' ')} Corrija.`] : []),
     '',
     'Responda só em JSON: {"titulo": "…", "destaque": "…", "subtitulo": "…"}',
