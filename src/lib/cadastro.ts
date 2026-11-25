@@ -83,8 +83,10 @@ export function aplicarCotacao(payload: LeadSubmissionPayload): string | null {
     payload.precoRegiao = 'regional'
     payload.tabelaNordeste = ne.tabela
     payload.planoNacional = ne.nacional
-    // A tabela é o preço final: não há desconto do adesivo por cima.
-    payload.comAdesivo = false
+    // A tabela é o valor normal; pagamento em dia e adesivo entram por cima. "Com adesivo" só
+    // quando o valor escolhido é o do adesivo (e ele é de fato menor que o de pagamento em dia).
+    const p = verified.plan
+    payload.comAdesivo = p.adesivo < p.pontualidade && Math.abs(payload.mensalidadeFinal - p.adesivo) < 0.005
   } else {
     const p = verified.plan
     payload.precoRegiao = 'nacional'

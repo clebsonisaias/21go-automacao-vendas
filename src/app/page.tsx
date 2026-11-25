@@ -64,7 +64,7 @@ export default function HomePage() {
   const [isCalculating, setIsCalculating] = useState(false)
 
   // Opções de Desconto
-  const [comAdesivo, setComAdesivo] = useState(true)
+  const [comAdesivo, setComAdesivo] = useState(false)
   const [comPontualidade, setComPontualidade] = useState(true)
 
   // Modal de Cadastro
@@ -430,6 +430,25 @@ export default function HomePage() {
     return plan.monthly
   }
 
+  // Preço nacional com os mesmos descontos marcados, para o "de/por" do VIP regional ser justo.
+  const nacionalFor = (plan: PlanPricing): number | undefined => {
+    const nac = plan.regional?.nacional
+    if (!nac) return plan.precoNacional
+    if (comAdesivo && quoteResult?.regras.elegivelAdesivo) return nac.adesivo
+    if (comPontualidade) return nac.pontualidade
+    return nac.monthly
+  }
+
+  // O desconto de pagamento em dia só vale até o vencimento (o do adesivo já inclui ele).
+  const notaEmDia = (plan: PlanPricing): string | null => {
+    const price = priceFor(plan)
+    if (price >= plan.monthly) return null
+    if (comAdesivo && quoteResult?.regras.elegivelAdesivo && plan.mensalidadeComAdesivo < plan.mensalidadeComPontualidade) {
+      return 'Pagando em dia. Com atraso, sai o desconto de 5%.'
+    }
+    return `Pagando em dia. Com atraso: R$\u00a0${money(plan.monthly)}.`
+  }
+
   const closeModal = () => {
     setIsModalOpen(false)
     setSubmitSuccessData(null)
@@ -739,12 +758,16 @@ export default function HomePage() {
                     type="checkbox"
                     checked={comPontualidade}
                     onChange={(e) => setComPontualidade(e.target.checked)}
+                    aria-describedby="ajuda-pontualidade"
                     className="h-[22px] w-[22px] accent-navy-800"
                   />
                   <span>
                     Pagamento em dia <strong className="text-go-lime-dark">−{quoteResult.regras.percentualPontualidade || 5}%</strong>
                   </span>
                 </label>
+                <p id="ajuda-pontualidade" className="m-0 pl-[34px] text-sm text-muted">
+                  Só para a mensalidade paga até o vencimento. Com atraso, vale o valor normal.
+                </p>
               </fieldset>
             </div>
 
@@ -769,7 +792,8 @@ export default function HomePage() {
                 <BadgePercent aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-go-orange-dark" />
                 <span>
                   <strong>Promoção para quem mora em {UFS[quoteResult.regiao.uf] ?? quoteResult.regiao.uf}:</strong> o plano{' '}
-                  {planoPromocao.name} sai pela tabela regional, já com o preço final. Os outros planos seguem o preço nacional.
+                  {planoPromocao.name} sai pela tabela regional. Os descontos de pagamento em dia e do adesivo valem como nos
+                  outros planos, que seguem o preço nacional.
                 </span>
               </div>
             )}
@@ -784,7 +808,8 @@ export default function HomePage() {
             <div className="grid items-stretch gap-5 [grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))]">
               {quoteResult.plans.map((plan) => {
                 const price = priceFor(plan)
-                const hasDiscount = price < plan.monthly
+                const nacional = nacionalFor(plan)
+                const nota = notaEmDia(plan)
                 const pop = !!plan.popular
                 const muted = pop ? 'text-muted-soft' : 'text-muted'
                 return (
@@ -801,7 +826,7 @@ export default function HomePage() {
                         <h3 className="m-0 text-[21px] font-extrabold">{plan.name}</h3>
                         {pop && (
                           <span className="rounded-full bg-go-orange px-2.5 py-1 text-[11px] font-extrabold tracking-wider text-navy-950">
-                            {plan.regional ? (plan.precoNacional && plan.precoNacional > price ? 'PROMOÇÃO' : 'PREÇO REGIONAL') : 'MAIS ESCOLHIDO'}
+                            {plan.regional ? (nacional && nacional > price ? 'PROMOÇÃO' : 'PREÇO REGIONAL') : 'MAIS ESCOLHIDO'}
                           </span>
                         )}
                       </div>
@@ -810,24 +835,16 @@ export default function HomePage() {
                         <span className="text-[42px] font-extrabold leading-none tracking-[-1.5px]">{money(price)}</span>
                         <span className={`text-sm ${muted}`}>/mês</span>
                       </div>
-                      {plan.precoNacional && plan.precoNacional > price ? (
+                      {nota && <span className={`text-sm ${muted}`}>{nota}</span>}
+                      {plan.regional && nacional && nacional > price && (
                         <>
                           <span className={`text-sm ${muted}`}>
-                            Preço nacional: <s>R$ {money(plan.precoNacional)}</s>
+                            Preço nacional: <s>R$ {money(nacional)}</s>
                           </span>
                           <span className={`text-sm font-bold ${pop ? 'text-go-orange' : 'text-go-orange-dark'}`}>
-                            Economia de R$ {money(plan.precoNacional - price)} por mês
+                            Economia de R$ {money(nacional - price)} por mês
                           </span>
-                          {plan.regional && (
-                            <span className={`text-sm ${muted}`}>Tabela regional: já é o preço final, sem outros descontos.</span>
-                          )}
                         </>
-                      ) : (
-                        hasDiscount && (
-                          <span className={`text-sm ${muted}`}>
-                            Sem descontos: <s>R$ {money(plan.monthly)}</s>
-                          </span>
-                        )
                       )}
                       <span className={`text-sm ${muted}`}>
                         Ativação no Pix: <strong>{brl(plan.ativacao)}</strong>
@@ -1037,10 +1054,13 @@ export default function HomePage() {
                   </dd>
                   <dt className="text-muted-soft">Mensalidade</dt>
                   <dd className="m-0 text-right font-bold">
-                    {selectedPlan.precoNacional && selectedPlan.precoNacional > priceFor(selectedPlan) && (
-                      <s className="block font-normal text-muted-soft">R$ {money(selectedPlan.precoNacional)}</s>
+                    {selectedPlan.regional && (nacionalFor(selectedPlan) ?? 0) > priceFor(selectedPlan) && (
+                      <s className="block font-normal text-muted-soft">R$ {money(nacionalFor(selectedPlan) ?? 0)}</s>
                     )}
                     <span className="whitespace-nowrap">R$ {money(priceFor(selectedPlan))}/mês</span>
+                    {notaEmDia(selectedPlan) && (
+                      <span className="block text-sm font-normal text-muted-soft">{notaEmDia(selectedPlan)}</span>
+                    )}
                   </dd>
                   <dt className="text-muted-soft">Ativação (uma vez, no Pix)</dt>
                   <dd className="m-0 text-right">

@@ -2,7 +2,8 @@ import { StoredLead, findLeadByRef, updateLead } from '@/lib/db'
 import { extractDocumentWithAi } from '@/lib/document-ai'
 import { readVistoriaFile } from '@/lib/vistoria-files'
 import { calcularDesconto } from '@/lib/cupons'
-import { calculateActivationFee } from '@/lib/pricing'
+import { calculateActivationFee, elegivelAoAdesivo } from '@/lib/pricing'
+import { escolhaDeDesconto, mensalidadesComDescontos, percentualAdesivo, valorDaEscolha } from '@/lib/descontos'
 import { autorizacaoNordeste } from '@/lib/powercrm-lead'
 import { sendTelegramNotification, esc } from '@/lib/telegram'
 import { sendCitchatMessage } from '@/lib/citchat'
@@ -15,7 +16,7 @@ import {
   regiaoDoComprovante,
   type RegiaoDoComprovante,
 } from '@/lib/tabela-nordeste'
-import type { DocumentAiResult } from '@/lib/types'
+import type { DocumentAiResult, VehicleInfo } from '@/lib/types'
 
 /**
  * O comprovante de residência confirma onde o cliente mora, e com isso o preço:
@@ -86,10 +87,28 @@ function trocarValores(l: StoredLead, mensalidade: number, ativacaoBase: number)
   }
 }
 
+/**
+ * As três mensalidades da tabela regional para este cadastro: o valor da tabela é o normal, e
+ * pagamento em dia e adesivo entram por cima, como nos outros planos (src/lib/descontos.ts).
+ */
+function opcoesDaTabela(l: StoredLead, normal: number) {
+  const v = l.vehicle as unknown as VehicleInfo
+  const { pontualidade, adesivo } = mensalidadesComDescontos(
+    normal,
+    percentualAdesivo(l.planoEscolhidoId, v.fipeValue, elegivelAoAdesivo(v))
+  )
+  return { normal, pontualidade, adesivo }
+}
+
 function paraNacional(l: StoredLead): boolean {
   const nac = l.planoNacional
   if (!nac) return false
-  trocarValores(l, nac.pontualidade, nac.ativacao)
+  // Mantém a escolha do cliente (normal, em dia ou com adesivo); sem reconhecer, vale a de pagamento em dia.
+  const escolha =
+    (l.tabelaNordeste && escolhaDeDesconto(l.mensalidadeFinal, opcoesDaTabela(l, l.tabelaNordeste.mensalidade))) ||
+    'pontualidade'
+  trocarValores(l, valorDaEscolha(escolha, { normal: nac.monthly, pontualidade: nac.pontualidade, adesivo: nac.adesivo }), nac.ativacao)
+  l.comAdesivo = escolha === 'adesivo'
   l.precoRegiao = 'nacional'
   delete l.tabelaNordeste
   return true
@@ -108,10 +127,15 @@ function paraRegional(l: StoredLead): string | null {
   if (!tabela) return 'a FIPE do veículo passa da tabela'
   const veic = { marca: v.marca, modelo: v.modelo, ano: v.ano, fipeValue: v.fipeValue, fipeCode: v.fipeCode }
   const ativ = calculateActivationFee(veic, tabela.mensalidade, [{ id: l.planoEscolhidoId, monthly: tabela.mensalidade }])
-  trocarValores(l, tabela.mensalidade, ativ)
+  // Mantém a escolha do cliente (normal, em dia ou com adesivo); sem reconhecer, vale a de pagamento em dia.
+  const nac = l.planoNacional
+  const escolha =
+    (nac && escolhaDeDesconto(l.mensalidadeFinal, { normal: nac.monthly, pontualidade: nac.pontualidade, adesivo: nac.adesivo })) ||
+    'pontualidade'
+  trocarValores(l, valorDaEscolha(escolha, opcoesDaTabela(l, tabela.mensalidade)), ativ)
   l.precoRegiao = 'regional'
   l.tabelaNordeste = tabela
-  l.comAdesivo = false
+  l.comAdesivo = escolha === 'adesivo'
   return null
 }
 

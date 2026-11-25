@@ -223,7 +223,10 @@ export function TabelaNordestePanel() {
           <h2 id="faixas-titulo" className="m-0 text-base font-semibold text-navy-900">
             Faixas da tabela
           </h2>
-          <p className="m-0 mt-1 text-sm text-muted">{dados.fonte}. Valor total da mensalidade, já com tudo incluído.</p>
+          <p className="m-0 mt-1 text-sm text-muted">
+            {dados.fonte}. Valor normal da mensalidade: o desconto de pagamento em dia e o do adesivo entram por cima, como
+            nos outros planos.
+          </p>
         </div>
 
         <div role="group" aria-label="Tipo de veículo" className="flex flex-wrap gap-1 rounded-[10px] bg-surface-100 p-1">
