@@ -857,3 +857,16 @@ Conferido só pela estrutura (nomes de campos), sem imprimir dados de cliente:
 - **Instagram:** a frase entrou nas legendas de `cotacao-online` (rodízio), `27-11-capa-reels-30s`, `07-12-seu-nome-nao-importa` e `23-12-o-que-a-protecao-cobre`. A arte desses posts não muda.
   - Ficaram de fora a moto, as coberturas com "conforme o plano" e as dúvidas.
   - A IA da legenda das artes oficiais cita o VIP quando fala de plano e não cita outro plano pelo nome.
+
+### [Claude] — 2026-11-25 — "O que a equipe precisa fazer" (topo da aba Carteira)
+
+- **Por quê:** conferindo se o cliente já compra sozinho, apareceu que o Coolify do site não tem `TELEGRAM_BOT_TOKEN` nem `TELEGRAM_CHAT_ID`. Nenhum aviso para a equipe chega: cadastro novo, Pix segurado, adesão paga, cotações paradas. Também falta `BREVO_API_KEY`, então o e-mail ao cliente não sai; o WhatsApp funciona.
+- **O quadro** (`PendenciasEquipe.tsx`, regras em `src/lib/pendencias.ts`, testes em `tests/pendencias.test.mts`) lê o banco do site e funciona sem o CRM e sem o Telegram. Só entram cadastros do site com até 60 dias, nesta ordem:
+  1. **Pix segurado:** `regiaoConfirmada.pixSeguradoEm` sem decisão da equipe;
+  2. **Vistoria esperando aprovação:** `crmVistoria.vistoriaStatus === 'aguardando_revisao'`;
+  3. **Link da vistoria não gerado:** documentos enviados há mais de 2 h e sem `appVistoUrl`;
+  4. **Documentos sem leitura do CPF;**
+  5. **Adesão paga, falta o Hinova SGA:** pago ou `aprovado`, sem `sgaCadastradoEm`. O botão "Já cadastrei no SGA" marca o cadastro (`POST /api/admin/pendencias/sga`).
+- **Aviso no quadro** enquanto o Telegram não estiver configurado.
+- **Abrir o cadastro:** cada item tem "Abrir o cadastro" (`/admin?cadastro=REF`, que abre a ficha na aba Cadastros).
+- **Rota:** `GET /api/admin/pendencias`, só admin. Na tela, só nome, placa e há quantos dias.

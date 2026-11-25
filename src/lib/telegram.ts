@@ -6,6 +6,11 @@ export function esc(value: unknown): string {
     .replace(/>/g, '&gt;')
 }
 
+/** Os avisos da equipe pelo Telegram estão configurados no servidor? */
+export function telegramConfigurado(): boolean {
+  return Boolean(process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_CHAT_ID)
+}
+
 /**
  * Disparador de Notificações para o Telegram
  */
