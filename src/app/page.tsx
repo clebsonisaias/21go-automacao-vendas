@@ -37,6 +37,7 @@ import {
 } from '@/components/home/HomeSections'
 import { Economizometro } from '@/components/home/Economizometro'
 import { origemDaVisita, type OrigemLead } from '@/lib/origem'
+import { codigoDoLink } from '@/lib/cupom-compartilhar'
 
 /** De onde a pessoa veio: a primeira origem da visita fica 30 dias no aparelho (sem dado pessoal). */
 const CHAVE_ORIGEM = 'origem21go'
@@ -59,6 +60,29 @@ function guardarOrigem(): void {
     }
   } catch {
     /* sem localStorage (modo privado): segue sem origem */
+  }
+}
+
+/** Cupom que veio no link (`?cupom=`, botão Compartilhar da aba Cupons): fica 30 dias no aparelho. */
+const CHAVE_CUPOM = 'cupom21go'
+function cupomDoLink(): string {
+  try {
+    const doLink = codigoDoLink(new URL(window.location.href).searchParams.get('cupom'))
+    if (doLink) {
+      localStorage.setItem(CHAVE_CUPOM, JSON.stringify({ codigo: doLink, em: new Date().toISOString() }))
+      return doLink
+    }
+    const salvo = JSON.parse(localStorage.getItem(CHAVE_CUPOM) || 'null')
+    return salvo && typeof salvo.em === 'string' && Date.now() - Date.parse(salvo.em) < 30 * 864e5 ? codigoDoLink(salvo.codigo) : ''
+  } catch {
+    return ''
+  }
+}
+function esquecerCupomDoLink(): void {
+  try {
+    localStorage.removeItem(CHAVE_CUPOM)
+  } catch {
+    /* sem localStorage */
   }
 }
 
@@ -125,8 +149,15 @@ export default function HomePage() {
   const [ufErro, setUfErro] = useState('')
   const [ufPelaLocalizacao, setUfPelaLocalizacao] = useState(false)
   const ufAtual = useRef('')
+  const cupomVeioDoLink = useRef(false)
+  const cupomConferidoNoPlano = useRef('')
   useEffect(() => {
     guardarOrigem()
+    const codigo = cupomDoLink()
+    if (codigo) {
+      cupomVeioDoLink.current = true
+      setCupomCodigo((atual) => atual || codigo)
+    }
   }, [])
 
   useEffect(() => {
@@ -341,6 +372,15 @@ export default function HomePage() {
     setCupomErro('')
   }, [selectedPlan?.id])
 
+  // Cupom do link: confere sozinho quando o plano é escolhido, para o desconto já aparecer no resumo.
+  useEffect(() => {
+    if (!cupomVeioDoLink.current || !selectedPlan || !quoteResult || cupomInfo || cupomConferindo) return
+    if (!cupomCodigo.trim() || cupomConferidoNoPlano.current === selectedPlan.id) return
+    cupomConferidoNoPlano.current = selectedPlan.id
+    conferirCupom()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPlan?.id, quoteResult, cupomInfo])
+
   /** Confere o cupom digitado; devolve se ele vale (o desconto aparece no resumo). */
   const conferirCupom = async (): Promise<boolean> => {
     const codigo = cupomCodigo.trim()
@@ -433,6 +473,7 @@ export default function HomePage() {
         return
       }
       if (data.success) {
+        esquecerCupomDoLink()
         setSubmitSuccessData({
           vistoriaUrl: data.vistoriaUrl || '/vistoria',
           pagamentoUrl: data.pagamentoUrl,
