@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import {
   Sparkles,
   Camera,
+  Upload,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -18,6 +19,8 @@ interface DocumentAiUploaderProps {
   hint?: ExtractedDocType
   onExtracted: (result: DocumentAiResult) => void
   className?: string
+  /** Abre direto a câmera no celular. Desligado, o celular deixa escolher arquivo (PDF) ou câmera. */
+  camera?: boolean
 }
 
 export function DocumentAiUploader({
@@ -25,6 +28,7 @@ export function DocumentAiUploader({
   hint,
   onExtracted,
   className = '',
+  camera = true,
 }: DocumentAiUploaderProps) {
   const [isScanning, setIsScanning] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
@@ -74,7 +78,7 @@ export function DocumentAiUploader({
         <input
           type="file"
           accept="image/*,application/pdf"
-          capture="environment"
+          {...(camera ? { capture: 'environment' as const } : {})}
           disabled={isScanning}
           onChange={handleFileChange}
           className="sr-only"
@@ -88,7 +92,11 @@ export function DocumentAiUploader({
         ) : (
           <>
             <Sparkles className="h-4 w-4 text-go-orange" />
-            <Camera className="h-4 w-4 text-navy-700" />
+            {camera ? (
+              <Camera aria-hidden className="h-4 w-4 text-navy-700" />
+            ) : (
+              <Upload aria-hidden className="h-4 w-4 text-navy-700" />
+            )}
             <span>{label}</span>
           </>
         )}

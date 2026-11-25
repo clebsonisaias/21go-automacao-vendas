@@ -37,12 +37,12 @@ interface Slot {
 }
 
 const DOCUMENTOS: Slot[] = [
-  { key: 'cnhOuRg', title: 'CNH ou RG', hint: 'Frente e verso', icon: UserCheck },
-  { key: 'crlv', title: 'Documento do carro (CRLV)', hint: 'Digital ou impresso', icon: FileText },
+  { key: 'cnhOuRg', title: 'CNH ou RG', hint: 'PDF da CNH digital ou foto da frente e do verso', icon: UserCheck },
+  { key: 'crlv', title: 'Documento do carro (CRLV)', hint: 'PDF do CRLV digital ou foto', icon: FileText },
   {
     key: 'comprovanteResidencia',
     title: 'Comprovante de residência',
-    hint: 'Luz, água ou telefone recente',
+    hint: 'Conta recente de luz, água ou telefone, em PDF ou foto',
     icon: Home,
   },
 ]
@@ -592,13 +592,25 @@ function VistoriaContent() {
                   </span>
                   <div>
                     <h2 className="m-0 text-xl font-extrabold">Documentos</h2>
-                    <p className="m-0 text-sm text-muted">A IA extrai nome, CPF, placa e endereço automaticamente.</p>
+                    <p className="m-0 text-sm text-muted">
+                      Envie de preferência em PDF. Se não tiver, mande uma foto nítida, sem reflexo. Nome, CPF, placa e
+                      endereço são lidos automaticamente.
+                    </p>
                   </div>
                 </div>
 
+                <p className="m-0 mb-4 flex items-start gap-2 rounded-lg bg-surface-50 px-3.5 py-3 text-sm leading-relaxed text-navy-800">
+                  <FileText aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-navy-700" />
+                  <span>
+                    <strong>Onde pegar o PDF:</strong> a CNH e o documento do carro saem em PDF no app Carteira Digital de
+                    Trânsito; a conta de luz ou de água, no site ou app da empresa.
+                  </span>
+                </p>
+
                 <div className="mb-4">
                   <DocumentAiUploader
-                    label="📷 Tirar foto da CNH, CRLV ou Comprovante (Leitura Automática)"
+                    label="Ler um documento agora (PDF ou foto)"
+                    camera={false}
                     onExtracted={handleDocExtracted}
                   />
                   {aiSummary && (
