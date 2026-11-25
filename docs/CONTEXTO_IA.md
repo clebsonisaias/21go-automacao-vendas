@@ -812,3 +812,16 @@ Conferido só pela estrutura (nomes de campos), sem imprimir dados de cliente:
 - **Alertas:** a IA lista o que a arte diz ou mostra que pode não valer para a CITmax no RN (outra cidade, como "20+ anos no Rio", plano com nome, prazo, marca de carro, data que passou). Eles aparecem em "A IA notou na arte:", acima da caixa "Conferi a arte", que continua obrigatória.
 - **Desfazer:** volta ao texto que a pessoa tinha escrito antes de pedir à IA.
 - **IA:** OpenAI com a imagem (`src/lib/legenda-ia.ts`), `gpt-6-luna` e, de reserva, `gpt-6-sol`, como a leitura de documentos. Rota `POST /api/admin/social/oficiais/legenda` (só admin, 20 pedidos a cada 10 min). O log leva só o modelo e o tempo. Nada é publicado pela IA.
+
+### [Claude] — 2026-11-25 — Compartilhar cupom (texto pronto e link que preenche o cupom)
+
+- **Aba Cupons:** cada cupom ganhou **Compartilhar**, logo abaixo do código, para aparecer também no celular sem rolar a tabela. A caixa traz:
+  - "Para quem", preenchido com a descrição do cupom;
+  - o texto pronto, que dá para editar;
+  - **Copiar texto**, **Abrir no WhatsApp** (`wa.me/?text=`, você escolhe o contato) e **Copiar só o link**.
+  - O texto sai dos dados do cupom (`src/lib/cupom-compartilhar.ts`, puro, testes em `tests/cupom-compartilhar.test.mts`): o que dá, para quem, como usar, o WhatsApp da franquia, a validade e quantos usos restam, e que o desconto é só na adesão. Sem "seguro".
+  - Avisa quando o cupom não está valendo ou quando o Pix do site está desligado.
+- **Link do cupom:** `https://21go.seg.br/?cupom=CODIGO#cotacao`.
+  - A home guarda o código no aparelho por 30 dias (`cupom21go`) e preenche o campo do cupom no cadastro.
+  - Quando o plano é escolhido, confere o cupom sozinho, para o desconto já aparecer no resumo.
+  - O código é apagado do aparelho depois do cadastro feito. Código fora do formato não é guardado.

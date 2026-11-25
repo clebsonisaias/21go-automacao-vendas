@@ -1,7 +1,8 @@
 'use client'
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Loader2, Pencil, Plus, Power, Search, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, Pencil, Plus, Power, Search, Share2, Trash2 } from 'lucide-react'
+import { CompartilharCupom } from '@/components/admin/CompartilharCupom'
 
 // Aba "Cupons" do /admin (padrão Lista): cupons de desconto na taxa de adesão.
 // A regra de verdade fica no servidor (src/lib/cupons.ts); aqui só se cria, edita, liga e exclui.
@@ -145,6 +146,7 @@ export function CuponsPanel() {
   const [salvando, setSalvando] = useState(false)
   const [ocupado, setOcupado] = useState('')
   const [excluindo, setExcluindo] = useState('')
+  const [compartilhando, setCompartilhando] = useState<Cupom | null>(null)
   const [mensagem, setMensagem] = useState('')
   const [busca, setBusca] = useState('')
   const [pagina, setPagina] = useState(1)
@@ -192,6 +194,7 @@ export function CuponsPanel() {
 
   function abrir(f: Formulario, gatilho: HTMLElement) {
     gatilhoRef.current = gatilho
+    setCompartilhando(null)
     setForm(f)
     setErros({})
     setErroForm('')
@@ -362,6 +365,21 @@ export function CuponsPanel() {
         <p role="note" className="m-0 rounded-xl border border-line bg-white p-4 text-sm text-navy-900">
           O Pix do site está desligado: o cupom só vale no Pix da adesão do site, não no checkout do PowerCRM.
         </p>
+      )}
+
+      {compartilhando && !form && (
+        <CompartilharCupom
+          key={compartilhando.id}
+          cupom={compartilhando}
+          descricao={compartilhando.descricao}
+          valendo={situacao(compartilhando).valendo}
+          situacao={situacao(compartilhando).texto}
+          pixLigado={pixLigado}
+          aoFechar={() => {
+            setCompartilhando(null)
+            requestAnimationFrame(() => gatilhoRef.current?.focus())
+          }}
+        />
       )}
 
       {form && (
@@ -621,6 +639,17 @@ export function CuponsPanel() {
                       <td className="px-4 py-3">
                         <span className="block font-semibold text-navy-900">{c.codigo}</span>
                         {c.descricao && <span className="block text-xs text-muted">{c.descricao}</span>}
+                        <button
+                          type="button"
+                          className={`${btn} mt-2`}
+                          onClick={(e) => {
+                            gatilhoRef.current = e.currentTarget
+                            setCompartilhando(c)
+                          }}
+                        >
+                          <Share2 aria-hidden className="h-4 w-4" />
+                          Compartilhar
+                        </button>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-navy-900">{desconto(c)}</td>
                       <td className="whitespace-nowrap px-4 py-3">
