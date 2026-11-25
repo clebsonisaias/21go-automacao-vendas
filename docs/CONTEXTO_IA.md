@@ -692,3 +692,9 @@ A rota recusa com 422 o que fere a seção 06 (`src/lib/arte-regras.ts`). Os 14 
   - conta: **um único CEP** no documento (conta com o endereço da empresa vai para a IA), com "CIDADE - UF" junto e a UF batendo com o CEP.
 - **Na dúvida vai para a IA.** O log mostra só o tipo ou o motivo (`[Document AI] PDF para a IA: mais de um CEP`), nunca dado do documento. Esses motivos servem para ajustar as regras com PDFs reais.
 - **Desligar sem mexer no código:** `DOCUMENTO_PDF_CODIGO=off` no Coolify.
+
+### [Claude] — 2026-11-25 — Limite de pedidos nas rotas de IA
+
+- `/api/documents/ocr` aceita até 20 pedidos por IP a cada 10 minutos; acima disso, responde 429 ("Muitas tentativas…"). O erro 500 passou a ter mensagem fixa, sem detalhe interno.
+- Chat da Luna (`/api/ai/luna`): até 30 pedidos por IP a cada 10 minutos. Acima disso, a Luna dá a resposta pronta, sem chamar IA. O chat não quebra para o cliente.
+- O texto de venda (`action: 'pitch'`) agora exige a sessão do painel (`checkAdminAuth`), porque só o `LeadDrawer` usa.

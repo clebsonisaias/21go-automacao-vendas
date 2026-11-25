@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { chatWithLuna, generateLunaPitch, LunaChatMessage } from '@/lib/luna-ai'
+import { checkAdminAuth } from '@/lib/admin-auth'
+import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,6 +41,9 @@ export async function POST(req: NextRequest) {
     const { action = 'chat', messages, prompt, lead, objection, objecao } = body
 
     if (action === 'pitch') {
+      // O texto de venda é só do painel (LeadDrawer): exige a sessão de admin.
+      const bloqueado = await checkAdminAuth(req)
+      if (bloqueado) return bloqueado
       if (!lead?.nome || !lead?.vehicle?.modelo) {
         return NextResponse.json(
           { success: false, error: 'Dados insuficientes do lead para gerar pitch.' },
@@ -75,6 +80,16 @@ export async function POST(req: NextRequest) {
         { success: false, error: 'Envie "messages" ou "prompt".' },
         { status: 400 }
       )
+    }
+
+    // Chat público que chama a IA: acima do limite por IP, a resposta pronta, sem gastar IA.
+    if (!rateLimit(req, 'luna', 30, 10 * 60 * 1000)) {
+      const lastUser = [...chatMessages].reverse().find((m) => m?.role === 'user')?.content
+      return NextResponse.json({
+        success: true,
+        reply: botFallbackReply(typeof lastUser === 'string' ? lastUser : ''),
+        fallback: true,
+      })
     }
 
     try {
