@@ -2,6 +2,7 @@ import { reconcilePendingPayments } from './lib/orchestrator'
 import { socialTick } from './lib/instagram'
 import { acompanharVistorias, gerarLinksPendentes } from './lib/crm-vistoria'
 import { lembretesTick } from './lib/lembretes'
+import { alertaParadasTick } from './lib/crm-carteira'
 
 function every(ms: number, label: string, job: () => Promise<unknown>) {
   let running = false
@@ -41,4 +42,9 @@ export function startVistoriaLinkScheduler() {
 export function startLembretes() {
   const ms = Number(process.env.LEMBRETES_INTERVALO_MS) || 10 * 60_000
   every(ms, 'Lembretes', () => lembretesTick())
+}
+
+// Cotações paradas no começo do funil do CRM: resumo no Telegram da equipe uma vez por dia (9h–20h).
+export function startAlertaCarteira() {
+  every(30 * 60_000, 'Carteira', () => alertaParadasTick())
 }
