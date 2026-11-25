@@ -709,3 +709,13 @@ Decisão do Clebson: pedir ao cliente os documentos **de preferência em PDF**, 
   - nos avisos de arquivo ilegível e da cotação pelo CRLV.
 - **Templates da Meta não mudaram** (`citmax_21go_*`, usados fora da janela de 24 h). Para pedir PDF ali também, é preciso aprovar um template novo na Meta.
 - **AtendeHub:** as ferramentas do 21Go (`produtoVeiculoTools.ts`) também orientam a IA a pedir o PDF primeiro.
+
+### [Claude] — 2026-11-25 — Página dos documentos pede PDF primeiro
+
+- `/vistoria`, seção Documentos:
+  - o subtítulo passou a dizer "Envie de preferência em PDF. Se não tiver, mande uma foto nítida, sem reflexo.";
+  - entrou o quadro "Onde pegar o PDF" (CNH e CRLV no app Carteira Digital de Trânsito; conta no site ou app da empresa);
+  - as dicas dos 3 cartões citam o PDF.
+- `DocumentAiUploader` ganhou a prop `camera` (padrão `true`):
+  - com `camera={false}`, o celular deixa escolher um arquivo (PDF) em vez de abrir direto a câmera;
+  - na página, o botão virou "Ler um documento agora (PDF ou foto)", sem emoji.
