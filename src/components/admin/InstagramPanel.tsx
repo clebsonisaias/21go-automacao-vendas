@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
+import { ArtesOficiais } from '@/components/admin/ArtesOficiais'
 import { Calendar, ExternalLink, Heart, Loader2, MessageCircle, Pause, Play, RefreshCw, Send } from 'lucide-react'
 
 interface IgMediaItem {
@@ -182,6 +183,8 @@ export function InstagramPanel() {
           </p>
         </div>
       </section>
+
+      <ArtesOficiais configurado={data.configured} aoPublicar={() => load(true)} />
 
       <section aria-label="Publicados no Instagram" className="rounded-xl border border-line bg-white">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">

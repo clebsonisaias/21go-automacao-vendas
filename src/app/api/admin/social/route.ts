@@ -31,7 +31,7 @@ async function snapshot() {
     igPosts,
     posts: state.posts.slice(0, 30).map((p) => ({
       ...p,
-      title: SOCIAL_CONTENT.find((c) => c.id === p.contentId)?.title || p.contentId,
+      title: SOCIAL_CONTENT.find((c) => c.id === p.contentId)?.title || p.titulo || p.contentId,
     })),
   }
 }

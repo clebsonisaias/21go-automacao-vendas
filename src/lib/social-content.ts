@@ -37,8 +37,8 @@ export interface SocialContent {
 }
 
 // Sem tempo em minutos: o manual não aceita estatística sem fonte.
-const CTA = 'Faça sua cotação grátis pela placa, no link da bio. 👆'
-const TAGS = '#protecaoveicular #21go #citmax #natalrn #parnamirim #macaiba #carro #moto'
+export const CTA = 'Faça sua cotação grátis pela placa, no link da bio. 👆'
+export const TAGS = '#protecaoveicular #21go #citmax #natalrn #parnamirim #macaiba #carro #moto'
 const cap = (text: string) => `${text}\n\n${CTA}\n\n${TAGS}`
 
 export const SOCIAL_CONTENT: SocialContent[] = [
