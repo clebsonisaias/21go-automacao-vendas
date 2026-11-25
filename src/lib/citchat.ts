@@ -145,7 +145,7 @@ export async function sendWhatsAppQuoteMessage(
 
   const message = [
     `🚗 *${ola(lead.nome)}! Tudo bem?*`,
-    `Aqui é da equipe *CITmax Proteção Veicular* (Franquia Oficial 21Go).`,
+    `Aqui é da equipe *CITmax Proteção Veicular* (franquia autorizada da 21Go).`,
     ``,
     `Recebemos a sua simulação oficial para o veículo:`,
     `🚘 *${lead.vehicle.marca} ${lead.vehicle.modelo} (${lead.vehicle.ano})*`,

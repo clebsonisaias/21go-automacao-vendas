@@ -3,9 +3,9 @@ import './globals.css'
 import { LunaFloatingChat } from '@/components/common/LunaFloatingChat'
 
 export const metadata: Metadata = {
-  title: '21Go Proteção Veicular — Cotação Instantânea Oficial',
+  title: '21Go Proteção Veicular · CITmax, franquia autorizada',
   description:
-    'Simule a proteção do seu veículo em segundos com valores oficiais da 21Go. Atendimento direto e exclusivo da nossa franquia.',
+    'Cotação da proteção veicular da 21Go pela placa, com os valores oficiais. Atendimento da CITmax, franquia autorizada da 21Go.',
 }
 
 export default function RootLayout({

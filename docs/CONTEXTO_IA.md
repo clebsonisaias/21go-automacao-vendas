@@ -870,3 +870,16 @@ Conferido só pela estrutura (nomes de campos), sem imprimir dados de cliente:
 - **Aviso no quadro** enquanto o Telegram não estiver configurado.
 - **Abrir o cadastro:** cada item tem "Abrir o cadastro" (`/admin?cadastro=REF`, que abre a ficha na aba Cadastros).
 - **Rota:** `GET /api/admin/pendencias`, só admin. Na tela, só nome, placa e há quantos dias.
+
+### [Claude] — 2026-11-25 — "Franquia autorizada" no logo e no site
+
+- **Pedido do Clebson:** deixar claro que o site é da CITmax, franquia autorizada da 21Go. Sem dizer que o site não é oficial: o serviço vendido é o oficial da 21Go.
+- **Logo:** `public/brand/logo-21go-franquia.png`, gerado por `scripts/logo-franquia.py` a partir do logo oficial.
+  - Ganha a linha **FRANQUIA AUTORIZADA** embaixo de "PROTEÇÃO VEICULAR", na cor lima da marca (`#C7D301`), com a mesma altura das letras e a mesma largura da linha de cima.
+  - O tamanho (484 × 219) é o mesmo. O símbolo e o nome não mudam.
+  - `LogoCompleto` usa essa versão por padrão; `franquia={false}` volta ao original.
+- **Textos:**
+  - linha do topo da página: "CITmax · Franquia autorizada da 21Go" (o "desde 2004" continua nos números);
+  - faixa de cima e rodapé, com a frase "Este site é da CITmax, franquia autorizada da 21Go Proteção Veicular. A proteção, os planos e o regulamento são da 21Go.";
+  - título e descrição da página.
+- **WhatsApp, Luna e mensagem de retomada:** "franquia oficial" virou "franquia autorizada". Continuam "oficial" o preço, a vistoria e o regulamento da 21Go.
