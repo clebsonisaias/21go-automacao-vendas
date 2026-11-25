@@ -370,6 +370,7 @@ export function CuponsPanel() {
       {compartilhando && !form && (
         <CompartilharCupom
           key={compartilhando.id}
+          cupomId={compartilhando.id}
           cupom={compartilhando}
           descricao={compartilhando.descricao}
           valendo={situacao(compartilhando).valendo}
