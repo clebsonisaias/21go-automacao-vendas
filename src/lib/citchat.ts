@@ -1,5 +1,6 @@
 import { LeadSubmissionPayload } from "./types";
 import { absolute } from './links'
+import { DOCUMENTOS_EM_PDF } from './vistoria-slots'
 
 interface AtendeHubMessagePayload {
   canalId?: string;
@@ -180,7 +181,7 @@ export async function sendWhatsAppQuoteMessage(
       ? []
       : [
           `📄 *Próximo passo: envie seus documentos*`,
-          `Abra o link e envie CNH ou RG, documento do carro e comprovante de residência. Depois enviamos aqui o link da vistoria (App Visto); a adesão é paga só no final, com a vistoria aprovada:`,
+          `Abra o link e envie CNH ou RG, documento do carro e comprovante de residência, ${DOCUMENTOS_EM_PDF}. Depois enviamos aqui o link da vistoria (App Visto); a adesão é paga só no final, com a vistoria aprovada:`,
           `👉 ${vistoriaUrl}`,
           ``,
         ]),
@@ -345,7 +346,7 @@ export async function sendWhatsAppLembrete(params: {
       ``,
       `É rapidinho pelo link: ${url}`,
       ``,
-      `Se preferir, mande as fotos aqui mesmo na conversa.`,
+      `Se preferir, mande aqui mesmo na conversa, ${DOCUMENTOS_EM_PDF}.`,
     ].join('\n')
     return sendCitchatMessage(params.telefone, message, {
       template: 'citmax_21go_documentos',

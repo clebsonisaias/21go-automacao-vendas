@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 const sim = (v: FormDataEntryValue | null) => v === 'true' || v === '1'
 
 const NAO_LEU =
-  'Não consegui ler a placa nesta foto. Peça ao cliente uma foto mais nítida do documento do carro (CRLV), sem reflexo e com a placa aparecendo, ou que digite a placa.'
+  'Não consegui ler a placa neste arquivo. Peça ao cliente o PDF do documento do carro (CRLV digital, no app Carteira Digital de Trânsito) ou uma foto mais nítida, sem reflexo e com a placa aparecendo, ou que digite a placa.'
 
 /**
  * POST multipart { telefone, arquivo, usoApp?, leilao?, uf? } → cotação a partir da foto ou PDF do
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       if (leitura.documentType === 'cnh' || leitura.documentType === 'comprovante_residencia') {
         return json(
           {
-            erro: `Essa foto parece ser ${leitura.documentType === 'cnh' ? 'da CNH' : 'de um comprovante de residência'}. Para cotar, peça a foto do documento do carro (CRLV) ou a placa.`,
+            erro: `Esse arquivo parece ser ${leitura.documentType === 'cnh' ? 'da CNH' : 'de um comprovante de residência'}. Para cotar, peça o documento do carro (CRLV), de preferência o PDF do app Carteira Digital de Trânsito, ou a placa.`,
           },
           422
         )

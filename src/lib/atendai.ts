@@ -4,6 +4,7 @@ import path from 'node:path'
 import { NextRequest, NextResponse } from 'next/server'
 import { DATA_DIR, getStoredLeads, StoredLead } from '@/lib/db'
 import { absolute, pagamentoPath, vistoriaPath } from '@/lib/links'
+import { DOCUMENTOS_EM_PDF } from '@/lib/vistoria-slots'
 
 /**
  * API de atendimento (`/api/atendai/v1`): o chat da CITmax (AtendeHub) cota,
@@ -229,7 +230,7 @@ export function situacaoDoCadastro(lead: StoredLead | null): Situacao {
     ...base,
     etapa: 'documentos',
     etapaTexto: 'Falta enviar os documentos',
-    proximoPasso: 'Enviar CNH ou RG, o documento do carro e o comprovante de residência pelo link.',
+    proximoPasso: `Enviar CNH ou RG, o documento do carro e o comprovante de residência, aqui na conversa ou pelo link, ${DOCUMENTOS_EM_PDF}.`,
     links: { documentos: absolute(vistoriaPath(lead)) },
   }
 }
