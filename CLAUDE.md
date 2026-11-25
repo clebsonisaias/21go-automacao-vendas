@@ -22,3 +22,11 @@ Regra do Clebson: toda arte do Instagram segue o **manual de artes**, em `docs/M
   - fazer a conferência da seção 06;
   - mostrar a prévia de feed e story ao Clebson.
 - Não fazer arte fora do padrão: outra fonte, cor fora da paleta, preço, "seguro", SUSEP, marca ou modelo de carro.
+
+## Vendas, marketing e SEO (skills do projeto)
+
+- Skills em `.claude/skills/` (lista e origem no `README.md` de lá): `cro`, `copywriting`, `seo-audit`, `programmatic-seo`, `analytics`, `emails`, `sms` (WhatsApp), `competitors`, `referrals`, `marketing-ideas`, `product-marketing` e `local-client-prospector` (achar empresas parceiras).
+- Contexto do produto para elas: `.claude/product-marketing.md` (planos, público, palavras proibidas). Atualize quando algo mudar.
+- Todo texto público novo (página, WhatsApp, legenda, prompt de IA) passa pelo subagente `revisor-texto-publico` antes do PR.
+- `/seo`: plugin claude-seo ligado em `.claude/settings.json`; na primeira vez, `/seo setup`.
+- Hooks (`.claude/hooks/protecao.mjs`): o Claude não edita `.env*`, `.coolify.local` nem `data/`, e o `git commit` só sai com `npm test` passando.
