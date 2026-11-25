@@ -14,6 +14,7 @@ import {
 import { limitePorChave } from '@/lib/rate-limit'
 import { DocumentAiResult } from '@/lib/types'
 import { MAX_FILE_BYTES, sniffType } from '@/lib/vistoria-files'
+import { DOCUMENTOS_EM_PDF } from '@/lib/vistoria-slots'
 import { guardarComprovanteLido } from '@/lib/regiao-comprovante'
 
 export const dynamic = 'force-dynamic'
@@ -189,8 +190,8 @@ async function processar(ref: string, arquivos: File[]): Promise<{ dados: Record
   if (ilegiveis) {
     avisos.push(
       ilegiveis === 1
-        ? 'Não consegui ler um dos arquivos. Mande de novo, com o documento inteiro, nítido e sem reflexo.'
-        : `Não consegui ler ${ilegiveis} arquivos. Mande de novo, com o documento inteiro, nítido e sem reflexo.`
+        ? 'Não consegui ler um dos arquivos. Mande de novo, de preferência o PDF do documento (CNH e documento do carro no app Carteira Digital de Trânsito, conta em PDF) ou uma foto do documento inteiro, nítida e sem reflexo.'
+        : `Não consegui ler ${ilegiveis} arquivos. Mande de novo, de preferência o PDF de cada documento (CNH e documento do carro no app Carteira Digital de Trânsito, conta em PDF) ou uma foto do documento inteiro, nítida e sem reflexo.`
     )
   }
 
@@ -206,7 +207,7 @@ async function processar(ref: string, arquivos: File[]): Promise<{ dados: Record
         faltam,
         naoLidos,
         avisos,
-        proximoPasso: `Falta mandar: ${faltam.join(', ')}.`,
+        proximoPasso: `Falta mandar: ${faltam.join(', ')}, ${DOCUMENTOS_EM_PDF}.`,
       },
       status: 200,
     }

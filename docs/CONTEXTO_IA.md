@@ -698,3 +698,14 @@ A rota recusa com 422 o que fere a seção 06 (`src/lib/arte-regras.ts`). Os 14 
 - `/api/documents/ocr` aceita até 20 pedidos por IP a cada 10 minutos; acima disso, responde 429 ("Muitas tentativas…"). O erro 500 passou a ter mensagem fixa, sem detalhe interno.
 - Chat da Luna (`/api/ai/luna`): até 30 pedidos por IP a cada 10 minutos. Acima disso, a Luna dá a resposta pronta, sem chamar IA. O chat não quebra para o cliente.
 - O texto de venda (`action: 'pitch'`) agora exige a sessão do painel (`checkAdminAuth`), porque só o `LeadDrawer` usa.
+
+### [Claude] — 2026-11-25 — Pedir os documentos de preferência em PDF
+
+Decisão do Clebson: pedir ao cliente os documentos **de preferência em PDF**, e foto só se ele não tiver o PDF. O PDF digital é lido por código, sem IA e sem erro de foto.
+
+- **Texto comum:** `DOCUMENTOS_EM_PDF` em `src/lib/vistoria-slots.ts`, usado:
+  - na mensagem de WhatsApp do cadastro e no lembrete de documentos (`citchat.ts`), só no texto livre;
+  - no `proximoPasso` da situação (`atendai.ts`) e de `/api/atendai/v1/documentos`;
+  - nos avisos de arquivo ilegível e da cotação pelo CRLV.
+- **Templates da Meta não mudaram** (`citmax_21go_*`, usados fora da janela de 24 h). Para pedir PDF ali também, é preciso aprovar um template novo na Meta.
+- **AtendeHub:** as ferramentas do 21Go (`produtoVeiculoTools.ts`) também orientam a IA a pedir o PDF primeiro.
