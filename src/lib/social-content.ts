@@ -434,3 +434,11 @@ export const SOCIAL_SCHEDULE: { contentId: string; at: string }[] = [
 export function contentById(id: string): SocialContent | undefined {
   return SOCIAL_CONTENT.find((c) => c.id === id) || SOCIAL_ONE_OFFS.find((c) => c.id === id)
 }
+
+/**
+ * O que o site já afirma, tirado das legendas do rodízio (primeiro parágrafo de cada uma).
+ * A IA que escreve legenda de arte pronta só pode afirmar isto (ver legenda-ia-regras.ts).
+ */
+export function fatosDoSite(): string[] {
+  return SOCIAL_CONTENT.map((c) => c.caption.split('\n\n')[0].trim()).filter(Boolean)
+}
