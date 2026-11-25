@@ -125,7 +125,7 @@ export async function cotacaoDoChat(dados: {
         ...(p.regional ? { precoNacional: p.precoNacional ?? null, tabelaNordeste: p.regional.tabela } : {}),
       })),
       regiao: r.regiao ? { ...r.regiao, origem: ufInformada ? 'informada' : 'ddd' } : null,
-      mensagemRegiao: mensagemRegiao(r.regiao, r.plans[0], !ufInformada),
+      mensagemRegiao: mensagemRegiao(r.regiao, r.plans.find((p) => p.regional), !ufInformada),
       observacao: r.regras?.exigeVistoriaPresencial ? 'Este veículo exige vistoria presencial.' : null,
     })
   } catch (err) {

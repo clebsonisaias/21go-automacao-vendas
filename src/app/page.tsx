@@ -815,12 +815,20 @@ export default function HomePage() {
                 return (
                   <article
                     key={plan.id}
-                    className={`flex flex-col gap-5 rounded-2xl p-6 ${
+                    className={`relative flex flex-col gap-5 rounded-2xl p-6 ${
                       pop
                         ? 'border-2 border-go-orange bg-navy-950 text-white shadow-[0_16px_40px_rgba(11,18,48,0.25)]'
                         : 'border border-line bg-white'
                     }`}
                   >
+                    {/* Promoção da tabela regional: anel laranja pulsando algumas vezes ao aparecer a cotação. */}
+                    {plan.regional && nacional && nacional > price && (
+                      <span
+                        key={quoteResult.quoteToken || 'promo'}
+                        aria-hidden
+                        className="promo-anel pointer-events-none absolute -inset-[6px] rounded-[22px] border-[3px] border-go-orange"
+                      />
+                    )}
                     <div className="flex flex-col gap-2.5">
                       <div className="flex min-h-[26px] items-center justify-between gap-2">
                         <h3 className="m-0 text-[21px] font-extrabold">{plan.name}</h3>
@@ -882,7 +890,7 @@ export default function HomePage() {
             <Economizometro
               fipeValue={quoteResult.vehicle.fipeValue}
               mensalidade21Go={priceFor(quoteResult.plans.find((p) => p.popular) || quoteResult.plans[0])}
-              ativacao21Go={quoteResult.plans[0]?.ativacao || 399.99}
+              ativacao21Go={(quoteResult.plans.find((p) => p.popular) || quoteResult.plans[0])?.ativacao || 399.99}
               veiculoNome={`${quoteResult.vehicle.marca} ${quoteResult.vehicle.modelo}`}
             />
 
