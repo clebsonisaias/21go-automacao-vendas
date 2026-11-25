@@ -802,3 +802,13 @@ Conferido só pela estrutura (nomes de campos), sem imprimir dados de cliente:
 - **Publicação:** a Meta só aceita JPEG pela API. O site baixa o PNG, converte (fundo branco, até 1080 de largura) e serve em `/api/social/oficial/{id}` (público, só depois de alguém mandar publicar). `publicarImagem` (`instagram.ts`) agora é o caminho comum do banco de posts e das artes oficiais. O post aparece no log como "Arte oficial: …".
 - **Atenção:** as artes da 21Go podem citar coisas que não valem aqui (ex.: "Carro reserva por 7 dias no Completo") e mostram carros com marca visível. Por isso a caixa de conferência é obrigatória.
 - **Indicação oficial:** o "Link de indicação" da tela Indicações do CRM é um exemplo fixo no código do CRM (`https://21go.org/indique?ref=joao-silva-123`), o mesmo para todos. A lista vem vazia e não existe rota que dê um link de verdade. O link de indicação ficou esperando a decisão do Clebson.
+
+### [Claude] — 2026-11-25 — Legenda das artes oficiais escrita pela IA
+
+- **Botão "Escrever com a IA"**, ao lado da legenda, na arte oficial escolhida (só no feed). A IA vê a arte e escreve de 1 a 3 frases; o código põe a chamada e as hashtags.
+- **Só afirma o que o site afirma:** a lista de fatos sai das legendas do rodízio (`fatosDoSite()` em `social-content.ts`), então acompanha o banco de posts.
+  - O prompt e a conferência da resposta ficam em `src/lib/legenda-ia-regras.ts` (puro, testes em `tests/artes-oficiais.test.mts`).
+  - A legenda montada passa por `problemasDaLegenda`. Se ferir o manual, a IA tenta de novo uma vez; se falhar de novo, a equipe escreve à mão.
+- **Alertas:** a IA lista o que a arte diz ou mostra que pode não valer para a CITmax no RN (outra cidade, como "20+ anos no Rio", plano com nome, prazo, marca de carro, data que passou). Eles aparecem em "A IA notou na arte:", acima da caixa "Conferi a arte", que continua obrigatória.
+- **Desfazer:** volta ao texto que a pessoa tinha escrito antes de pedir à IA.
+- **IA:** OpenAI com a imagem (`src/lib/legenda-ia.ts`), `gpt-6-luna` e, de reserva, `gpt-6-sol`, como a leitura de documentos. Rota `POST /api/admin/social/oficiais/legenda` (só admin, 20 pedidos a cada 10 min). O log leva só o modelo e o tempo. Nada é publicado pela IA.

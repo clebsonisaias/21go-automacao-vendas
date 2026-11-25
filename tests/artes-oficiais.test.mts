@@ -36,3 +36,39 @@ test('legenda: regras do manual e limite da Meta', () => {
   assert.match(problemasDaLegenda('Legenda com hashtags demais ' + Array.from({ length: 31 }, (_, i) => `#t${i}`).join(' ')).join(), /30/)
   assert.match(problemasDaLegenda('x'.repeat(2201)).join(), /2\.200/)
 })
+
+import { limparLegendaDaIa, montarLegenda, promptDaLegenda } from '../src/lib/legenda-ia-regras.ts'
+import { CTA, TAGS, fatosDoSite } from '../src/lib/social-content.ts'
+
+test('IA da legenda: o prompt leva os fatos do site e as regras', () => {
+  const fatos = fatosDoSite()
+  assert.ok(fatos.length >= 5)
+  assert.ok(fatos.every((f) => !f.includes('#') && !f.includes(CTA)))
+  const p = promptDaLegenda(fatos)
+  assert.match(p, /Rio Grande do Norte/)
+  assert.match(p, /nunca use a palavra "seguro"/)
+  assert.match(p, /20\+ anos no Rio/)
+  assert.ok(fatos.every((f) => p.includes(f)))
+  assert.doesNotMatch(p, /recusada/)
+  assert.match(promptDaLegenda(fatos, ['O post não chama o produto de "seguro".']), /recusada por: O post não chama/)
+})
+
+test('IA da legenda: confere a resposta e monta a legenda que passa no manual', () => {
+  const r = limparLegendaDaIa(
+    {
+      texto: `Aqui não tem análise de perfil: o que conta é o veículo. 🚗 #21go https://x.com\n\n${CTA}`,
+      alertas: ['A arte cita o Rio ("20+ anos no Rio"); a CITmax atende no RN.', '', 42, 'x'.repeat(300)],
+    },
+    CTA
+  )
+  assert.ok(r)
+  assert.equal(r.texto, 'Aqui não tem análise de perfil: o que conta é o veículo. 🚗')
+  assert.equal(r.alertas.length, 2)
+  assert.equal(r.alertas[1].length, 200)
+  const legenda = montarLegenda(r.texto, CTA, TAGS)
+  assert.deepEqual(problemasDaLegenda(legenda), [])
+  assert.equal(limparLegendaDaIa({ texto: 'curto' }), null)
+  assert.equal(limparLegendaDaIa({ texto: 'x'.repeat(401) }), null)
+  assert.equal(limparLegendaDaIa('não é json'), null)
+  assert.deepEqual(limparLegendaDaIa({ texto: 'Texto sem alertas, mas válido.' })?.alertas, [])
+})
