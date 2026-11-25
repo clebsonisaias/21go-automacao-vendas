@@ -603,7 +603,7 @@ export default function HomePage() {
             <div className="flex min-w-0 flex-col gap-3 sm:gap-5 lg:col-start-1 lg:row-start-1 lg:self-end">
               <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#e6ee5c]">
                 <Check aria-hidden className="h-4 w-4 text-go-lime" />
-                CITmax · Franquia autorizada da 21Go
+                CITmax · Consultor autorizado da 21Go
               </span>
               <h1 className="m-0 text-[32px] font-extrabold leading-[1.06] tracking-[-1px] sm:text-[48px] sm:tracking-[-1.6px] lg:text-[64px] lg:tracking-[-2.4px]">
                 Seu carro protegido pelo <span className="text-go-orange">preço oficial</span>, em 30 segundos.

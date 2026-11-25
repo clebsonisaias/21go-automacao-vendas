@@ -14,7 +14,7 @@ export function Logo({
   /** Classes da imagem do logo (ex.: menor no celular). */
   imgClassName?: string
 }) {
-  // O logo já traz "21 Go! Proteção Veicular" e a linha "Franquia autorizada"; sem texto, só o símbolo.
+  // O logo já traz "21 Go! Proteção Veicular" e a linha "Consultor autorizado"; sem texto, só o símbolo.
   return (
     <a href={href} className="flex items-center gap-3 no-underline">
       {showText ? (
@@ -30,7 +30,7 @@ export function TopBar() {
   return (
     <div className="hidden bg-navy-deep text-[13px] text-muted-dark sm:block">
       <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 py-2">
-        <span>CITmax · Franquia autorizada da 21Go · Atendimento para todo o Brasil</span>
+        <span>CITmax · Consultor autorizado da 21Go · Atendimento para todo o Brasil</span>
         <span className="flex flex-wrap gap-x-4">
           <span>Mais de 20 anos de mercado</span>
         </span>
@@ -94,7 +94,7 @@ export function SiteFooter() {
           <div className="flex flex-col gap-2">
             <LogoCompleto altura={56} />
             <div className="flex flex-col gap-0.5">
-              <span className="text-sm">CITmax · Franquia autorizada da 21Go</span>
+              <span className="text-sm">CITmax · Consultor autorizado da 21Go</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-12 text-[15px]">
@@ -115,11 +115,11 @@ export function SiteFooter() {
           </div>
         </div>
         <p className="border-t border-navy-800 pt-6 text-[13px] leading-relaxed text-muted-2">
-          Este site é da CITmax, franquia autorizada da 21Go Proteção Veicular. A proteção, os planos e o
+          Este site é da CITmax, consultor autorizado da 21Go Proteção Veicular. A proteção, os planos e o
           regulamento são da 21Go. Proteção patrimonial veicular operada em regime associativo (mutualismo). Não se trata de seguro.
           As cotações refletem os valores oficiais sincronizados com o motor PowerCRM; valores e coberturas
           variam conforme o plano, o modelo e o ano do veículo.
-          {SITE.cnpj ? ` CNPJ da franquia: ${SITE.cnpj}.` : ''}
+          {SITE.cnpj ? ` CNPJ da CITmax: ${SITE.cnpj}.` : ''}
         </p>
       </div>
     </footer>

@@ -242,7 +242,7 @@ export function mensagemDeRetomada(p: { nome: string; veiculo?: string; placa?: 
   const ola = primeiroNome(p.nome) ? `Olá, ${primeiroNome(p.nome)}!` : 'Olá!'
   const doVeiculo = p.veiculo ? ` para o ${p.veiculo}` : p.placa ? ` do veículo de placa ${p.placa}` : ''
   return [
-    `${ola} Aqui é da CITmax, franquia autorizada da 21Go.`,
+    `${ola} Aqui é da CITmax, consultor autorizado da 21Go.`,
     ``,
     `Você fez a cotação da proteção veicular${doVeiculo} e ela continua valendo.`,
     ...(p.propostaUrl ? [`Para ver a proposta e contratar: ${p.propostaUrl}`] : []),

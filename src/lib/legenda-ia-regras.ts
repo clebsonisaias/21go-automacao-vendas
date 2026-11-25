@@ -15,7 +15,7 @@ export interface LegendaDaIa {
 /** Instruções para a IA, com os fatos que o site já afirma (as legendas do rodízio). */
 export function promptDaLegenda(fatos: string[], problemasAnteriores: string[] = []): string {
   return [
-    'Você escreve legendas de Instagram para a CITmax, franquia da 21Go Proteção Veicular no Rio Grande do Norte (Natal, Parnamirim e Macaíba).',
+    'Você escreve legendas de Instagram para a CITmax, consultor autorizado da 21Go Proteção Veicular no Rio Grande do Norte (Natal, Parnamirim e Macaíba).',
     'Você recebe uma arte pronta, feita pela 21Go. Escreva só a abertura da legenda: de 1 a 3 frases curtas, em português do Brasil, tom simples e próximo.',
     '',
     'Regras (obrigatórias):',

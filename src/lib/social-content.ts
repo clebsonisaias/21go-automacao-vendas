@@ -257,7 +257,7 @@ export const SOCIAL_CONTENT: SocialContent[] = [
         { titulo: 'Assistência 24h em todo o Brasil', texto: 'Conforme o plano.' },
       ],
     },
-    caption: cap('Somos a franquia CITmax da 21Go na Grande Natal. A assistência 24h acompanha você em todo o Brasil, conforme o plano.'),
+    caption: cap('Somos a CITmax, consultor autorizado da 21Go na Grande Natal. A assistência 24h acompanha você em todo o Brasil, conforme o plano.'),
   },
 ]
 

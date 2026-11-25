@@ -1,20 +1,20 @@
-"""Logo do site com a linha "FRANQUIA AUTORIZADA" (pedido do Clebson, 25/11/2026).
+"""Logo do site com a linha "CONSULTOR AUTORIZADO" (pedido do Clebson, 25/11/2026).
 
-Uso: python3 -I scripts/logo-franquia.py
+Uso: python3 -I scripts/logo-consultor.py
 
 Lê public/brand/logo-21go.png (o logo oficial do CRM 21Go, gerado por scripts/logo-21go.py) e
-escreve, embaixo de "PROTEÇÃO VEICULAR", a linha FRANQUIA AUTORIZADA na cor lima da marca, com a
+escreve, embaixo de "PROTEÇÃO VEICULAR", a linha CONSULTOR AUTORIZADO na cor lima da marca, com a
 mesma altura das letras e a mesma largura da linha de cima. O símbolo e o "21 Go! Proteção
 Veicular" não mudam. A posição é medida na própria imagem.
 
-Saída: public/brand/logo-21go-franquia.png (mesmo tamanho do logo; texto claro, fundo escuro).
+Saída: public/brand/logo-21go-consultor.png (mesmo tamanho do logo; texto claro, fundo escuro).
 """
 from PIL import Image, ImageFont
 
 ORIGEM = 'public/brand/logo-21go.png'
-DESTINO = 'public/brand/logo-21go-franquia.png'
+DESTINO = 'public/brand/logo-21go-consultor.png'
 FONTE = 'public/fonts/inter/inter-700.woff'
-TEXTO = 'FRANQUIA AUTORIZADA'
+TEXTO = 'CONSULTOR AUTORIZADO'
 LIMA = (199, 211, 1, 255)  # #C7D301, a cor do alfinete
 
 
