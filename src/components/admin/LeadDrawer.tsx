@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
+import { descreverOrigem } from '@/lib/origem'
 import { Bot, CheckCircle2, Copy, ExternalLink, Loader2, MessageCircle, X } from 'lucide-react'
 import type { StoredLead } from '@/lib/db'
 import { brl } from '@/lib/site'
@@ -462,6 +463,7 @@ export function LeadDrawer({
             )}
             {draft.diaVencimento && <Field label="Vencimento">Todo dia {draft.diaVencimento}</Field>}
             <Field label="Adesivo 21Go">{draft.comAdesivo ? 'Sim' : 'Não'}</Field>
+            <Field label="Origem">{descreverOrigem(draft.origem).replace(/^Origem: /, '')}</Field>
             {draft.powercrmCode && (
               <Field label="Código CRM">
                 <span className="font-mono text-xs">{draft.powercrmCode}</span>

@@ -78,6 +78,7 @@ export function LeadsView() {
   const [search, setSearch] = useState('')
   const [statuses, setStatuses] = useState<Set<LeadStatus>>(new Set())
   const [onlyWork, setOnlyWork] = useState(false)
+  const [canal, setCanal] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'createdAt', dir: 'desc' })
   const [page, setPage] = useState(1)
@@ -183,12 +184,26 @@ export function LeadsView() {
     return c
   }, [leads])
 
+  // De onde vêm os clientes (src/lib/origem.ts): cadastros e quantos fecharam (adesão paga ou venda no CRM).
+  const porCanal = useMemo(() => {
+    const m = new Map<string, { cadastros: number; fecharam: number }>()
+    for (const l of leads) {
+      const k = l.origem?.canal ?? 'Sem registro'
+      const v = m.get(k) || { cadastros: 0, fecharam: 0 }
+      v.cadastros++
+      if (l.status === 'adesao_paga' || l.status === 'vendas_concretizadas') v.fecharam++
+      m.set(k, v)
+    }
+    return [...m.entries()].sort((a, b) => (a[0] === 'Sem registro' ? 1 : b[0] === 'Sem registro' ? -1 : b[1].cadastros - a[1].cadastros))
+  }, [leads])
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
     const digits = term.replace(/\D/g, '')
     const rows = leads.filter((l) => {
       if (statuses.size && !statuses.has(l.status)) return false
       if (onlyWork && !l.veiculoTrabalho) return false
+      if (canal && (l.origem?.canal ?? 'Sem registro') !== canal) return false
       if (!term) return true
       return (
         l.nome.toLowerCase().includes(term) ||
@@ -203,9 +218,9 @@ export function LeadsView() {
       if (sort.key === 'mensalidadeFinal') return (a.mensalidadeFinal - b.mensalidadeFinal) * dir
       return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * dir
     })
-  }, [leads, search, statuses, onlyWork, sort])
+  }, [leads, search, statuses, onlyWork, canal, sort])
 
-  useEffect(() => setPage(1), [search, statuses, onlyWork, sort])
+  useEffect(() => setPage(1), [search, statuses, onlyWork, canal, sort])
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
@@ -285,6 +300,40 @@ export function LeadsView() {
           {isSyncing ? 'Sincronizando…' : 'Sincronizar CRM'}
         </button>
       </div>
+
+      {/* De onde vêm os clientes */}
+      {porCanal.length > 0 && (
+        <section aria-labelledby="origem-titulo" className="rounded-xl border border-line bg-white p-4 shadow-[0_1px_2px_rgba(26,39,84,0.05)]">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 id="origem-titulo" className="m-0 text-base font-semibold text-navy-900">
+              De onde vêm os clientes
+            </h2>
+            <p className="m-0 text-xs text-muted">Registrado a partir de 25/11/2026. Clique num canal para filtrar a lista.</p>
+          </div>
+          <ul className="m-0 mt-3 grid list-none gap-2 p-0 [grid-template-columns:repeat(auto-fill,minmax(min(160px,100%),1fr))]">
+            {porCanal.map(([nome, v]) => (
+              <li key={nome}>
+                <button
+                  type="button"
+                  aria-pressed={canal === nome}
+                  onClick={() => {
+                    setCanal(canal === nome ? null : nome)
+                    setPage(1)
+                  }}
+                  className={`flex min-h-[44px] w-full flex-col items-start rounded-lg border px-3 py-2 text-left transition-colors hover:bg-surface-50 ${
+                    canal === nome ? 'border-navy-600 bg-surface-50' : 'border-line'
+                  }`}
+                >
+                  <span className="text-sm font-semibold text-navy-900">{nome}</span>
+                  <span className="text-xs tabular-nums text-muted">
+                    {v.cadastros} {v.cadastros === 1 ? 'cadastro' : 'cadastros'} · {v.fecharam} {v.fecharam === 1 ? 'fechou' : 'fecharam'}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Moldura da lista */}
       <section aria-label="Lista de cadastros" className="rounded-xl border border-line bg-white shadow-[0_1px_2px_rgba(26,39,84,0.05)]">
@@ -493,7 +542,10 @@ export function LeadsView() {
                       >
                         {lead.nome || <span className="text-muted">Aguardando documentos</span>}
                       </button>
-                      <div className="text-xs text-muted">{lead.whatsapp}</div>
+                      <div className="text-xs text-muted">
+                        {lead.whatsapp}
+                        {lead.origem ? ` · ${lead.origem.canal}` : ''}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="text-navy-900">

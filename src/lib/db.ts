@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { CupomAplicado, LeadSubmissionPayload, PlanoNacional } from './types'
 import type { PrecoNordeste } from './tabela-nordeste'
+import type { OrigemLead } from './origem'
 
 /** Cobrança Pix da taxa de adesão (Mercado Pago, Orders API). */
 export interface LeadPagamento {
@@ -73,6 +74,8 @@ export interface StoredLead {
   ativacaoOriginal?: number
   cupom?: CupomAplicado
   comAdesivo: boolean
+  /** De onde o cliente veio (src/lib/origem.ts). */
+  origem?: OrigemLead
   vehicle: {
     marca: string
     modelo: string
@@ -224,6 +227,7 @@ export function saveNewLead(
     ativacao: payload.ativacao,
     ...(payload.cupom ? { cupom: payload.cupom, ativacaoOriginal: payload.ativacaoOriginal } : {}),
     comAdesivo: payload.comAdesivo,
+    ...(payload.origem ? { origem: payload.origem } : {}),
     vehicle: {
       marca: payload.vehicle.marca,
       modelo: payload.vehicle.modelo,

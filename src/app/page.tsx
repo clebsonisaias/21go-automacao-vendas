@@ -36,6 +36,31 @@ import {
   Stats,
 } from '@/components/home/HomeSections'
 import { Economizometro } from '@/components/home/Economizometro'
+import { origemDaVisita, type OrigemLead } from '@/lib/origem'
+
+/** De onde a pessoa veio: a primeira origem da visita fica 30 dias no aparelho (sem dado pessoal). */
+const CHAVE_ORIGEM = 'origem21go'
+function lerOrigem(): OrigemLead | undefined {
+  try {
+    const o = JSON.parse(localStorage.getItem(CHAVE_ORIGEM) || 'null')
+    return o && typeof o === 'object' ? o : undefined
+  } catch {
+    return undefined
+  }
+}
+function guardarOrigem(): void {
+  try {
+    const atual = origemDaVisita(window.location.href, document.referrer)
+    const salvo = lerOrigem()
+    const valido = salvo?.em && Date.now() - Date.parse(salvo.em) < 30 * 864e5
+    // Fica a primeira origem; "Direto" dá lugar a uma origem de verdade (anúncio, indicação, Instagram).
+    if (!valido || (salvo?.canal === 'Direto' && atual.canal !== 'Direto')) {
+      localStorage.setItem(CHAVE_ORIGEM, JSON.stringify({ ...atual, em: new Date().toISOString() }))
+    }
+  } catch {
+    /* sem localStorage (modo privado): segue sem origem */
+  }
+}
 
 const inputCls =
   'min-h-[48px] w-full rounded-lg border border-[#c9d1e6] bg-white px-3.5 text-base text-navy-800 placeholder:text-muted-2'
@@ -100,6 +125,10 @@ export default function HomePage() {
   const [ufErro, setUfErro] = useState('')
   const [ufPelaLocalizacao, setUfPelaLocalizacao] = useState(false)
   const ufAtual = useRef('')
+  useEffect(() => {
+    guardarOrigem()
+  }, [])
+
   useEffect(() => {
     ufAtual.current = uf
   }, [uf])
@@ -391,6 +420,7 @@ export default function HomePage() {
           vehicle: quoteResult.vehicle,
           powercrmMeta: quoteResult.powercrmMeta,
           quoteToken: quoteResult.quoteToken,
+          origem: lerOrigem(),
           ...(cupomCodigo.trim() ? { cupomCodigo: cupomCodigo.trim() } : {}),
         }),
       })
