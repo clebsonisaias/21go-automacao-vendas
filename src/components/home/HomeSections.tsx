@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Revelar } from '@/components/common/Revelar'
 import {
   Check,
   ChevronDown,
@@ -74,14 +75,14 @@ export function Coberturas() {
   return (
     <section id="coberturas" className="scroll-mt-20 px-6 py-14 sm:py-24">
       <div className="mx-auto flex max-w-[1200px] flex-col gap-12">
-        <div className="flex max-w-[680px] flex-col gap-3">
+        <Revelar className="flex max-w-[680px] flex-col gap-3">
           <span className={eyebrow}>O QUE ESTÁ PROTEGIDO</span>
           <h2 className={h2}>Proteção completa, sem letras miúdas</h2>
           <p className="m-0 text-lg leading-relaxed text-muted">
             Tudo o que você precisa para rodar tranquilo, da garagem à estrada, em qualquer canto do Brasil.
           </p>
-        </div>
-        <div className="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))]">
+        </Revelar>
+        <Revelar atraso={60} className="grid gap-6 [grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))]">
           {COBERTURAS.map(({ icon: Icon, title, text }) => (
             <article
               key={title}
@@ -94,7 +95,7 @@ export function Coberturas() {
               <p className="m-0 leading-relaxed text-muted">{text}</p>
             </article>
           ))}
-        </div>
+        </Revelar>
       </div>
     </section>
   )
@@ -129,21 +130,21 @@ export function PlanosPreview() {
   return (
     <section id="planos" className="scroll-mt-20 bg-surface-100 px-6 py-14 sm:py-24">
       <div className="mx-auto flex max-w-[1200px] flex-col gap-12">
-        <div className="flex max-w-[640px] flex-col gap-3">
+        <Revelar className="flex max-w-[640px] flex-col gap-3">
           <span className={eyebrow}>PLANOS</span>
           <h2 className={h2}>Escolha o plano do seu jeito</h2>
           <p className="m-0 text-lg leading-relaxed text-muted">
             Para carros, motos, SUVs e especiais. O valor depende do modelo e do ano — consulte pela placa para ver o seu.
           </p>
-        </div>
-        <div className="grid items-stretch gap-5 [grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))]">
+        </Revelar>
+        <Revelar atraso={60} className="grid items-stretch gap-5 [grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))]">
           {PLANOS.map((p) => (
             <article
               key={p.name}
-              className={`flex flex-col gap-5 rounded-2xl p-7 ${
+              className={`flex flex-col gap-5 rounded-2xl p-7 transition duration-150 hover:-translate-y-0.5 ${
                 p.popular
                   ? 'border-2 border-go-orange bg-navy-950 text-white shadow-[0_16px_40px_rgba(11,18,48,0.25)]'
-                  : 'border border-line bg-white'
+                  : 'border border-line bg-white hover:border-navy-500'
               }`}
             >
               <div className="flex flex-col gap-1.5">
@@ -175,7 +176,7 @@ export function PlanosPreview() {
               </a>
             </article>
           ))}
-        </div>
+        </Revelar>
       </div>
     </section>
   )
@@ -191,10 +192,11 @@ export function ComoFunciona() {
   return (
     <section id="como-funciona" className="scroll-mt-20 px-6 py-14 sm:py-24">
       <div className="mx-auto flex max-w-[1200px] flex-col gap-12">
-        <div className="flex max-w-[640px] flex-col gap-3">
+        <Revelar className="flex max-w-[640px] flex-col gap-3">
           <span className={eyebrow}>COMO FUNCIONA</span>
           <h2 className={h2}>Protegido em 4 passos, sem sair de casa</h2>
-        </div>
+        </Revelar>
+        <Revelar atraso={60}>
         <ol className="m-0 grid list-none gap-6 p-0 [grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))]">
           {steps.map(([n, title, text, last]) => (
             <li
@@ -207,6 +209,7 @@ export function ComoFunciona() {
             </li>
           ))}
         </ol>
+        </Revelar>
       </div>
     </section>
   )
@@ -223,11 +226,11 @@ export function Comparativo() {
   return (
     <section className="border-y border-line bg-white px-6 py-14 sm:py-24">
       <div className="mx-auto flex max-w-[960px] flex-col gap-10">
-        <div className="flex flex-col items-center gap-3 text-center">
+        <Revelar className="flex flex-col items-center gap-3 text-center">
           <span className={eyebrow}>COMPARATIVO</span>
           <h2 className={h2}>Proteção veicular x seguro tradicional</h2>
-        </div>
-        <div className="overflow-x-auto rounded-2xl border border-line">
+        </Revelar>
+        <Revelar atraso={60} className="overflow-x-auto rounded-2xl border border-line">
           <table className="w-full min-w-[560px] border-collapse text-base">
             <thead>
               <tr className="bg-surface-100 text-left">
@@ -248,7 +251,7 @@ export function Comparativo() {
               ))}
             </tbody>
           </table>
-        </div>
+        </Revelar>
         <p className="m-0 text-center text-sm leading-relaxed text-muted">
           A 21Go é uma associação de proteção patrimonial por rateio (mutualismo). Não é seguro.
         </p>
@@ -268,7 +271,7 @@ export function SeguradoraDisseNao() {
   ]
   return (
     <section className="px-6 py-14 sm:py-24">
-      <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-10 rounded-3xl bg-navy-950 px-5 py-8 text-white sm:px-12 sm:py-14">
+      <Revelar className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-10 rounded-3xl bg-navy-950 px-5 py-8 text-white sm:px-12 sm:py-14">
         <div className="flex min-w-0 flex-[1_1_380px] flex-col gap-4">
           <span className="text-xs font-bold tracking-[1.5px] text-go-orange">A SEGURADORA DISSE NÃO?</span>
           <h2 className="m-0 text-[32px] font-extrabold leading-[1.1] tracking-[-1px] sm:text-[40px]">
@@ -285,7 +288,7 @@ export function SeguradoraDisseNao() {
             </li>
           ))}
         </ul>
-      </div>
+      </Revelar>
     </section>
   )
 }
@@ -302,13 +305,13 @@ const FAQS = [
 export function Faq() {
   const [open, setOpen] = useState<number | null>(0)
   return (
-    <section id="duvidas" className="scroll-mt-20 px-6 pb-24">
+    <section id="duvidas" className="scroll-mt-20 px-6 py-14 sm:py-24">
       <div className="mx-auto flex max-w-[800px] flex-col gap-8">
-        <div className="flex flex-col items-center gap-3 text-center">
+        <Revelar className="flex flex-col items-center gap-3 text-center">
           <span className={eyebrow}>DÚVIDAS FREQUENTES</span>
           <h2 className={h2}>Perguntas frequentes</h2>
-        </div>
-        <div className="flex flex-col gap-3">
+        </Revelar>
+        <Revelar atraso={60} className="flex flex-col gap-3">
           {FAQS.map(([q, a], i) => {
             const isOpen = open === i
             return (
@@ -334,7 +337,7 @@ export function Faq() {
               </div>
             )
           })}
-        </div>
+        </Revelar>
       </div>
     </section>
   )
@@ -342,8 +345,8 @@ export function Faq() {
 
 export function CtaFinal() {
   return (
-    <section className="bg-navy-900 bg-[radial-gradient(ellipse_at_100%_0%,rgba(242,145,29,0.22),transparent_50%)] px-6 py-20 text-white">
-      <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-8">
+    <section className="bg-navy-900 bg-[radial-gradient(ellipse_at_100%_0%,rgba(242,145,29,0.22),transparent_50%)] px-6 py-14 text-white sm:py-24">
+      <Revelar className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-8">
         <div className="flex min-w-0 flex-[1_1_480px] flex-col gap-3">
           <h2 className="m-0 text-[32px] font-extrabold leading-[1.1] tracking-[-1px] sm:text-[40px]">
             Descubra quanto custa proteger seu veículo.
@@ -353,7 +356,7 @@ export function CtaFinal() {
         <div className="flex flex-wrap gap-3">
           <a
             href="#cotacao"
-            className="inline-flex min-h-[54px] items-center rounded-lg bg-go-orange px-7 text-[17px] font-extrabold text-navy-950 no-underline transition hover:-translate-y-px hover:shadow-cta"
+            className="inline-flex min-h-[54px] items-center rounded-lg bg-go-orange px-7 text-[17px] font-extrabold text-navy-950 no-underline transition hover:-translate-y-px hover:shadow-cta active:scale-[0.98]"
           >
             Cotar agora
           </a>
@@ -364,7 +367,7 @@ export function CtaFinal() {
             Falar no WhatsApp
           </a>
         </div>
-      </div>
+      </Revelar>
     </section>
   )
 }

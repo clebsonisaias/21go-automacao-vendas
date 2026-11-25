@@ -7,6 +7,8 @@ import { usePathname } from 'next/navigation'
 export function LunaFloatingChat() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
+  // No celular, na home, fica acima do botão do WhatsApp; nas outras páginas, embaixo.
+  const naHome = pathname === '/'
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; text: string }>>([
     {
       role: 'assistant',
@@ -85,14 +87,11 @@ export function LunaFloatingChat() {
           type="button"
           onClick={() => setIsOpen(true)}
           aria-label="Abrir chat com IA Luna"
-          className="fixed bottom-6 left-6 z-40 flex items-center gap-2 rounded-full border border-go-orange/30 bg-navy-950 px-4 py-3 text-white shadow-2xl transition hover:-translate-y-1 hover:border-go-orange hover:shadow-go-orange/20 active:translate-y-0"
+          className={`fixed ${naHome ? 'bottom-[80px]' : 'bottom-4'} right-4 z-40 flex items-center gap-2 rounded-full border border-go-orange/30 bg-navy-950 p-1.5 text-white shadow-2xl transition hover:-translate-y-1 hover:border-go-orange hover:shadow-go-orange/20 active:translate-y-0 sm:bottom-6 sm:left-6 sm:right-auto sm:px-4 sm:py-3`}
         >
-          <div className="relative flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-go-orange to-amber-300 text-navy-950">
+          <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-go-orange to-amber-300 text-navy-950 sm:h-8 sm:w-8">
             <Bot className="h-4 w-4" />
-            <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
-            </span>
+            <span aria-hidden className="absolute -top-0.5 -right-0.5 inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-navy-950" />
           </div>
           <div className="text-left hidden sm:block">
             <span className="block text-xs font-black tracking-tight text-white">IA Luna</span>
@@ -103,7 +102,7 @@ export function LunaFloatingChat() {
 
       {/* Chat Window Drawer / Modal */}
       {isOpen && (
-        <div className="fixed bottom-4 left-4 z-50 flex h-[540px] w-[92vw] max-w-[380px] flex-col rounded-3xl border border-navy-700 bg-white shadow-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200">
+        <div className="fixed bottom-4 left-4 z-50 flex h-[540px] w-[92vw] max-w-[380px] flex-col rounded-3xl border border-navy-700 bg-white shadow-2xl overflow-hidden entrar-suave">
           {/* Header */}
           <div className="flex items-center justify-between bg-navy-950 p-4 text-white">
             <div className="flex items-center gap-2.5">
