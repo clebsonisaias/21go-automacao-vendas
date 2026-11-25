@@ -329,11 +329,10 @@ export function Faq() {
                     className={`h-5 w-5 shrink-0 text-navy-600 transition-transform ${isOpen ? 'rotate-180' : ''}`}
                   />
                 </button>
-                {isOpen && (
-                  <p id={`faq-${i}`} className="m-0 px-5 pb-5 leading-relaxed text-muted">
-                    {a}
-                  </p>
-                )}
+                {/* A resposta fica sempre no HTML (o Google e as IAs leem); fechada, só não aparece. */}
+                <p id={`faq-${i}`} hidden={!isOpen} className="m-0 px-5 pb-5 leading-relaxed text-muted">
+                  {a}
+                </p>
               </div>
             )
           })}

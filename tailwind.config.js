@@ -8,7 +8,7 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
+        sans: ['var(--font-inter)', 'Inter', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
       },
       boxShadow: {
         card: '0 1px 2px rgba(26,39,84,0.06), 0 8px 24px rgba(26,39,84,0.08)',

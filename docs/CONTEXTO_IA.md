@@ -956,3 +956,24 @@ Os valores podem mudar com a Tabela FIPE do mês. Se tiver dúvida, é só respo
 Os 2 lembretes também usam este template quando a conversa está fechada. Se a Meta classificar o template como Marketing, os lembretes param: avise.
 
 **Pedido ao AtendeHub (outra sessão):** quando o cliente pedir para não receber mais mensagens, chamar `POST /api/atendai/v1/cotacao-whatsapp/parar` com `{ telefone }` da conversa. A autenticação é a mesma das outras rotas do `atendai`.
+
+### [Claude] — 2026-11-25 — SEO técnico (Frente 2a: aparecer no Google)
+
+- **`robots.txt` e sitemap:**
+  - O `public/robots.txt` apontava para um `sitemap.xml` que não existia. Saiu e virou `src/app/robots.ts`: libera o site e fecha `/admin`, `/api/`, `/cliente`, `/vistoria`, `/pagamento` e `/carteirinha`. Os robôs de busca das IAs (OAI-SearchBot, ChatGPT-User, Claude-SearchBot, PerplexityBot) ficam nomeados.
+  - O `src/app/sitemap.ts` lista a home e `/privacidade`. As páginas por cidade entram na Frente 2b.
+- **Páginas privadas:** levam `X-Robots-Tag: noindex, nofollow` (`next.config.js`).
+- **Home:**
+  - virou página de servidor (`src/app/page.tsx`), com título, descrição e canonical próprios;
+  - o componente da cotação foi para `src/components/home/HomeClient.tsx`, sem mudar o funcionamento.
+- **`layout.tsx`:**
+  - `metadataBase`, modelo de título ("… · 21Go pela CITmax"), Open Graph pt_BR e Twitter;
+  - dados estruturados (JSON-LD): `Organization` (CITmax, contato, Instagram), `Service` ("Proteção veicular", marca 21Go, Brasil) e `WebSite`;
+  - sem endereço, sem nota e sem tipo de seguradora.
+- **Imagem de compartilhamento:** `src/app/opengraph-image.tsx`, 1200×630, gerada na build. Logo com "consultor autorizado", "Proteção veicular pela placa", sem preço.
+- **Fonte Inter:** agora pelo `next/font` (fica no próprio site; saiu o Google Fonts da página e da CSP).
+- **FAQ da home:** as respostas ficam sempre no HTML (fechadas com `hidden`), para o Google e as IAs lerem.
+- **Fica com o Clebson** (sem isso o Google demora a achar as páginas novas):
+  1. **Search Console:** em search.google.com/search-console, adicionar a propriedade `https://21go.seg.br`, verificar (o jeito mais simples é pelo DNS do domínio) e enviar o sitemap `https://21go.seg.br/sitemap.xml`.
+  2. **Bing Webmaster Tools:** em bing.com/webmasters, importar do Search Console. O Bing alimenta o ChatGPT e o Copilot.
+  3. **Perfil da Empresa no Google (Maps):** só se houver atendimento num endereço; sem endereço, cadastrar como "empresa de área de serviço", com as cidades atendidas. Categoria: a mais próxima de proteção veicular; nada de "seguradora".
