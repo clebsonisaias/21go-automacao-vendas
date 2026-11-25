@@ -37,7 +37,8 @@ export async function conferirVeiculo(d: {
 
 /**
  * Preço por região: quem mora no RN, na PB ou no CE vê todos os planos do CRM, com o VIP (o plano
- * que a Tabela Nordeste substitui) em primeiro e em promoção, pela mensalidade da tabela. O valor
+ * que a Tabela Nordeste substitui) em promoção, pela mensalidade da tabela, no lugar dele na ordem
+ * do CRM (o terceiro, depois de Básico e Do seu jeito: pedido do Clebson, 25/11/2026). O valor
  * da tabela é o valor normal: pagamento em dia e adesivo entram por cima, como nos outros planos
  * (decisões do Clebson, 24 e 25/11/2026). Os outros planos seguem o preço do CRM. O resto do Brasil: o preço do CRM. Recusa do CRM
  * continua recusa, e FIPE fora das faixas da tabela fica com o preço do CRM.
@@ -56,8 +57,8 @@ export function aplicarPrecoRegional(
   const plano = montarPlanoNordeste(result.vehicle, result.plans, uf, veiculo, utilitariosParaCotacao())
   if (!plano) return result
 
-  // O VIP em promoção primeiro (o destaque); os outros planos como o CRM deu.
-  result.plans = [plano, ...result.plans.filter((p) => p.id !== plano.id).map((p) => ({ ...p, popular: false }))]
+  // O VIP em promoção fica no lugar dele (o destaque é visual); os outros planos como o CRM deu.
+  result.plans = result.plans.map((p) => (p.id === plano.id ? plano : { ...p, popular: false }))
   result.regiao.tabela = true
   return result
 }

@@ -21,6 +21,25 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
+/*
+ * Destaque da promoção da tabela regional no cartão do VIP (pedido do Clebson: "destacar piscando").
+ * Exceção do motion, anotada no .ux-profile.md: pulso de opacidade, 4 vezes ao aparecer e para.
+ * Com "reduzir movimento", o bloco abaixo zera a animação e o anel some (fica o destaque fixo).
+ */
+@keyframes promo-pulso {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.promo-anel {
+  opacity: 0;
+  animation: promo-pulso 1.5s ease-in-out 4;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

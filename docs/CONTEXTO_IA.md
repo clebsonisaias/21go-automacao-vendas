@@ -733,3 +733,4 @@ Esta entrada **substitui** a decisão de 24/11 ("a tabela é o preço final"). O
   - cada plano mostra "Pagando em dia. Com atraso: R$ X";
   - o "de/por" do VIP regional compara com o preço nacional com os mesmos descontos.
 - **Chat:** `mensagemRegiao` avisa a IA que os descontos valem no VIP regional e que o de pagamento em dia é só até o vencimento.
+- **Ordem dos planos (pedido do Clebson, 25/11):** o VIP regional fica no lugar dele, em 3º (Básico, Do seu jeito, VIP, Premium). O destaque é visual: um anel laranja pulsa 4 vezes quando a cotação aparece, sem animação com "reduzir movimento"; a exceção está anotada no `.ux-profile.md`. No chat, `mensagemRegiao` procura o plano regional na lista, em vez de pegar o primeiro.
