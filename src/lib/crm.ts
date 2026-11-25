@@ -1,9 +1,9 @@
 import { LeadSubmissionPayload } from './types'
 import { StoredLead, getStoredLeads, writeLeads } from './db'
 
-const CRM_BASE_URL = process.env.CRM_BASE_URL || 'https://www.crm21go.site/api'
+export const CRM_BASE_URL = process.env.CRM_BASE_URL || 'https://www.crm21go.site/api'
 
-const CRM_PIPE_ID = process.env.CRM_PIPE_ID || 'a41be931-04d2-46da-a0c4-1406c3c4e114'
+export const CRM_PIPE_ID = process.env.CRM_PIPE_ID || 'a41be931-04d2-46da-a0c4-1406c3c4e114'
 const CRM_PHASE_COTACOES_RECEBIDAS =
   process.env.CRM_PHASE_COTACOES_RECEBIDAS || '7a0c33a6-0935-4fba-aa5c-0c13f9efb4a3'
 

@@ -769,3 +769,24 @@ Esta entrada **substitui** a decisão de 24/11 ("a tabela é o preço final"). O
   - o chat manda `canal: WhatsApp`.
 - **Admin:** quadro "De onde vêm os clientes", com cadastros e quantos fecharam (adesão paga ou venda no CRM) por canal. Clicar num canal filtra a lista. O canal também aparece na linha do cliente e no detalhe.
 - **Para medir campanhas:** use links com UTM, por exemplo `https://21go.seg.br/?utm_source=instagram&utm_medium=bio&utm_campaign=black`.
+
+### [Claude] — 2026-11-25 — Rotas do CRM 21Go que o site lê (ideia do Grok, conferência)
+
+Conferido só pela estrutura (nomes de campos), sem imprimir dados de cliente:
+
+- `GET /dashboard/stats`: `periodDays` (sempre 7; os parâmetros de período são ignorados), `kpis.*` (entradas, fechados, receita com as variações em %, conversão, em atendimento, em negociação, em vistoria, prestes a fechar, pendências, associados, veículos protegidos), `funil[{name, count, isWon, isLost, color}]` (11 etapas da empresa) e `timeline[{date, entradas, fechados, receita}]`.
+- `GET /dashboard/meu-trabalho`: números do usuário logado (o do site): `simulacoes`, `placas`, `fechadas`, `boletos{aVencer, vencidos, pagos}` e `funil[{coluna, nome, total}]`.
+- `GET /pipes/{pipe}/cards`: os cards do funil do site, com `title` ("PLACA · Nome"), `currentPhase{name, position}`, `createdAt` e `updatedAt`. O CRM não diz quando o card entrou na fase (`currentPhase.updatedAt` é da fase, não do card): o painel usa o `updatedAt` do card.
+- `GET /pipes/cards/{id}`: detalhe (contato, `negociacao.cotacoes[0].powerQuotationCode`); `GET /pipes/cards/{id}/historico` tem os eventos do card (`eventos[{tipo, quandoIso, grupo…}]`), ainda não usado.
+- `GET /indicacoes/stats` (total, pendentes, convertidos, taxa) e `GET /materiais/pastas` (6 pastas) com `GET /materiais/pastas/{id}/arquivos`: ficam para a fase das indicações e artes.
+
+### [Claude] — 2026-11-25 — Painel da carteira e cotações paradas (ideias do Grok, nº 1 e 2)
+
+- **Aba "Carteira" no /admin** (`src/components/admin/CarteiraPanel.tsx`, padrão Dashboard): números dos últimos 7 dias, entradas por dia, o que está agora no CRM, o funil do site e as cotações paradas.
+  - Leitura das respostas em `src/lib/carteira.ts` (funções puras, testes em `tests/carteira.test.mts`); busca e cache de 5 minutos em `src/lib/crm-carteira.ts`; rota `GET /api/admin/carteira` (só admin; `?atualizar=1` passa por cima do cache, com limite).
+  - Só leitura no CRM: nada muda card, fase ou negociação.
+- **Cotação parada:** card em "Cotações recebidas" ou "Em negociação" sem nenhuma mudança há mais de 48 h.
+  - Cada uma tem "Ver proposta" (link do PowerCRM) e **Preparar WhatsApp**: a mensagem vem sugerida, a equipe revisa e só sai no clique em "Mandar pelo WhatsApp" (`POST /api/admin/carteira/whatsapp`, gateway do CITchat, sem template: fora da janela vai a reserva).
+  - No máximo uma mensagem a cada 24 h por card (`data/carteira.json`). O telefone não vai para a tela (só o final) nem para o log.
+- **Resumo diário no Telegram da equipe:** uma vez por dia, das 9h às 20h de Brasília, com primeiro nome, placa, fase e dias parados (sem CPF nem telefone) e o link da aba. Roda a cada 30 min com as credenciais do CRM; `CARTEIRA_ALERTA=off` desliga.
+- **Menu do /admin:** as abas aparecem a partir de 1280 px (ícones só nas telas bem largas); abaixo disso, o menu. Com 9 abas, os nomes estavam quebrando em duas linhas.
