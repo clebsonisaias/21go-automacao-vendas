@@ -80,11 +80,12 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   const nav = [
-    ['#coberturas', 'Coberturas'],
-    ['#planos', 'Planos'],
-    ['#como-funciona', 'Como funciona'],
-    ['#duvidas', 'Dúvidas'],
+    ['/#coberturas', 'Coberturas'],
+    ['/#planos', 'Planos'],
+    ['/#como-funciona', 'Como funciona'],
+    ['/#duvidas', 'Dúvidas'],
     ['/carteirinha', 'Carteirinha Digital'],
+    ['/privacidade', 'Privacidade'],
     ['/admin', 'Painel da Franquia'],
   ]
   return (

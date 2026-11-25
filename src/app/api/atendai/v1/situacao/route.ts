@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { autorizarAtendai, cadastroMaisRecente, chaveTelefone, json, situacaoDoCadastro } from '@/lib/atendai'
 import { rateLimit } from '@/lib/rate-limit'
 
+import { conversaNoChat } from '@/lib/cotacao-whatsapp-envio'
+
 export const dynamic = 'force-dynamic'
 
 /**
@@ -23,5 +25,6 @@ export async function POST(req: NextRequest) {
   }
   const telefone = String(corpo?.telefone ?? '')
   if (!chaveTelefone(telefone)) return json({ erro: 'Telefone inválido.' }, 400)
+  conversaNoChat(telefone)
   return json(situacaoDoCadastro(cadastroMaisRecente(telefone)))
 }

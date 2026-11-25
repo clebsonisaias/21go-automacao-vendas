@@ -2,6 +2,7 @@ import { sendLeadToPowerCrm } from '@/lib/powercrm-lead'
 import { sendTelegramNotification, esc } from '@/lib/telegram'
 import { sendWhatsAppQuoteMessage } from '@/lib/citchat'
 import { findLeadByRef, saveNewLead, StoredLead } from '@/lib/db'
+import { marcarCotacaoFechada } from '@/lib/cotacao-whatsapp-envio'
 import { verifyQuoteToken } from '@/lib/quote-token'
 import { mpEnabled } from '@/lib/mercadopago'
 import { vistoriaPath } from '@/lib/links'
@@ -180,6 +181,12 @@ async function gravarCadastro(
   // O card do CRM 21Go chega pela sincronização do PowerCRM; o site não cria outro (ficava duplicado no Kanban).
 
   const storedLead = saveNewLead(payload, leadRef, powerCrmResult.qttnCd, 'pendente_vistoria')
+  // Quem tinha pedido a cotação pelo WhatsApp e agora se cadastrou não recebe mais lembretes dela.
+  try {
+    marcarCotacaoFechada(storedLead)
+  } catch (e) {
+    console.warn('[cadastro] cotação do WhatsApp não fechou:', e instanceof Error ? e.message : 'erro')
+  }
 
   const fipeFormatted = payload.vehicle.fipeValue
     ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(payload.vehicle.fipeValue)

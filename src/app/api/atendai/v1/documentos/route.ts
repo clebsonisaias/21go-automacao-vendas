@@ -17,6 +17,8 @@ import { MAX_FILE_BYTES, sniffType } from '@/lib/vistoria-files'
 import { DOCUMENTOS_EM_PDF } from '@/lib/vistoria-slots'
 import { guardarComprovanteLido } from '@/lib/regiao-comprovante'
 
+import { conversaNoChat } from '@/lib/cotacao-whatsapp-envio'
+
 export const dynamic = 'force-dynamic'
 
 /**
@@ -76,6 +78,7 @@ export async function POST(req: NextRequest) {
   }
 
   const telefone = String(form.get('telefone') ?? '').replace(/\D/g, '').slice(0, 15)
+  conversaNoChat(telefone)
   const chave = chaveTelefone(telefone)
   if (!chave) return json({ erro: 'Telefone inválido.' }, 400)
   if (!limitePorChave('atendai-documentos', chave, 20, 10 * 60 * 1000)) {

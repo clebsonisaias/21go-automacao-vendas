@@ -5,6 +5,7 @@ import { ExternalLink, Loader2, MessageCircle, RefreshCw } from 'lucide-react'
 import { mensagemDeRetomada } from '@/lib/carteira'
 import type { DadosCarteira, ParadaNoPainel } from '@/lib/crm-carteira'
 import { PendenciasEquipe } from '@/components/admin/PendenciasEquipe'
+import { CotouNaoFechou } from '@/components/admin/CotouNaoFechou'
 
 // Aba "Carteira" do /admin (padrão Dashboard): números do CRM 21Go e cotações paradas no funil do
 // site. Só leitura no CRM; o WhatsApp de retomada sai só no clique, com o texto revisado aqui.
@@ -293,6 +294,7 @@ export function CarteiraPanel() {
         </div>
       </div>
       <PendenciasEquipe />
+      <CotouNaoFechou />
       {corpo}
     </div>
   )
@@ -342,6 +344,7 @@ export function CarteiraPanel() {
       </div>
 
       <PendenciasEquipe />
+      <CotouNaoFechou />
 
       <div aria-live="polite">
         {aviso && <p className="m-0 rounded-xl border border-line bg-white p-4 text-sm text-navy-900">{aviso}</p>}

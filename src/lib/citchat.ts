@@ -325,6 +325,27 @@ export async function sendWhatsAppVistoriaAprovada(params: {
 }
 
 /**
+ * "Receber esta cotação no WhatsApp" (ver cotacao-whatsapp.ts). Vai pelo template
+ * `citmax_21go_cotacao`; enquanto ele não existir na Meta, o gateway responde "não existe" (4xx,
+ * nada enviado) e a mensagem vai de novo sem template, pela reserva do produto 21Go. Dentro da
+ * janela de 24h o gateway manda o texto livre.
+ */
+export async function sendWhatsAppCotacao(params: {
+  telefone: string
+  texto: string
+  templateParams?: string[]
+}): Promise<{ success: boolean; viaReserva?: boolean; janela?: boolean; error?: string }> {
+  const janelaDe = (d: any): boolean | undefined => (typeof d?.janela === 'boolean' ? d.janela : undefined)
+  if (params.templateParams) {
+    const r = await sendCitchatMessage(params.telefone, params.texto, { template: 'citmax_21go_cotacao', params: params.templateParams })
+    if (r.success) return { success: true, janela: janelaDe(r.data) }
+    if (!/n[aã]o existe/i.test(r.error || '')) return { success: false, error: r.error }
+  }
+  const r = await sendCitchatMessage(params.telefone, params.texto)
+  return r.success ? { success: true, viaReserva: true, janela: janelaDe(r.data) } : { success: false, error: r.error }
+}
+
+/**
  * Lembrete de etapa parada (ver lembretes.ts). Dentro da janela de 24h vai o texto; fora dela,
  * o mesmo template da etapa (documentos, vistoria ou Pix), que já leva o link certo.
  */
