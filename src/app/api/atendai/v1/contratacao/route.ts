@@ -95,6 +95,8 @@ async function cadastrar(
     mensalidadeFinal: comAdesivo ? verificada.plan.adesivo : verificada.plan.pontualidade,
     ativacao: verificada.plan.ativacao,
     comAdesivo,
+    // Veio pela conversa do WhatsApp (AtendeHub).
+    origem: { canal: 'WhatsApp', utm_source: 'whatsapp', utm_medium: 'chat' },
     vehicle: { ...verificada.vehicle, placa: cotacao.placa },
     quoteToken: cotacao.token,
     powercrmMeta: verificada.meta,

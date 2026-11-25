@@ -754,3 +754,18 @@ Esta entrada **substitui** a decisão de 24/11 ("a tabela é o preço final"). O
   - os planos da home têm hover;
   - o espaçamento das seções ficou igual;
   - o ponto "ping" infinito da Luna virou fixo (regra: sem laço decorativo).
+
+### [Claude] — 2026-11-25 — Origem de cada lead (ideia do Grok, nº 6)
+
+- **Regras:** `src/lib/origem.ts`, funções puras, com testes em `tests/origem.test.mts`.
+  - O canal sai do UTM (`utm_source`), do clique de anúncio (`gclid` é Google, `fbclid` é Facebook), da indicação (`?ref=` ou `?indicacao=`) ou do site de onde a pessoa veio.
+  - Os canais são: Instagram, Facebook, Google, WhatsApp, Indicação, Direto ou Outro.
+- **No navegador:** a home guarda a **primeira** origem em `localStorage` (`origem21go`), por 30 dias e sem dado pessoal. "Direto" é substituído por uma origem de verdade. A origem vai junto no cadastro.
+- **No servidor:**
+  - `aplicarCotacao` limpa os campos e recalcula o canal;
+  - o lead grava `origem`;
+  - o CRM recebe `utmParameters` (antes ia `{}`) e uma linha "Origem: …" na observação;
+  - o Telegram também mostra a linha "Origem: …";
+  - o chat manda `canal: WhatsApp`.
+- **Admin:** quadro "De onde vêm os clientes", com cadastros e quantos fecharam (adesão paga ou venda no CRM) por canal. Clicar num canal filtra a lista. O canal também aparece na linha do cliente e no detalhe.
+- **Para medir campanhas:** use links com UTM, por exemplo `https://21go.seg.br/?utm_source=instagram&utm_medium=bio&utm_campaign=black`.

@@ -1,5 +1,6 @@
 import { LeadSubmissionPayload } from './types'
 import { linhaTabelaNordeste } from './tabela-nordeste'
+import { descreverOrigem, utmParaCrm } from './origem'
 
 // Envio de leads ao Power CRM pelo formulário dinâmico oficial (o mesmo que o cotacao.me usa).
 // Formato espelhado do script oficial: resources.powercrm.com.br/assets/external/js/script.pwrcrm.js
@@ -182,8 +183,9 @@ export async function buildPowerCrmBody(payload: LeadSubmissionPayload): Promise
       `CPF: ${payload.cpf || 'não informado'}`,
       `Cidade: ${payload.cidade || 'não informada'}`,
       `Trabalho/app: ${payload.veiculoTrabalho ? 'SIM' : 'NÃO'}`,
+      descreverOrigem(payload.origem),
     ].join(' | '), payload),
-    utmParameters: {},
+    utmParameters: utmParaCrm(payload.origem),
   }
 }
 

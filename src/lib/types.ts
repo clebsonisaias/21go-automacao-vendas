@@ -1,4 +1,5 @@
 import type { PrecoNordeste } from './tabela-nordeste'
+import type { OrigemLead } from './origem'
 
 export type VehicleType = 'carro' | 'moto'
 
@@ -92,6 +93,8 @@ export interface LeadSubmissionPayload {
   ativacaoOriginal?: number
   cupom?: CupomAplicado
   comAdesivo: boolean
+  /** De onde o cliente veio (UTM, indicação, site de origem): src/lib/origem.ts. */
+  origem?: OrigemLead
   vehicle: VehicleInfo
   quoteToken?: string
   powercrmMeta?: {
