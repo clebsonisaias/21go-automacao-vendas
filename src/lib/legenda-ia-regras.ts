@@ -24,6 +24,7 @@ export function promptDaLegenda(fatos: string[], problemasAnteriores: string[] =
     '- Sem preço, "a partir de", porcentagem, marca ou modelo de veículo.',
     '- Sem hashtags, sem link e sem chamada para a cotação (o sistema acrescenta depois).',
     '- Pode usar no máximo 1 emoji.',
+    '- Se a legenda falar de plano, cite o plano VIP, que está em promoção para quem mora no RN, na Paraíba e no Ceará (para carro). Não cite outro plano pelo nome, nem o que a arte citar.',
     '',
     'Em "alertas", liste em frases curtas o que a ARTE diz ou mostra que pode não valer para a CITmax no RN, para a equipe conferir antes de publicar:',
     '- outra cidade ou estado (ex.: "20+ anos no Rio");',

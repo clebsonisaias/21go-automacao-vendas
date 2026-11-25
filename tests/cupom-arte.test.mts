@@ -49,3 +49,11 @@ test('resposta da IA e prompt', () => {
   assert.match(pr, /colaboradores da Netgo|Colaboradores da Netgo/)
   assert.match(pr, /recusada por: Título longo/)
 })
+
+test('arte do cupom: o passo 02 é o plano VIP, e o prompt manda citar só o VIP', () => {
+  const c = conteudoDaArte('NET21GO', textosPadraoDoCupom(NET))
+  const cards = c.miolo?.tipo === 'cards' ? c.miolo.cards : []
+  assert.deepEqual(cards[1], { titulo: 'Escolha o plano VIP', texto: 'Em promoção no RN, PB e CE' })
+  assert.deepEqual(problemasDaArte('NET21GO', textosPadraoDoCupom(NET), problemasDoTexto), [])
+  assert.match(promptDaArteDoCupom(NET, ''), /Se citar plano, cite o plano VIP/)
+})

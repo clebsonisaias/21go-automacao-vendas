@@ -845,3 +845,15 @@ Conferido só pela estrutura (nomes de campos), sem imprimir dados de cliente:
 - **Causa** (conferida com a chave do Coolify, sem imprimir a chave): o `gpt-6-luna` e o `gpt-6-sol` respondem 400 a `max_tokens` ("use max_completion_tokens") e a `temperature` diferente de 1.
 - **O mesmo erro estava na leitura de documentos por IA** (`document-ai.ts`), desde a troca para o gpt-6 em 21/11. Toda foto ou PDF escaneado caía na "simulation", que o site já ignora (`leituraConfiavel`), então nenhum dado falso entrou em cadastro. Mas nenhum documento por foto estava sendo lido sozinho; só os PDFs digitais, lidos por código.
 - **Correção:** `max_completion_tokens` (conta também o raciocínio) e `reasoning_effort: 'low'`, sem `temperature`, em `document-ai.ts` e `openai-json.ts`. Pedido real de legenda com imagem: 200 em cerca de 3 s. A Luna continua no `gpt-4o-mini` (`OPENAI_MODEL` vazio), que aceita os parâmetros antigos.
+
+### [Claude] — 2026-11-25 — Divulgar o plano VIP nos cupons e no Instagram (quando o post fala de plano)
+
+- **Pedido do Clebson:** os cupons sempre divulgam o plano VIP, o que está em promoção. O cupom continua valendo em qualquer plano. No Instagram, o VIP entra **só quando o post fala de plano**; o resto fica como está.
+- **Frase usada:** "Para carro, o destaque é o plano VIP, em promoção para quem mora no RN, na Paraíba e no Ceará." É só para carro porque na moto o plano da tabela regional é outro. Sem preço nem porcentagem.
+- **Cupom:**
+  - o texto de compartilhar ganhou a linha "💡 Dica: para carro, escolha o plano VIP…" (`DICA_VIP` em `cupom-compartilhar.ts`);
+  - a arte ganhou o passo "02 Escolha o plano VIP · Em promoção no RN, PB e CE";
+  - a IA da arte só cita o VIP se citar plano.
+- **Instagram:** a frase entrou nas legendas de `cotacao-online` (rodízio), `27-11-capa-reels-30s`, `07-12-seu-nome-nao-importa` e `23-12-o-que-a-protecao-cobre`. A arte desses posts não muda.
+  - Ficaram de fora a moto, as coberturas com "conforme o plano" e as dúvidas.
+  - A IA da legenda das artes oficiais cita o VIP quando fala de plano e não cita outro plano pelo nome.

@@ -17,6 +17,13 @@ export interface CupomParaCompartilhar {
 
 const CODIGO = /^[A-Z0-9][A-Z0-9-]{1,28}[A-Z0-9]$/
 
+/**
+ * Divulgação do plano em promoção (pedido do Clebson, 25/11/2026: "divulgar nos cupons sempre o
+ * plano VIP"). O cupom vale em qualquer plano; a dica aponta o VIP, que é o plano da tabela
+ * regional (RN, PB e CE). Na moto o plano é outro, por isso "para carro".
+ */
+export const DICA_VIP = 'Para carro, escolha o plano VIP, que está em promoção para quem mora no RN, na Paraíba e no Ceará.'
+
 /** Código vindo de link (`?cupom=`): maiúsculas e só o formato aceito; senão, vazio. */
 export function codigoDoLink(v: unknown): string {
   const c = typeof v === 'string' ? v.trim().toUpperCase() : ''
@@ -69,6 +76,8 @@ export function textoDoCupom(
     `1. Faça a cotação pela placa neste link: ${linkDoCupom(opcoes.siteUrl, c.codigo)}`,
     '2. Escolha o plano e faça o cadastro: o cupom já vem preenchido.',
     ...(zap ? [`3. Se preferir, mande o código ${c.codigo} no nosso WhatsApp: https://wa.me/${zap}`] : []),
+    '',
+    `💡 Dica: ${DICA_VIP.charAt(0).toLowerCase()}${DICA_VIP.slice(1)}`,
     '',
     `O desconto é na taxa de adesão; a mensalidade segue o plano escolhido.${regra ? ` ${regra}` : ''}`,
   ].join('\n')

@@ -72,3 +72,23 @@ test('IA da legenda: confere a resposta e monta a legenda que passa no manual', 
   assert.equal(limparLegendaDaIa('não é json'), null)
   assert.deepEqual(limparLegendaDaIa({ texto: 'Texto sem alertas, mas válido.' })?.alertas, [])
 })
+
+import { SOCIAL_CONTENT, SOCIAL_ONE_OFFS } from '../src/lib/social-content.ts'
+
+test('VIP: posts que falam de plano citam o VIP; moto e cobertura ficam como estavam', () => {
+  const todos = [...SOCIAL_CONTENT, ...SOCIAL_ONE_OFFS]
+  const comVip = ['cotacao-online', '27-11-capa-reels-30s', '07-12-seu-nome-nao-importa', '23-12-o-que-a-protecao-cobre']
+  for (const id of comVip) {
+    const c = todos.find((x) => x.id === id)
+    assert.ok(c, id)
+    assert.match(c.caption, /Para carro, o destaque é o plano VIP, em promoção para quem mora no RN, na Paraíba e no Ceará\./, id)
+    assert.deepEqual(problemasDaLegenda(c.caption), [], id)
+  }
+  for (const id of ['motos', '18-12-moto', 'roubo-furto', 'colisao', '16-12-chuva-forte']) {
+    const c = todos.find((x) => x.id === id)
+    assert.ok(c, id)
+    assert.doesNotMatch(c.caption, /VIP/, id)
+  }
+  assert.ok(fatosDoSite().some((f) => /plano VIP/.test(f)))
+  assert.match(promptDaLegenda(fatosDoSite()), /Se a legenda falar de plano, cite o plano VIP/)
+})
