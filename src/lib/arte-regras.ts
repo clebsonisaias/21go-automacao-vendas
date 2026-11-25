@@ -51,3 +51,21 @@ export function acharDestaque(palavras: string[], destaque: string): [number, nu
   return null
 }
 
+
+/**
+ * Legenda de post com arte pronta (as artes oficiais da 21Go): a arte já vem feita, então a
+ * conferência vale para o texto que vai junto. Mesmas regras do manual e o limite da Meta.
+ */
+export function problemasDaLegenda(legenda: string): string[] {
+  const p: string[] = []
+  const t = legenda.trim()
+  if (t.length < 20) p.push('Escreva a legenda (pelo menos uma frase).')
+  if (t.length > 2200) p.push(`A legenda tem ${t.length} caracteres; o Instagram aceita até 2.200.`)
+  if (/R\$\s*\d|\d+\s*%|a partir de/i.test(t)) p.push('Preço, "a partir de" ou porcentagem não vão no post.')
+  if (/\bseguros?\b|\bsusep\b/i.test(t)) p.push('O post não chama o produto de "seguro" nem cita a SUSEP.')
+  const marca = t.match(MARCAS)
+  if (marca) p.push(`Marca ou modelo de veículo não vai no post ("${marca[0]}").`)
+  const tags = t.match(/#[\p{L}\p{N}_]+/gu) || []
+  if (tags.length > 30) p.push(`São ${tags.length} hashtags; o Instagram aceita até 30.`)
+  return p
+}

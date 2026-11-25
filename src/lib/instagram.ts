@@ -18,6 +18,8 @@ const ART_VERSION = '1'
 export interface SocialPost {
   date: string
   contentId: string
+  /** Título para o painel (arte oficial do CRM, que não está no banco de posts). */
+  titulo?: string
   status: 'publicado' | 'erro'
   kind?: 'feed' | 'story'
   igId?: string
@@ -122,23 +124,36 @@ async function ig(method: 'GET' | 'POST', pathname: string, params: Record<strin
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 let publishing = false
 
-/** Publica um conteúdo no feed. Registra o resultado e avisa no Telegram se falhar. */
+/** Publica um conteúdo do banco de posts. Registra o resultado e avisa no Telegram se falhar. */
 export async function publishContent(contentId: string, kind: 'feed' | 'story' = 'feed'): Promise<SocialPost> {
   const content = contentById(contentId)
   if (!content) throw new Error('Conteúdo não encontrado.')
+  return publicarImagem({ contentId, titulo: content.title, imageUrl: artUrl(contentId, kind), caption: content.caption, kind })
+}
+
+/**
+ * Publica uma imagem JPEG (URL pública) no feed ou no story. Usado pelo banco de posts e pelas
+ * artes oficiais do CRM (crm-materiais.ts). Registra o resultado e avisa no Telegram se falhar.
+ */
+export async function publicarImagem(p: {
+  contentId: string
+  titulo: string
+  imageUrl: string
+  caption: string
+  kind: 'feed' | 'story'
+}): Promise<SocialPost> {
+  const { contentId, kind } = p
   if (!igConfigured()) throw new Error('Instagram não configurado: defina IG_USER_ID e IG_ACCESS_TOKEN no Coolify.')
   if (publishing) throw new Error('Já existe uma publicação em andamento.')
   publishing = true
 
   const user = process.env.IG_USER_ID as string
-  const record: SocialPost = { date: localNow().date, contentId, kind, status: 'erro', at: new Date().toISOString() }
+  const record: SocialPost = { date: localNow().date, contentId, titulo: p.titulo, kind, status: 'erro', at: new Date().toISOString() }
   try {
     const created = await ig(
       'POST',
       `${user}/media`,
-      kind === 'story'
-        ? { image_url: artUrl(contentId, 'story'), media_type: 'STORIES' }
-        : { image_url: artUrl(contentId), caption: content.caption }
+      kind === 'story' ? { image_url: p.imageUrl, media_type: 'STORIES' } : { image_url: p.imageUrl, caption: p.caption }
     )
     if (!created.ok || !created.data.id) {
       throw Object.assign(new Error(created.data?.error?.message || 'A Meta recusou a imagem.'), {
@@ -175,7 +190,7 @@ export async function publishContent(contentId: string, kind: 'feed' | 'story' =
     await sendTelegramNotification(
       e.code === 190
         ? `🔑 <b>Instagram parou</b>: a chave de acesso foi recusada pela Meta (senha trocada, sessão encerrada ou chave vencida). Gere uma nova e atualize IG_ACCESS_TOKEN no Coolify.`
-        : `⚠️ <b>Instagram</b>: o post "${esc(content.title)}" não foi publicado. Motivo: ${esc(record.error)}`
+        : `⚠️ <b>Instagram</b>: o post "${esc(p.titulo)}" não foi publicado. Motivo: ${esc(record.error)}`
     )
   } finally {
     publishing = false

@@ -790,3 +790,15 @@ Conferido só pela estrutura (nomes de campos), sem imprimir dados de cliente:
   - No máximo uma mensagem a cada 24 h por card (`data/carteira.json`). O telefone não vai para a tela (só o final) nem para o log.
 - **Resumo diário no Telegram da equipe:** uma vez por dia, das 9h às 20h de Brasília, com primeiro nome, placa, fase e dias parados (sem CPF nem telefone) e o link da aba. Roda a cada 30 min com as credenciais do CRM; `CARTEIRA_ALERTA=off` desliga.
 - **Menu do /admin:** as abas aparecem a partir de 1280 px (ícones só nas telas bem largas); abaixo disso, o menu. Com 9 abas, os nomes estavam quebrando em duas linhas.
+
+### [Claude] — 2026-11-25 — Artes oficiais da 21Go na aba Instagram (ideia do Grok, nº 5)
+
+- **De onde vêm:** os Materiais do CRM (`GET /materiais/pastas` e `/materiais/pastas/{id}/arquivos`). São 6 pastas com 42 PNGs, como "Criativos — Novembro 2026" e "Aniversário".
+  - Cada arquivo traz uma URL assinada do Supabase que vale 2 horas.
+  - Leitura em `src/lib/artes-oficiais.ts` (pura, testes em `tests/artes-oficiais.test.mts`); busca, cache de 10 min e conversão em `src/lib/crm-materiais.ts`.
+- **Na aba Instagram do /admin** (`ArtesOficiais.tsx`): pastas, miniaturas e, ao escolher uma arte, a prévia grande, feed ou story, a legenda e a caixa "Conferi a arte: o que ela diz vale para os planos do site". Só publica depois de "Confirmar publicação".
+  - A prévia sai pelo próprio site (`/api/admin/social/oficiais/{id}/previa`, só admin): o CSP não deixa a tela carregar do Supabase e a URL assinada não vai para o navegador.
+  - A legenda vem com a chamada e as hashtags; a equipe precisa escrever a primeira linha. Passa por `problemasDaLegenda` (`arte-regras.ts`): sem preço, porcentagem, "seguro", SUSEP ou marca de carro, até 2.200 caracteres e 30 hashtags.
+- **Publicação:** a Meta só aceita JPEG pela API. O site baixa o PNG, converte (fundo branco, até 1080 de largura) e serve em `/api/social/oficial/{id}` (público, só depois de alguém mandar publicar). `publicarImagem` (`instagram.ts`) agora é o caminho comum do banco de posts e das artes oficiais. O post aparece no log como "Arte oficial: …".
+- **Atenção:** as artes da 21Go podem citar coisas que não valem aqui (ex.: "Carro reserva por 7 dias no Completo") e mostram carros com marca visível. Por isso a caixa de conferência é obrigatória.
+- **Indicação oficial:** o "Link de indicação" da tela Indicações do CRM é um exemplo fixo no código do CRM (`https://21go.org/indique?ref=joao-silva-123`), o mesmo para todos. A lista vem vazia e não existe rota que dê um link de verdade. O link de indicação ficou esperando a decisão do Clebson.
