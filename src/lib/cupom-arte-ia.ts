@@ -20,8 +20,6 @@ export async function textosDaArteComIa(
       sistema: promptDaArteDoCupom(c, paraQuem, problemas),
       usuario: 'Escreva o título, o destaque e o subtítulo da arte.',
       validar: limparTextosDaIa,
-      temperatura: 0.7,
-      maxTokens: 300,
     })
     if (!r) return { textos: padrao, viaIa: false, aviso: 'A IA não respondeu: ficou o texto padrão.' }
     problemas = problemasDaArte(c.codigo, r, problemasDoTexto)

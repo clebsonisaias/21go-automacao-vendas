@@ -214,8 +214,10 @@ async function tryOpenAIModel(
             ],
           },
         ],
-        max_tokens: 2000,
-        temperature: 0.05,
+        // Os modelos gpt-6 recusam max_tokens e temperature (só aceitam max_completion_tokens, que
+        // inclui o raciocínio). Com max_tokens, toda leitura voltava 400 e caía na "simulation".
+        max_completion_tokens: 6000,
+        reasoning_effort: 'low',
       }),
     })
 
