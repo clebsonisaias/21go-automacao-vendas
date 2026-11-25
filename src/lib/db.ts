@@ -125,6 +125,8 @@ export interface StoredLead {
     /** Cadastro antigo (de antes dos lembretes): nada é enviado nesta etapa. */
     semLembrete?: boolean
   }
+  /** A equipe marcou no /admin que cadastrou o associado no Hinova SGA (ver pendencias.ts). */
+  sgaCadastradoEm?: string
   /** Arquivos reais da vistoria gravados no servidor (ver vistoria-files.ts). */
   vistoriaArquivos?: Record<string, { ext: string; mime: string; size: number; originalName: string; savedAt: string; sha256?: string }>
   vistoriaData?: {

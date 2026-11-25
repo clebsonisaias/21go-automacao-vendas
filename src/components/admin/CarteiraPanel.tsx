@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { ExternalLink, Loader2, MessageCircle, RefreshCw } from 'lucide-react'
 import { mensagemDeRetomada } from '@/lib/carteira'
 import type { DadosCarteira, ParadaNoPainel } from '@/lib/crm-carteira'
+import { PendenciasEquipe } from '@/components/admin/PendenciasEquipe'
 
 // Aba "Carteira" do /admin (padrão Dashboard): números do CRM 21Go e cotações paradas no funil do
 // site. Só leitura no CRM; o WhatsApp de retomada sai só no clique, com o texto revisado aqui.
@@ -281,8 +282,23 @@ export function CarteiraPanel() {
     setAviso(`Mensagem mandada${p?.nome ? ` para ${p.nome}` : ''}.`)
   }
 
+  // As pendências da equipe ficam sempre no mesmo lugar (logo abaixo do título), com o CRM
+  // carregando, fora do ar ou respondendo: elas vêm do banco do site, não do CRM.
+  const semDados = (corpo: React.ReactNode) => (
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="m-0 text-2xl font-semibold tracking-tight text-navy-900">Carteira</h1>
+          <p className="m-0 mt-1 text-sm text-muted">Números do CRM 21Go.</p>
+        </div>
+      </div>
+      <PendenciasEquipe />
+      {corpo}
+    </div>
+  )
+
   if (erro && !dados) {
-    return (
+    return semDados(
       <div role="alert" className="rounded-xl border border-line bg-white p-6 text-sm text-navy-900">
         {erro}{' '}
         <button type="button" onClick={() => carregar()} className="inline-flex min-h-[44px] items-center font-semibold text-navy-600 underline-offset-2 hover:underline">
@@ -292,10 +308,9 @@ export function CarteiraPanel() {
     )
   }
   if (!dados) {
-    return (
+    return semDados(
       <div className="flex flex-col gap-4" aria-busy="true">
         <span className="sr-only">Carregando a carteira…</span>
-        <div className="h-7 w-40 animate-pulse rounded bg-surface-100" />
         <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(150px,100%),1fr))]">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="h-24 animate-pulse rounded-lg bg-surface-100" />
@@ -325,6 +340,8 @@ export function CarteiraPanel() {
           {atualizando ? 'Atualizando…' : 'Atualizar agora'}
         </button>
       </div>
+
+      <PendenciasEquipe />
 
       <div aria-live="polite">
         {aviso && <p className="m-0 rounded-xl border border-line bg-white p-4 text-sm text-navy-900">{aviso}</p>}

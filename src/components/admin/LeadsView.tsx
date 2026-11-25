@@ -118,6 +118,19 @@ export function LeadsView() {
     }
   }, [])
 
+  // Link /admin?cadastro=REF (quadro de pendências da aba Carteira): abre aquele cadastro.
+  const abriuDoLink = useRef(false)
+  useEffect(() => {
+    if (abriuDoLink.current || !leads.length) return
+    const ref = new URLSearchParams(window.location.search).get('cadastro')
+    if (!ref) return
+    abriuDoLink.current = true
+    const lead = leads.find((l) => l.ref === ref || l.id === ref)
+    if (lead) setSelected(lead)
+    else setToast({ id: Date.now(), text: 'Esse cadastro não está na lista.', tone: 'error' })
+    window.history.replaceState(null, '', window.location.pathname + window.location.hash)
+  }, [leads])
+
   const syncCrm = useCallback(
     async (quiet = false) => {
       setIsSyncing(true)
