@@ -1,5 +1,6 @@
 import { PlanPricing, VehicleInfo } from './types'
 import { precoNordeste, type VeiculoParaTabela } from './tabela-nordeste'
+import { mensalidadesComDescontos, percentualAdesivo, PERCENTUAL_PONTUALIDADE } from './descontos'
 
 // Coberturas oficiais de cada plano extraídas do bundle da 21Go
 export const PLAN_FEATURES: Record<string, string[]> = {
@@ -137,6 +138,12 @@ export function calculateActivationFee(
   return Math.round(ativacao * 100) / 100
 }
 
+/** O desconto do adesivo vale para carro; moto, elétrico e híbrido ficam de fora. */
+export function elegivelAoAdesivo(vehicle: VehicleInfo): boolean {
+  const isMoto = vehicle.categoria?.toUpperCase().includes('MOTO') || false
+  return !isMoto && !isElectricOrHybrid(vehicle)
+}
+
 /**
  * Calcula os planos completos com todas as taxas e descontos aplicados
  */
@@ -152,33 +159,18 @@ export function enrichPlansWithRules(
     percentualPontualidade: number
   }
 } {
-  const isMoto = vehicle.categoria?.toUpperCase().includes('MOTO') || false
-  const isEV = isElectricOrHybrid(vehicle)
-  const elegivelAdesivo = !isMoto && !isEV
+  const elegivelAdesivo = elegivelAoAdesivo(vehicle)
 
   const exigeVistoriaPresencial = requiresPresencialInspection(vehicle)
-  const percentualPontualidade = 5 // 5% de desconto pontualidade
+  const percentualPontualidade = PERCENTUAL_PONTUALIDADE
 
   const plans: PlanPricing[] = rawPlans.map((raw) => {
-    // Percentual de adesivo por plano/FIPE
-    let percentualAdesivo = 0
-    if (elegivelAdesivo) {
-      if (['vip', 'suv', 'especial'].includes(raw.id)) {
-        percentualAdesivo = vehicle.fipeValue > 30000 ? 15 : 10
-      } else {
-        percentualAdesivo = vehicle.fipeValue > 60000 ? 15 : 10
-      }
-    }
-
     const ativacao = calculateActivationFee(vehicle, raw.monthly, rawPlans)
-
-    // Desconto de pontualidade (5%)
-    const mensalidadeComPontualidade = Math.round(raw.monthly * 0.95 * 100) / 100
-
-    // Desconto com adesivo cumulativo com pontualidade
-    const descontoAdesivoFator = 1 - percentualAdesivo / 100
-    const mensalidadeComAdesivo =
-      Math.round(raw.monthly * descontoAdesivoFator * 0.95 * 100) / 100
+    // Pagamento em dia (5%) e adesivo (por plano e FIPE, cumulativo): src/lib/descontos.ts
+    const { pontualidade: mensalidadeComPontualidade, adesivo: mensalidadeComAdesivo } = mensalidadesComDescontos(
+      raw.monthly,
+      percentualAdesivo(raw.id, vehicle.fipeValue, elegivelAdesivo)
+    )
 
     return {
       id: raw.id,
@@ -192,12 +184,8 @@ export function enrichPlansWithRules(
     }
   })
 
-  // Percentual de adesivo de referência
-  const percentualAdesivoReferencia = elegivelAdesivo
-    ? vehicle.fipeValue > 30000
-      ? 15
-      : 10
-    : 0
+  // Percentual de adesivo de referência (o do VIP), para o rótulo da caixa do adesivo
+  const percentualAdesivoReferencia = percentualAdesivo('vip', vehicle.fipeValue, elegivelAdesivo)
 
   return {
     plans,
@@ -212,9 +200,10 @@ export function enrichPlansWithRules(
 
 /**
  * Plano único de quem mora onde a Tabela Nordeste vale (RN, PB e CE): a mensalidade da Tabela Nordeste no lugar do preço do
- * CRM, sem pontualidade nem adesivo por cima (a tabela é o preço final). Compara com o VIP do
- * CRM, ou com o primeiro plano da ordem de prioridade; nome e coberturas são os desse plano,
- * para o CRM achar o plano pelo nome. Sem faixa na tabela para o veículo, devolve null.
+ * CRM. O valor da tabela é o valor normal; o pagamento em dia e o adesivo entram por cima, como nos
+ * outros planos (decisão do Clebson, 25/11/2026). Compara com o VIP do CRM, ou com o primeiro
+ * plano da ordem de prioridade; nome e coberturas são os desse plano, para o CRM achar o plano
+ * pelo nome. Sem faixa na tabela para o veículo, devolve null.
  */
 export function montarPlanoNordeste(
   vehicle: VehicleInfo,
@@ -229,14 +218,18 @@ export function montarPlanoNordeste(
   if (!tabela) return null
   const mensalidade = tabela.mensalidade
   const ativacao = calculateActivationFee(vehicle, mensalidade, [{ id: base.id, monthly: mensalidade }])
+  const { pontualidade, adesivo } = mensalidadesComDescontos(
+    mensalidade,
+    percentualAdesivo(base.id, vehicle.fipeValue, elegivelAoAdesivo(vehicle))
+  )
   return {
     id: base.id,
     name: base.name,
     monthly: mensalidade,
     popular: true,
     ativacao,
-    mensalidadeComPontualidade: mensalidade,
-    mensalidadeComAdesivo: mensalidade,
+    mensalidadeComPontualidade: pontualidade,
+    mensalidadeComAdesivo: adesivo,
     coberturas: base.coberturas,
     precoNacional: base.monthly,
     regional: {

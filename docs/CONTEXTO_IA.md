@@ -719,3 +719,17 @@ Decisão do Clebson: pedir ao cliente os documentos **de preferência em PDF**, 
 - `DocumentAiUploader` ganhou a prop `camera` (padrão `true`):
   - com `camera={false}`, o celular deixa escolher um arquivo (PDF) em vez de abrir direto a câmera;
   - na página, o botão virou "Ler um documento agora (PDF ou foto)", sem emoji.
+
+### [Claude] — 2026-11-25 — Tabela regional é o valor normal; descontos entram por cima
+
+Esta entrada **substitui** a decisão de 24/11 ("a tabela é o preço final"). O Clebson resumiu: "o valor da tabela que mandei é o valor normal; pagamento em dia e adesivo é adicional".
+
+- **Regra única dos descontos:** `src/lib/descontos.ts`. Pagamento em dia dá 5%. O adesivo dá 10% ou 15%, conforme o plano e a FIPE, e soma com o de pagamento em dia. Vale para os planos do CRM, sem mudar o resultado de antes, e para o VIP da tabela regional.
+- **Exemplo (Argo 2020, RN):** normal R$ 176,50; pagando em dia R$ 167,68; com adesivo R$ 142,52.
+- **Observação do CRM:** "Cobrir valor de mensalidade … Valor R$ X" continua com o **valor normal** da tabela.
+- **Troca de preço pelo comprovante (`regiao-comprovante.ts`):** mantém a escolha do cliente (normal, pagando em dia ou com adesivo).
+- **Home:**
+  - o adesivo começa **desmarcado**; "Pagamento em dia" continua marcado, com a ajuda "Só para a mensalidade paga até o vencimento. Com atraso, vale o valor normal.";
+  - cada plano mostra "Pagando em dia. Com atraso: R$ X";
+  - o "de/por" do VIP regional compara com o preço nacional com os mesmos descontos.
+- **Chat:** `mensagemRegiao` avisa a IA que os descontos valem no VIP regional e que o de pagamento em dia é só até o vencimento.

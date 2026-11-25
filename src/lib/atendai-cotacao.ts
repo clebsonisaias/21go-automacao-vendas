@@ -139,7 +139,7 @@ const brl = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', c
 /** Orientação para a IA do chat sobre o preço por região (o "de/por" da tabela regional). */
 function mensagemRegiao(
   regiao: { uf: string; regional: boolean; tabela: boolean } | undefined,
-  plano: { monthly: number; precoNacional?: number } | undefined,
+  plano: { monthly: number; mensalidadeComPontualidade?: number; precoNacional?: number } | undefined,
   peloDdd: boolean
 ): string {
   if (!regiao) {
@@ -151,7 +151,8 @@ function mensagemRegiao(
     : ''
   if (regiao.tabela && plano) {
     const de = plano.precoNacional && plano.precoNacional > plano.monthly ? `de ${brl(plano.precoNacional)} (preço nacional) por ` : ''
-    return `Cliente de ${nome}: o VIP está em promoção pela tabela regional, ${de}${brl(plano.monthly)} por mês, já o preço final (sem desconto de pontualidade nem de adesivo). Ofereça o VIP primeiro, em destaque. Os outros planos seguem o preço nacional, com os descontos de sempre. O comprovante de residência confirma o estado.${confirmar}`
+    const emDia = plano.mensalidadeComPontualidade ? ` (${brl(plano.mensalidadeComPontualidade)} pagando em dia)` : ''
+    return `Cliente de ${nome}: o VIP está em promoção pela tabela regional, ${de}${brl(plano.monthly)} por mês, valor normal${emDia}. Ofereça o VIP primeiro, em destaque. Como nos outros planos, o desconto de pagamento em dia e o do adesivo entram por cima: o de pagamento em dia só vale para a mensalidade paga até o vencimento; com atraso, vale o valor normal. Os outros planos seguem o preço nacional. O comprovante de residência confirma o estado.${confirmar}`
   }
   if (regiao.regional) {
     return `Cliente de ${nome}, mas a FIPE deste veículo passa da tabela regional: vale o preço nacional.${confirmar}`
