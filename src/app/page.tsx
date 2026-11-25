@@ -514,7 +514,7 @@ export default function HomePage() {
   )
 
   const ctaCls =
-    'flex min-h-[54px] w-full items-center justify-center gap-2 rounded-lg bg-go-orange text-[17px] font-extrabold text-navy-950 transition hover:-translate-y-px hover:shadow-cta disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none'
+    'flex min-h-[54px] w-full items-center justify-center gap-2 rounded-lg bg-go-orange text-[17px] font-extrabold text-navy-950 transition hover:-translate-y-px hover:shadow-cta active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none'
 
   return (
     <div className="flex min-h-screen flex-col bg-surface-50 font-sans text-navy-800">
@@ -527,38 +527,21 @@ export default function HomePage() {
           id="topo"
           className="bg-navy-950 text-white [background-image:radial-gradient(ellipse_at_85%_0%,rgba(242,145,29,0.20),transparent_45%),radial-gradient(ellipse_at_0%_100%,rgba(199,211,1,0.10),transparent_45%),radial-gradient(circle_at_30%_20%,#22337a_0%,#111b45_50%,#0b1230_100%)]"
         >
-          <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-8 px-6 pb-14 pt-10 sm:gap-14 sm:pb-24 sm:pt-20">
-            <div className="flex min-w-0 flex-[1_1_520px] flex-col gap-6">
-              <span className="inline-flex items-center gap-2 self-start rounded-full border border-go-lime/35 bg-go-lime/10 px-3.5 py-1.5 text-[13px] font-semibold text-[#e6ee5c]">
+          {/* Celular: título → cartão da cotação → resto. Computador: texto à esquerda, cartão à direita. */}
+          <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-6 px-4 pb-12 pt-6 sm:px-6 sm:pb-16 sm:pt-12 lg:grid-cols-[minmax(0,1fr)_460px] lg:grid-rows-[auto_1fr] lg:gap-x-14 lg:gap-y-6 lg:pb-24 lg:pt-20">
+            <div className="flex min-w-0 flex-col gap-3 sm:gap-5 lg:col-start-1 lg:row-start-1 lg:self-end">
+              <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#e6ee5c]">
                 <Check aria-hidden className="h-4 w-4 text-go-lime" />
                 Proteção veicular em todo o Brasil desde 2004
               </span>
-              <h1 className="m-0 text-[40px] font-extrabold leading-[1.04] tracking-[-1.2px] sm:text-[64px] sm:tracking-[-2.4px]">
+              <h1 className="m-0 text-[32px] font-extrabold leading-[1.06] tracking-[-1px] sm:text-[48px] sm:tracking-[-1.6px] lg:text-[64px] lg:tracking-[-2.4px]">
                 Seu carro protegido pelo <span className="text-go-orange">preço oficial</span>, em 30 segundos.
               </h1>
-              <p className="m-0 max-w-[560px] text-[19px] leading-relaxed text-muted-soft">
-                Digite a placa e veja na hora os planos da 21Go para o seu veículo. 100% da Tabela FIPE, sem
-                consulta ao SPC/Serasa e vistoria pelo celular — de qualquer estado.
-              </p>
-              <ul className="m-0 grid list-none gap-x-6 gap-y-3 p-0 text-base [grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))]">
-                {[
-                  'Indenização de 100% da FIPE',
-                  'Sem análise de perfil',
-                  'Aprovação em até 48h',
-                  'Sem fidelidade nem multa',
-                ].map((t) => (
-                  <li key={t} className="flex items-center gap-2.5">
-                    <Check aria-hidden className="h-5 w-5 shrink-0 text-go-orange" />
-                    {t}
-                  </li>
-                ))}
-              </ul>
             </div>
-
             {/* Card de cotação */}
             <div
               id="cotacao"
-              className="flex min-w-0 max-w-[460px] flex-[1_1_320px] scroll-mt-24 flex-col gap-5 rounded-3xl bg-white p-5 text-navy-800 shadow-[0_24px_64px_rgba(7,12,34,0.45)] sm:p-8"
+              className="flex w-full min-w-0 max-w-[460px] scroll-mt-24 flex-col gap-5 justify-self-center rounded-3xl bg-white p-5 text-navy-800 shadow-[0_24px_64px_rgba(7,12,34,0.45)] sm:p-8 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center lg:justify-self-end"
             >
               <div className="flex flex-col gap-1">
                 <span className="text-xs font-bold tracking-[1.5px] text-muted">COTAÇÃO GRÁTIS</span>
@@ -704,6 +687,26 @@ export default function HomePage() {
                 Grátis e sem compromisso. Valores oficiais da 21Go, sem consulta ao SPC/Serasa.
               </p>
             </div>
+
+            <div className="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-2 lg:self-start">
+              <p className="m-0 max-w-[560px] text-[17px] leading-relaxed text-muted-soft sm:text-[19px]">
+                Digite a placa e veja na hora os planos da 21Go para o seu veículo. 100% da Tabela FIPE, sem
+                consulta ao SPC/Serasa e vistoria pelo celular — de qualquer estado.
+              </p>
+              <ul className="m-0 grid list-none gap-x-6 gap-y-3 p-0 text-base [grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))]">
+                {[
+                  'Indenização de 100% da FIPE',
+                  'Sem análise de perfil',
+                  'Aprovação em até 48h',
+                  'Sem fidelidade nem multa',
+                ].map((t) => (
+                  <li key={t} className="flex items-center gap-2.5">
+                    <Check aria-hidden className="h-5 w-5 shrink-0 text-go-orange" />
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
 
@@ -806,7 +809,7 @@ export default function HomePage() {
             </div>
 
             <div className="grid items-stretch gap-5 [grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr))]">
-              {quoteResult.plans.map((plan) => {
+              {quoteResult.plans.map((plan, i) => {
                 const price = priceFor(plan)
                 const nacional = nacionalFor(plan)
                 const nota = notaEmDia(plan)
@@ -815,7 +818,8 @@ export default function HomePage() {
                 return (
                   <article
                     key={plan.id}
-                    className={`relative flex flex-col gap-5 rounded-2xl p-6 ${
+                    style={{ animationDelay: `${Math.min(i, 3) * 60}ms` }}
+                    className={`entrar-plano relative flex flex-col gap-5 rounded-2xl p-6 ${
                       pop
                         ? 'border-2 border-go-orange bg-navy-950 text-white shadow-[0_16px_40px_rgba(11,18,48,0.25)]'
                         : 'border border-line bg-white'
@@ -840,7 +844,7 @@ export default function HomePage() {
                       </div>
                       <div className="flex items-baseline gap-1">
                         <span className="text-base font-bold">R$</span>
-                        <span className="text-[42px] font-extrabold leading-none tracking-[-1.5px]">{money(price)}</span>
+                        <span key={price} className="trocar-valor text-[42px] font-extrabold leading-none tracking-[-1.5px]">{money(price)}</span>
                         <span className={`text-sm ${muted}`}>/mês</span>
                       </div>
                       {nota && <span className={`text-sm ${muted}`}>{nota}</span>}
@@ -876,7 +880,7 @@ export default function HomePage() {
                         setSelectedPlan(plan)
                         setIsModalOpen(true)
                       }}
-                      className={`flex min-h-[50px] items-center justify-center rounded-lg text-base font-extrabold transition hover:-translate-y-px hover:shadow-cta ${
+                      className={`flex min-h-[50px] items-center justify-center rounded-lg text-base font-extrabold transition hover:-translate-y-px hover:shadow-cta active:scale-[0.98] ${
                         pop ? 'bg-go-orange text-navy-950' : 'border-2 border-navy-800 text-navy-800'
                       }`}
                     >

@@ -16,6 +16,13 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <head>
+        {/* Liga as animações de rolagem; se o React não subir em 4 s, mostra tudo (components/common/Revelar.tsx). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "document.documentElement.classList.add('anima');setTimeout(function(){if(!document.documentElement.dataset.revelar)document.documentElement.classList.remove('anima')},4000)",
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
