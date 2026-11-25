@@ -21,7 +21,6 @@ export async function pedirJsonOpenAI<T>(p: {
   usuario: Conteudo
   validar: (json: unknown) => T | null
   maxTokens?: number
-  temperatura?: number
 }): Promise<T | null> {
   if (!OPENAI_API_KEY) return null
   for (const modelo of MODELOS) {
@@ -37,10 +36,11 @@ export async function pedirJsonOpenAI<T>(p: {
             { role: 'system', content: p.sistema },
             { role: 'user', content: p.usuario },
           ],
-          max_tokens: p.maxTokens ?? 600,
-          temperature: p.temperatura ?? 0.4,
+          // gpt-6: só max_completion_tokens (conta o raciocínio) e sem temperature (400 se mandar).
+          max_completion_tokens: p.maxTokens ?? 4000,
+          reasoning_effort: 'low',
         }),
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(45_000),
       })
       const ms = Date.now() - inicio
       if (!res.ok) {

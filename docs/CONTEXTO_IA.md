@@ -838,3 +838,10 @@ Conferido só pela estrutura (nomes de campos), sem imprimir dados de cliente:
 - **"Escrever com a IA"** (`cupom-arte-ia.ts`, rota `POST /api/admin/cupons/{id}/arte-ia`): só texto (código, desconto e público). Passa por `problemasDaArte` + `problemasDoTexto`, com uma nova tentativa; se falhar, volta o padrão com o aviso.
 - **Imagem:** `GET /api/admin/cupons/{id}/arte?titulo&destaque&subtitulo&fundo&formato[&baixar=1]`, só admin. Confere as regras de novo no servidor (422 se ferir).
 - **Pedido à OpenAI em JSON** virou `src/lib/openai-json.ts` (`gpt-6-luna`, `gpt-6-sol` de reserva), usado pela legenda das artes oficiais e pela arte do cupom.
+
+### [Claude] — 2026-11-25 — OpenAI: os modelos gpt-6 recusavam o pedido (leitura de documentos por foto parada desde 21/11)
+
+- **Sintoma:** "A IA não respondeu" no botão de legenda das artes oficiais.
+- **Causa** (conferida com a chave do Coolify, sem imprimir a chave): o `gpt-6-luna` e o `gpt-6-sol` respondem 400 a `max_tokens` ("use max_completion_tokens") e a `temperature` diferente de 1.
+- **O mesmo erro estava na leitura de documentos por IA** (`document-ai.ts`), desde a troca para o gpt-6 em 21/11. Toda foto ou PDF escaneado caía na "simulation", que o site já ignora (`leituraConfiavel`), então nenhum dado falso entrou em cadastro. Mas nenhum documento por foto estava sendo lido sozinho; só os PDFs digitais, lidos por código.
+- **Correção:** `max_completion_tokens` (conta também o raciocínio) e `reasoning_effort: 'low'`, sem `temperature`, em `document-ai.ts` e `openai-json.ts`. Pedido real de legenda com imagem: 200 em cerca de 3 s. A Luna continua no `gpt-4o-mini` (`OPENAI_MODEL` vazio), que aceita os parâmetros antigos.
