@@ -884,3 +884,24 @@ Conferido só pela estrutura (nomes de campos), sem imprimir dados de cliente:
   - título e descrição da página;
   - área do cliente.
 - **WhatsApp, Luna, retomada, prompts da IA (legenda e arte do cupom) e legenda do post `regiao`:** "consultor autorizado". Continuam "oficial" o preço, a vistoria e o regulamento da 21Go. O que é interno ("Painel da Franquia", `NEXT_PUBLIC_FRANQUIA_*`) não muda.
+
+### [Claude] — 2026-11-25 — Ferramentas de vendas do Claude no repositório (Fase 0 do plano "prospectar e vender sozinho")
+
+Pedido do Clebson: tirar o melhor de três repositórios de skills (claude-seo, marketingskills e claude-prospector-skills) e do Reel "iceberg do Claude Code". O plano tem 4 frentes depois desta fase: recuperar quem cotou, aparecer no Google, parceiros com cupom e medição.
+
+- **Skills em `.claude/skills/`:** 11 do `coreyhaines31/marketingskills` (MIT) e o `local-client-prospector` (MIT). A lista, a origem e o commit estão no `README.md` de lá. Alguns nomes mudaram no repositório de origem: page-cro e form-cro viraram `cro`, email-sequence virou `emails`, e assim por diante.
+- **Contexto do produto:** `.claude/product-marketing.md`. Tem os planos como estão na home, a promoção VIP (só carro, RN/PB/CE), as palavras proibidas e o que nunca prometer.
+- **Subagente:** `.claude/agents/revisor-texto-publico.md`, só leitura. Confere todo texto público antes do PR.
+- **`.claude/settings.json`:**
+  - liga o plugin claude-seo (`/seo setup` na primeira vez);
+  - um hook não deixa o Claude editar `.env*`, `.coolify.local` nem `data/`;
+  - outro hook roda `npm test` antes de cada `git commit`.
+- **Luna (`src/lib/luna-ai.ts`):** o prompt passou a dizer só o que a home publica. Saíram:
+  - terceiros "de R$ 50 a 100 mil" (é de R$ 5 a 100 mil conforme o plano);
+  - guincho "sem limite";
+  - carro reserva para todos (é 7 dias no VIP em roubo e 15 no Premium);
+  - "40 a 60% menores que os seguros" (sem fonte);
+  - "validação instantânea por IA" (quem aprova é a equipe);
+  - a citação de lei com prazo até 2028.
+
+  Entrou a regra de nunca dizer "seguro" nem inventar número, prazo ou lei.
