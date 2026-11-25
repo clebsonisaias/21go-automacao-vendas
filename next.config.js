@@ -5,8 +5,8 @@
 const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self'",
   "img-src 'self' data: blob: https://*.cdninstagram.com https://*.fbcdn.net",
   "connect-src 'self'",
   "frame-ancestors 'none'",
@@ -29,7 +29,12 @@ const nextConfig = {
   output: 'standalone',
   poweredByHeader: false,
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }]
+    // Áreas privadas (painel, cliente, etapas do cadastro, API): fora do Google mesmo se alguém linkar.
+    const privado = ['/admin/:path*', '/admin', '/api/:path*', '/cliente/:path*', '/cliente', '/vistoria', '/pagamento', '/carteirinha']
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      ...privado.map((source) => ({ source, headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }] })),
+    ]
   },
 }
 

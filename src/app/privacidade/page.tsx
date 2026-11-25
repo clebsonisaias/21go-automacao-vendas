@@ -6,7 +6,7 @@ import { SITE, whatsappUrl } from '@/lib/site'
 // site da CITmax, consultor autorizado da 21Go. Só o que o site faz de fato (conferido no código).
 
 export const metadata: Metadata = {
-  title: 'Privacidade · 21Go Proteção Veicular pela CITmax',
+  title: 'Privacidade',
   description: 'Que dados o site da CITmax, consultor autorizado da 21Go, usa, para quê, com quem compartilha e por quanto tempo guarda.',
   alternates: { canonical: '/privacidade' },
 }
