@@ -3,6 +3,7 @@ import { socialTick } from './lib/instagram'
 import { acompanharVistorias, gerarLinksPendentes } from './lib/crm-vistoria'
 import { lembretesTick } from './lib/lembretes'
 import { alertaParadasTick } from './lib/crm-carteira'
+import { cotacoesTick } from './lib/cotacao-whatsapp-envio'
 
 function every(ms: number, label: string, job: () => Promise<unknown>) {
   let running = false
@@ -47,4 +48,10 @@ export function startLembretes() {
 // Cotações paradas no começo do funil do CRM: resumo no Telegram da equipe uma vez por dia (9h–20h).
 export function startAlertaCarteira() {
   every(30 * 60_000, 'Carteira', () => alertaParadasTick())
+}
+
+// Cotação pedida pelo WhatsApp na home: até 2 lembretes (24 h e 72 h), das 9h às 20h.
+export function startLembretesCotacao() {
+  const ms = Number(process.env.COTACAO_LEMBRETES_INTERVALO_MS) || 10 * 60_000
+  every(ms, 'Cotação WhatsApp', () => cotacoesTick())
 }

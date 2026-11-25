@@ -3,6 +3,8 @@ import { autorizarAtendai, json } from '@/lib/atendai'
 import { cotacaoDoChat, limparPlaca, PLACA } from '@/lib/atendai-cotacao'
 import { rateLimit } from '@/lib/rate-limit'
 
+import { conversaNoChat } from '@/lib/cotacao-whatsapp-envio'
+
 export const dynamic = 'force-dynamic'
 
 /**
@@ -28,6 +30,7 @@ export async function POST(req: NextRequest) {
   if (!PLACA.test(placa)) {
     return json({ erro: 'Placa inválida. Informe os 7 caracteres (ex.: ABC1D23).' }, 400)
   }
+  conversaNoChat(corpo?.telefone)
   const r = await cotacaoDoChat({
     placa,
     usoApp: corpo?.usoApp === true,

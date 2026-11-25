@@ -5,6 +5,8 @@ import { obterPixDaAdesao } from '@/lib/pix-adesao'
 import { limitePorChave, rateLimit } from '@/lib/rate-limit'
 import { esc, sendTelegramNotification } from '@/lib/telegram'
 
+import { conversaNoChat } from '@/lib/cotacao-whatsapp-envio'
+
 export const dynamic = 'force-dynamic'
 
 /** Aviso de limite de cobranças: um por cadastro a cada 12 h (o cliente pede de novo e o lembrete convida). */
@@ -35,6 +37,7 @@ export async function POST(req: NextRequest) {
   }
   const telefone = String(corpo?.telefone ?? '')
   const chave = chaveTelefone(telefone)
+  conversaNoChat(telefone)
   if (!chave) return json({ erro: 'Telefone inválido.' }, 400)
   // Cada pedido pode gerar uma ordem no Mercado Pago: freio por cliente, além do freio geral.
   if (!limitePorChave('atendai-pagamento-tel', chave, 6, 10 * 60 * 1000)) {

@@ -3,10 +3,15 @@ import { fetchOfficialPricing } from '@/lib/powercrm'
 import { createQuoteToken } from '@/lib/quote-token'
 import { aplicarPrecoRegional, conferirVeiculo } from '@/lib/preco-regional'
 import { naRegiaoDaTabela } from '@/lib/tabela-nordeste'
+import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
+  // Cada cálculo consulta o PowerCRM: limite por IP contra robô (uma pessoa cota poucas vezes).
+  if (!rateLimit(req, 'quote-calc', 30, 10 * 60 * 1000)) {
+    return NextResponse.json({ success: false, error: 'Muitas cotações seguidas. Tente de novo em alguns minutos.' }, { status: 429 })
+  }
   try {
     const body = await req.json()
     const { tipo, brandId, brandText, modelId, modelText, year, codFipe, leilao, carroApp, uf } = body

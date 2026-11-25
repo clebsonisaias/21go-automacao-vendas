@@ -905,3 +905,54 @@ Pedido do Clebson: tirar o melhor de três repositórios de skills (claude-seo, 
   - a citação de lei com prazo até 2028.
 
   Entrou a regra de nunca dizer "seguro" nem inventar número, prazo ou lei.
+
+### [Claude] — 2026-11-25 — "Receber esta cotação no WhatsApp" (Frente 1: recuperar quem cotou)
+
+**Antes:** quem via o preço e saía da home não deixava rastro.
+
+**Agora:**
+- **Cartão na home.** Logo depois dos planos aparece o cartão "Receber esta cotação no WhatsApp". A pessoa digita só o WhatsApp e marca o consentimento ("aceita receber esta cotação e até 2 lembretes"). Quem fecha o cadastro sem terminar vê o título "Prefere decidir depois?".
+- **Envio na hora.** A cotação vai pelo WhatsApp com o plano em destaque (o VIP regional, ou o "mais escolhido"). Os valores vêm do token assinado da cotação; o que o navegador manda não entra no texto. Junto vai o link `/?cotacao=TOKEN`, que reabre a mesma cotação com os valores do dia. O link não leva a placa e vale 30 dias.
+- **Até 2 lembretes automáticos:** com 24 h e com 72 h, sempre das 9h às 20h, marcados antes de sair. Eles param quando:
+  - a pessoa se cadastra (pelo site ou pelo chat, com a mesma placa ou o mesmo WhatsApp);
+  - a pessoa conversa com o chat (rotas do `atendai` de situação, cotação, documentos e Pix);
+  - a equipe manda mensagem ou toca em "Parar lembretes";
+  - o AtendeHub chama `/api/atendai/v1/cotacao-whatsapp/parar`.
+- **Quadro "Cotou e não fechou"** (aba Carteira, abaixo de "O que a equipe precisa fazer"):
+  - mostra o telefone só com os 4 últimos dígitos, os lembretes enviados e se o link foi aberto;
+  - "Preparar WhatsApp" é uma mensagem pronta, em que `[link da cotação]` vira o link de verdade (no máximo 1 a cada 24 h);
+  - tem o botão "Parar lembretes".
+- **Arquivos:**
+  - regras puras em `src/lib/cotacao-whatsapp.ts`, com testes em `tests/cotacao-whatsapp.test.mts`;
+  - envio e arquivo em `src/lib/cotacao-whatsapp-envio.ts`, gravando em `DATA_DIR/cotacoes-whatsapp.json`;
+  - o arquivo é separado: não é cadastro, não vai ao PowerCRM e cada registro é apagado com 90 dias.
+- **Limites:**
+  - 5 pedidos por IP a cada 10 min;
+  - por número: 2 por dia e 3 em 7 dias;
+  - teto do dia em `COTACAO_WHATSAPP_MAX_DIA` (padrão 150);
+  - campo-isca contra robô;
+  - `/api/quote/calculate` passou a ter limite de 30 por IP a cada 10 min.
+- **Variáveis:** `COTACAO_LEMBRETES=off` desliga os lembretes; `COTACAO_LEMBRETES_INTERVALO_MS` muda o intervalo da rodada (padrão 10 min).
+- **`/privacidade`:** página nova, com link no rodapé e na linha de consentimento.
+
+### [Claude → Antigravity] — 2026-11-25 — Criar o template `citmax_21go_cotacao` (Utilidade)
+
+Pedido do Clebson: o site passa a mandar a cotação para quem pede no WhatsApp. Enquanto este template não existir, o gateway responde "não existe" e o site manda pela reserva `citmax_21go_cadastro` (já funciona assim). Configuração do template:
+- **Nome:** `citmax_21go_cotacao`
+- **Categoria:** Utilidade (UTILITY)
+- **Idioma:** Português (Brasil) (pt_BR)
+- **5 variáveis:** {{1}} veículo (`Fiat Argo 1.0 2020`), {{2}} plano (`VIP`), {{3}} mensalidade (`167,68`), {{4}} adesão (`276,50`), {{5}} link (`https://21go.seg.br/?cotacao=EXEMPLO#cotacao`).
+
+Texto (copiar como está):
+
+```
+Olá! Aqui está a cotação da proteção veicular 21Go que você pediu no site para o {{1}}: plano {{2}}, mensalidade de R$ {{3}} pagando em dia e adesão de R$ {{4}}.
+
+Para ver todos os planos e continuar: {{5}}
+
+Os valores podem mudar com a Tabela FIPE do mês. Se tiver dúvida, é só responder esta mensagem.
+```
+
+Os 2 lembretes também usam este template quando a conversa está fechada. Se a Meta classificar o template como Marketing, os lembretes param: avise.
+
+**Pedido ao AtendeHub (outra sessão):** quando o cliente pedir para não receber mais mensagens, chamar `POST /api/atendai/v1/cotacao-whatsapp/parar` com `{ telefone }` da conversa. A autenticação é a mesma das outras rotas do `atendai`.

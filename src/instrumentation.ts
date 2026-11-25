@@ -10,5 +10,7 @@ export async function register() {
     if (process.env.CRM_EMAIL && process.env.CRM_PASSWORD && process.env.CARTEIRA_ALERTA !== 'off') node.startAlertaCarteira()
     // Lembretes por WhatsApp: só com o gateway configurado; LEMBRETES_WHATSAPP=off desliga.
     if (process.env.CITCHAT_GATEWAY_TOKEN && process.env.LEMBRETES_WHATSAPP !== 'off') node.startLembretes()
+    // Lembretes da cotação pedida pelo WhatsApp na home; COTACAO_LEMBRETES=off desliga.
+    if (process.env.CITCHAT_GATEWAY_TOKEN && process.env.COTACAO_LEMBRETES !== 'off') node.startLembretesCotacao()
   }
 }

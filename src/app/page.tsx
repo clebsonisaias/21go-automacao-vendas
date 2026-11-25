@@ -36,6 +36,8 @@ import {
   Stats,
 } from '@/components/home/HomeSections'
 import { Economizometro } from '@/components/home/Economizometro'
+import { ReceberCotacaoWhatsApp } from '@/components/home/ReceberCotacaoWhatsApp'
+import type { PedidoCotacao } from '@/lib/cotacao-whatsapp'
 import { origemDaVisita, type OrigemLead } from '@/lib/origem'
 import { codigoDoLink } from '@/lib/cupom-compartilhar'
 
@@ -111,6 +113,12 @@ export default function HomePage() {
   // Resultado da Cotação
   const [quoteResult, setQuoteResult] = useState<QuoteCalculationResult | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
+  // Último pedido de cotação (para o "Receber no WhatsApp" e para reabrir pelo link).
+  const [ultimoPedido, setUltimoPedido] = useState<PedidoCotacao | null>(null)
+  const [decidirDepois, setDecidirDepois] = useState(false)
+  const [avisoRetomada, setAvisoRetomada] = useState('')
+  const cartaoWhatsRef = useRef<HTMLElement>(null)
+  const cartaoJaMostrado = useRef(false)
 
   // Opções de Desconto
   const [comAdesivo, setComAdesivo] = useState(false)
@@ -158,6 +166,77 @@ export default function HomePage() {
       cupomVeioDoLink.current = true
       setCupomCodigo((atual) => atual || codigo)
     }
+  }, [])
+
+  // Link da cotação mandada pelo WhatsApp (`/?cotacao=`): refaz a mesma cotação, com os valores de hoje.
+  useEffect(() => {
+    let token = ''
+    try {
+      const url = new URL(window.location.href)
+      token = url.searchParams.get('cotacao') || ''
+      if (!token) return
+      url.searchParams.delete('cotacao')
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+    } catch {
+      return
+    }
+    const falhou = (msg: string) => {
+      setPlateError(msg)
+      setTimeout(() => document.getElementById('cotacao')?.scrollIntoView(), 100)
+    }
+    ;(async () => {
+      setIsCalculating(true)
+      try {
+        const r = await fetch('/api/quote/retomar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        })
+        const d = await r.json().catch(() => ({}))
+        if (!d.success || !d.pedido) {
+          falhou(d.error || 'Este link de cotação venceu. Faça a cotação de novo pela placa.')
+          return
+        }
+        const ufLink = typeof d.uf === 'string' && d.uf in UFS ? d.uf : ''
+        if (ufLink) escolherUf(ufLink)
+        if (d.placa) setPlaca(d.placa)
+        if (d.pedido.tipo === 'moto' || d.pedido.tipo === 'carro') setTipo(d.pedido.tipo)
+        try {
+          if (d.cupom && !cupomDoLink()) {
+            localStorage.setItem(CHAVE_CUPOM, JSON.stringify({ codigo: d.cupom, em: new Date().toISOString() }))
+            cupomVeioDoLink.current = true
+            setCupomCodigo((atual) => atual || d.cupom)
+          }
+          if (d.origem && !lerOrigem()) {
+            localStorage.setItem(CHAVE_ORIGEM, JSON.stringify({ ...d.origem, em: new Date().toISOString() }))
+          }
+        } catch {
+          /* sem localStorage: segue sem cupom e origem guardados */
+        }
+        setUltimoPedido(d.pedido)
+        const calcRes = await fetch('/api/quote/calculate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...d.pedido, uf: ufLink }),
+        })
+        const calcData = await calcRes.json().catch(() => ({}))
+        if (!calcData.success) {
+          falhou(calcData.error || 'Não foi possível refazer a cotação agora. Busque o veículo pela placa.')
+          return
+        }
+        setQuoteResult(calcData)
+        const mesmo = (calcData.plans as PlanPricing[]).find((p) => p.id === d.plano?.id)
+        if (mesmo && Math.abs(mesmo.mensalidadeComPontualidade - Number(d.plano?.mensalidade)) >= 0.01) {
+          setAvisoRetomada('Os valores foram atualizados hoje pela Tabela FIPE do mês.')
+        }
+        setTimeout(() => document.getElementById('planos-section')?.scrollIntoView(), 150)
+      } catch {
+        falhou('Sem conexão. Busque o veículo pela placa.')
+      } finally {
+        setIsCalculating(false)
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -272,6 +351,7 @@ export default function HomePage() {
     setIsSearchingPlate(true)
     setPlateError('')
     setQuoteResult(null)
+    setAvisoRetomada('')
 
     try {
       const res = await fetch(`/api/vehicle/plate?plate=${clean}`)
@@ -284,19 +364,20 @@ export default function HomePage() {
       }
 
       setIsCalculating(true)
+      const pedido: PedidoCotacao = {
+        tipo: data.tipo === 'moto' ? 'moto' : 'carro',
+        brandId: String(data.brandId ?? ''),
+        brandText: String(data.brandText ?? ''),
+        modelId: String(data.modelId ?? ''),
+        modelText: String(data.modelText ?? ''),
+        year: String(data.year ?? ''),
+        codFipe: String(data.codFipe ?? ''),
+      }
+      setUltimoPedido(pedido)
       const calcRes = await fetch('/api/quote/calculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo: data.tipo || 'carro',
-          brandId: data.brandId,
-          brandText: data.brandText,
-          modelId: data.modelId,
-          modelText: data.modelText,
-          year: data.year,
-          codFipe: data.codFipe,
-          uf,
-        }),
+        body: JSON.stringify({ ...pedido, uf }),
       })
 
       const calcData = await calcRes.json()
@@ -333,21 +414,23 @@ export default function HomePage() {
     setIsCalculating(true)
     setPlateError('')
     setQuoteResult(null)
+    setAvisoRetomada('')
 
     try {
+      const pedido: PedidoCotacao = {
+        tipo,
+        brandId: selectedBrand,
+        brandText: brandObj?.name || '',
+        modelId: selectedModel,
+        modelText: modelObj.name,
+        year: selectedYear,
+        codFipe: modelObj.codFipe,
+      }
+      setUltimoPedido(pedido)
       const calcRes = await fetch('/api/quote/calculate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo,
-          brandId: selectedBrand,
-          brandText: brandObj?.name || '',
-          modelId: selectedModel,
-          modelText: modelObj.name,
-          year: selectedYear,
-          codFipe: modelObj.codFipe,
-          uf,
-        }),
+        body: JSON.stringify({ ...pedido, uf }),
       })
 
       const calcData = await calcRes.json()
@@ -521,6 +604,13 @@ export default function HomePage() {
   }
 
   const closeModal = () => {
+    // Fechou o cadastro sem terminar: o cartão do WhatsApp convida a decidir depois (uma vez).
+    if (!submitSuccessData && !cartaoJaMostrado.current) {
+      cartaoJaMostrado.current = true
+      setDecidirDepois(true)
+      const reduzir = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      setTimeout(() => cartaoWhatsRef.current?.scrollIntoView({ behavior: reduzir ? 'auto' : 'smooth', block: 'center' }), 120)
+    }
     setIsModalOpen(false)
     setSubmitSuccessData(null)
   }
@@ -872,6 +962,13 @@ export default function HomePage() {
               </div>
             )}
 
+            {avisoRetomada && (
+              <div role="note" className="flex items-center gap-3 rounded-2xl border border-line bg-surface-50 p-4 text-sm">
+                <Info aria-hidden className="h-5 w-5 shrink-0 text-navy-600" />
+                <span>{avisoRetomada}</span>
+              </div>
+            )}
+
             <div className="flex flex-col gap-1.5">
               <h2 className="m-0 text-[28px] font-extrabold tracking-[-0.6px]">Escolha o seu plano</h2>
               <p className="m-0 text-base text-muted">
@@ -961,6 +1058,25 @@ export default function HomePage() {
                 )
               })}
             </div>
+
+            {quoteResult.quoteToken && (() => {
+              const destaque = quoteResult.plans.find((p) => p.popular) || quoteResult.plans[0]
+              return destaque ? (
+                <ReceberCotacaoWhatsApp
+                  key={quoteResult.quoteToken}
+                  ref={cartaoWhatsRef}
+                  quoteToken={quoteResult.quoteToken}
+                  planoId={destaque.id}
+                  planoNome={destaque.name}
+                  pedido={ultimoPedido}
+                  placa={placa || quoteResult.vehicle.placa || ''}
+                  cupom={cupomCodigo.trim()}
+                  origem={lerOrigem}
+                  decidirDepois={decidirDepois}
+                  onEnviado={(w) => setWhatsapp((atual) => atual || w)}
+                />
+              ) : null
+            })()}
 
             <Economizometro
               fipeValue={quoteResult.vehicle.fipeValue}
