@@ -341,7 +341,7 @@ export default function ClienteDashboardPage() {
                   Central de Atendimento
                 </h4>
                 <p className="mt-1 text-xs text-muted leading-relaxed">
-                  Fale diretamente com nossa equipe no WhatsApp oficial da Franquia CITmax: (84) 2018-2178.
+                  Fale diretamente com nossa equipe no WhatsApp da CITmax, consultor autorizado 21Go: (84) 2018-2178.
                 </p>
               </div>
               <div className="mt-4 flex items-center gap-1 text-xs font-bold text-go-whatsapp-dark">

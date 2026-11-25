@@ -93,7 +93,7 @@ export function limparTextosDaIa(bruto: unknown): TextosDaArte | null {
 export function promptDaArteDoCupom(c: CupomParaCompartilhar, paraQuem: string, problemasAnteriores: string[] = []): string {
   const gratis = c.tipo === 'percentual' && c.desconto >= 100
   return [
-    'Você escreve o texto de uma arte de divulgação da CITmax, franquia da 21Go Proteção Veicular no Rio Grande do Norte.',
+    'Você escreve o texto de uma arte de divulgação da CITmax, consultor autorizado da 21Go Proteção Veicular no Rio Grande do Norte.',
     `A arte divulga o cupom ${c.codigo}, que dá ${gratis ? 'adesão grátis (a taxa de adesão sai de graça)' : 'desconto na taxa de adesão'}.`,
     paraQuem.trim() ? `O público é: ${paraQuem.trim()}.` : 'O público é geral.',
     'A arte já mostra o código do cupom e o passo a passo; você escreve só o título e o subtítulo.',

@@ -114,7 +114,7 @@ export function LunaFloatingChat() {
                   <h3 className="font-heading text-sm font-extrabold text-white">Luna • 21Go IA</h3>
                   <span className="rounded bg-emerald-500/20 px-1.5 py-0.2 text-[9px] font-bold text-emerald-400">Online</span>
                 </div>
-                <p className="text-[10px] text-muted-soft">Consultora Virtual Oficial CITmax</p>
+                <p className="text-[10px] text-muted-soft">Consultora virtual · CITmax, consultor autorizado 21Go</p>
               </div>
             </div>
             <button
