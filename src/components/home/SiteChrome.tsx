@@ -84,6 +84,8 @@ export function SiteFooter() {
     ['/#planos', 'Planos'],
     ['/#como-funciona', 'Como funciona'],
     ['/#duvidas', 'Dúvidas'],
+    ['/protecao-veicular', 'Cidades atendidas'],
+    ['/protecao-veicular/moto', 'Proteção para moto'],
     ['/carteirinha', 'Carteirinha Digital'],
     ['/privacidade', 'Privacidade'],
     ['/admin', 'Painel da Franquia'],
@@ -117,7 +119,7 @@ export function SiteFooter() {
         </div>
         <p className="border-t border-navy-800 pt-6 text-[13px] leading-relaxed text-muted-2">
           Este site é da CITmax, consultor autorizado da 21Go Proteção Veicular. A proteção, os planos e o
-          regulamento são da 21Go. Proteção patrimonial veicular operada em regime associativo (mutualismo). Não se trata de seguro.
+          regulamento são da 21Go Proteção Patrimonial Veicular (CNPJ 40.902.817/0001-70). Proteção patrimonial veicular operada em regime associativo (mutualismo). Não se trata de seguro.
           As cotações refletem os valores oficiais sincronizados com o motor PowerCRM; valores e coberturas
           variam conforme o plano, o modelo e o ano do veículo.
           {SITE.cnpj ? ` CNPJ da CITmax: ${SITE.cnpj}.` : ''}

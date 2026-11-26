@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
-import { Logo, SiteFooter } from '@/components/home/SiteChrome'
+import { SiteFooter } from '@/components/home/SiteChrome'
+import { CabecalhoSimples } from '@/components/home/CabecalhoSimples'
 import { SITE, whatsappUrl } from '@/lib/site'
 
 // Padrão de página: rota de marketing "Blog post" (navegação → coluna de leitura de 65–75ch → rodapé). Política de privacidade do
@@ -21,14 +22,7 @@ export default function PrivacidadePage() {
   const telefone = SITE.whatsapp.replace(/^55(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3')
   return (
     <>
-      <header className="border-b border-line bg-white">
-        <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-4 px-6 py-3">
-          <Logo href="/" size={48} />
-          <a href="/#cotacao" className="inline-flex min-h-[44px] items-center rounded-lg bg-go-orange px-4 text-sm font-extrabold text-navy-950">
-            Cotar pela placa
-          </a>
-        </div>
-      </header>
+      <CabecalhoSimples />
 
       <main id="conteudo" className="mx-auto max-w-[calc(70ch+3rem)] px-6 py-12 sm:py-16">
         <p className="m-0 text-xs font-bold tracking-[1.5px] text-navy-600">PRIVACIDADE</p>

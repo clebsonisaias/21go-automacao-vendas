@@ -977,3 +977,41 @@ Os 2 lembretes também usam este template quando a conversa está fechada. Se a 
   1. **Search Console:** em search.google.com/search-console, adicionar a propriedade `https://21go.seg.br`, verificar (o jeito mais simples é pelo DNS do domínio) e enviar o sitemap `https://21go.seg.br/sitemap.xml`.
   2. **Bing Webmaster Tools:** em bing.com/webmasters, importar do Search Console. O Bing alimenta o ChatGPT e o Copilot.
   3. **Perfil da Empresa no Google (Maps):** só se houver atendimento num endereço; sem endereço, cadastrar como "empresa de área de serviço", com as cidades atendidas. Categoria: a mais próxima de proteção veicular; nada de "seguradora".
+
+### [Claude] — 2026-11-26 — Páginas por cidade (Frente 2b) e correções pelo Manual do Consultor 21Go
+
+**Páginas por cidade.** `src/lib/cidades.ts` tem 12 cidades:
+- RN: Natal, Parnamirim, Mossoró, São Gonçalo do Amarante, Macaíba, Caicó e Ceará-Mirim;
+- PB: João Pessoa e Campina Grande;
+- CE: Fortaleza, Caucaia e Juazeiro do Norte.
+
+Cada cidade tem texto próprio, perguntas tiradas do manual e vizinhas.
+- O `tests/cidades.test.mts` confere:
+  - 40% ou mais de texto exclusivo por cidade;
+  - nenhuma palavra proibida;
+  - só as porcentagens oficiais (100/80% da FIPE e cota de 6/10/15%).
+- Páginas novas:
+  - `/protecao-veicular` (lista por estado);
+  - `/protecao-veicular/[cidade]` (estáticas, com JSON-LD `Service` + `BreadcrumbList`);
+  - `/protecao-veicular/moto`.
+- **Atalho da cotação:** `CotarPelaPlaca` guarda a placa na aba (`sessionStorage`, nunca na URL) e o estado. A home busca sozinha.
+- O sitemap e o rodapé ganharam as páginas novas, e `CabecalhoSimples` é o cabeçalho das páginas de fora da home.
+
+**Manual do Consultor 21Go** (edição 2026, enviado pelo Clebson; está em `docs/manual-consultor-21go.pdf` e em texto no `.txt`). Corrigido o que o site prometia diferente:
+- **Carência:**
+  - roubo e furto valem na hora;
+  - reboque, assistência, colisão e fenômenos liberam em 72 horas úteis;
+  - antes o site dizia "proteção no mesmo dia".
+- **Fenômenos da natureza:** só a partir do Do Seu Jeito (o Básico não tem).
+- **Vidros:** para-brisa 70% em todos os planos; todos os vidros só no Premium (antes aparecia no Do Seu Jeito).
+- **Básico:** saiu o "rastreamento" (o rastreador só é instalado no RJ).
+- **Batida:** a 21Go paga o conserto direto à oficina e o associado paga só a cota de participação (6% carro, 10% elétrico/híbrido, 15% moto). Antes: "oficina credenciada".
+- **Pagamento em dia:** 5% para quem paga até 5 dias antes do vencimento (decisão do Clebson). A 1ª mensalidade vem no mês seguinte, no dia 10 ou 20.
+- **Comparativo da home:** trocado pela tabela oficial do manual. Saiu o "até 60% mais barata", que não tinha fonte.
+- **"Seguradora disse não":** só o que o manual aceita (carros de 2006 em diante, motos até 1.000 cc).
+- **FAQ novo na home:** cota na batida, livre condutor e cancelamento (sem fidelidade, avisando 10 dias antes).
+- **Quadro "Quem é a 21Go":** 20+ anos, sede com oficina em Campo Grande (RJ), CNPJ 40.902.817/0001-70. Não cita a SUSEP, por decisão do Clebson. O rodapé ganhou o nome oficial com o CNPJ.
+- **Luna e `.claude/product-marketing.md`:** reescritos com as regras do manual. Não existe auxílio funeral nem APP, e não se promete horário do guincho.
+- **Decisões do Clebson:**
+  - o adesivo continua na tabela regional, embora o manual diga "só RJ";
+  - a indicação oficial (R$ 50 no Pix + 10% no próximo boleto) entra no site na Frente 3.

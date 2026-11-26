@@ -42,7 +42,7 @@ const COBERTURAS = [
   {
     icon: ShieldCheck,
     title: 'Roubo, furto e colisão',
-    text: 'Indenização de 100% da Tabela FIPE em roubo, furto e perda total. Reparo em oficinas credenciadas nas colisões.',
+    text: 'Indenização de 100% da Tabela FIPE em roubo, furto e perda total, sem cota. Na batida, a 21Go paga o conserto direto à oficina e você paga só a cota de participação.',
   },
   {
     icon: LifeBuoy,
@@ -57,12 +57,12 @@ const COBERTURAS = [
   {
     icon: KeyRound,
     title: 'Carro reserva',
-    text: 'De 7 a 15 dias de carro reserva nos planos superiores, para você não ficar a pé durante o reparo.',
+    text: '7 dias no VIP em caso de roubo ou furto e 15 dias no Premium, para você não ficar a pé.',
   },
   {
     icon: CloudRain,
     title: 'Fenômenos da natureza',
-    text: 'Enchentes, alagamentos, queda de árvore e granizo. Incêndio decorrente de colisão também está coberto.',
+    text: 'Enchente, alagamento, queda de árvore e granizo, a partir do plano Do Seu Jeito. Incêndio decorrente de colisão está coberto em todos os planos.',
   },
   {
     icon: Users,
@@ -105,23 +105,23 @@ const PLANOS = [
   {
     name: 'Básico',
     desc: 'O essencial para rodar protegido.',
-    items: ['Roubo, furto e colisão', 'Terceiros até R$ 5 mil', 'Guincho 200 km', 'Assistência 24h e rastreamento', 'Vidros: para-brisa', 'Clube de benefícios'],
+    items: ['Roubo, furto e colisão', 'Terceiros até R$ 5 mil', 'Guincho 200 km', 'Assistência 24h', 'Para-brisa (70% da troca)', 'Clube de benefícios'],
   },
   {
     name: 'Do Seu Jeito',
     desc: 'Mais cobertura por pouco a mais.',
-    items: ['Tudo do Básico', 'Terceiros até R$ 10 mil', 'Guincho 400 km', 'Todos os vidros', 'Táxi 50 km', 'Carro amigo 25 km'],
+    items: ['Tudo do Básico', 'Fenômenos da natureza', 'Terceiros até R$ 10 mil', 'Guincho 400 km', 'Táxi 50 km', 'Carro amigo 25 km'],
   },
   {
     name: 'VIP',
     desc: 'O equilíbrio ideal para o dia a dia.',
     popular: true,
-    items: ['Tudo do Do Seu Jeito', 'Terceiros até R$ 50 mil', 'Guincho 1.000 km', 'Carro reserva 7 dias (roubo)', 'Táxi 100 km'],
+    items: ['Tudo do Do Seu Jeito', 'Terceiros até R$ 50 mil', 'Guincho 1.000 km', 'Carro reserva 7 dias (roubo e furto)', 'Táxi 100 km'],
   },
   {
     name: 'Premium',
     desc: 'A proteção mais completa.',
-    items: ['Tudo do VIP', 'Terceiros até R$ 100 mil', 'Guincho 1.400 km', 'Carro reserva 15 dias', 'Táxi 150 km'],
+    items: ['Tudo do VIP', 'Terceiros até R$ 100 mil', 'Guincho 1.400 km', 'Carro reserva 15 dias', 'Todos os vidros, espelhos e faróis', 'Táxi 150 km'],
   },
 ]
 
@@ -187,7 +187,7 @@ export function ComoFunciona() {
     ['01', 'Cote pela placa', 'Em 30 segundos você vê os planos e valores para o seu veículo.', false],
     ['02', 'Escolha o plano e envie os documentos', 'CNH ou RG, documento do carro e comprovante de residência, pelo celular.', false],
     ['03', 'Vistoria no App Visto', 'Fotos do veículo na vistoria oficial da 21Go, pelo link no WhatsApp.', false],
-    ['04', 'Adesão no Pix e pronto', 'Com a vistoria aprovada, você paga a adesão por Pix e a proteção é ativada.', true],
+    ['04', 'Adesão no Pix e pronto', 'Com a vistoria aprovada, você paga a adesão por Pix: roubo e furto ficam protegidos na hora, e o resto em 72 horas úteis.', true],
   ] as const
   return (
     <section id="como-funciona" className="scroll-mt-20 px-6 py-14 sm:py-24">
@@ -217,11 +217,11 @@ export function ComoFunciona() {
 
 export function Comparativo() {
   const rows = [
-    ['Mensalidade', 'Até 60% mais barata', 'Valor cheio'],
-    ['Consulta SPC/Serasa', 'Não consulta', 'Pode recusar'],
-    ['Análise de perfil', 'Não tem', 'Idade, CEP e condutor alteram o preço'],
-    ['Fidelidade', 'Sem multa de cancelamento', 'Contrato de 12 meses'],
-    ['Carros antigos e de leilão', 'Aceita (leilão até 80% da FIPE)', 'Geralmente recusa'],
+    ['Como funciona', 'Os associados dividem entre si o custo dos imprevistos', 'A seguradora vende uma apólice e assume o risco'],
+    ['Quem pode dirigir', 'Livre condutor, sem restrição de idade', 'Geralmente depende do perfil do motorista'],
+    ['Carro de aplicativo', 'Aceita, sem mudar valor nem indenização', 'Costuma encarecer ou recusar'],
+    ['Fidelidade', 'Sem fidelidade e sem multa de cancelamento', 'Contrato anual'],
+    ['Indenização', '100% da Tabela FIPE', 'Varia conforme a apólice'],
   ]
   return (
     <section className="border-y border-line bg-white px-6 py-14 sm:py-24">
@@ -260,14 +260,52 @@ export function Comparativo() {
   )
 }
 
+/** Quem é a 21Go (dados do Manual do Consultor 21Go, edição 2026). Sem SUSEP, por decisão do Clebson. */
+export const CNPJ_21GO = '40.902.817/0001-70'
+
+export function QuemE21Go() {
+  return (
+    <section aria-labelledby="quem-e-21go" className="px-6 py-14 sm:py-20">
+      <Revelar className="mx-auto grid max-w-[1200px] items-start gap-8 rounded-2xl border border-line bg-white p-6 shadow-card sm:p-10 lg:grid-cols-[1.2fr_1fr]">
+        <div className="flex flex-col gap-3">
+          <span className={eyebrow}>QUEM É A 21GO</span>
+          <h2 id="quem-e-21go" className="m-0 text-[28px] font-extrabold leading-[1.15] tracking-[-0.8px] sm:text-[34px]">
+            Mais de 20 anos protegendo quem trabalha
+          </h2>
+          <p className="m-0 text-lg leading-relaxed text-muted">
+            A proteção é da 21Go Proteção Patrimonial Veicular, empresa do Rio de Janeiro com sede própria, com oficina, em
+            Campo Grande (RJ). A CITmax é consultor autorizado da 21Go: faz a sua cotação, o cadastro e o atendimento pelo
+            WhatsApp.
+          </p>
+        </div>
+        <ul className="m-0 flex list-none flex-col gap-3 p-0 text-[15px] text-navy-800">
+          <li className="flex items-start gap-2.5">
+            <Check aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-go-orange-dark" />
+            Sem fidelidade e sem multa de cancelamento
+          </li>
+          <li className="flex items-start gap-2.5">
+            <Check aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-go-orange-dark" />
+            Contrato (termo de adesão) por e-mail, com prazo para ler e desistir
+          </li>
+          <li className="flex items-start gap-2.5">
+            <Check aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-go-orange-dark" />
+            Assistência 24h pelo 0800, em todo o Brasil
+          </li>
+          <li className="text-sm text-muted">21Go Proteção Patrimonial Veicular · CNPJ {CNPJ_21GO}</li>
+        </ul>
+      </Revelar>
+    </section>
+  )
+}
+
 export function SeguradoraDisseNao() {
   const items = [
     'Nome negativado',
     'Motorista de aplicativo',
-    'Carros mais antigos',
-    'Carros de leilão',
-    'Motos de qualquer cilindrada',
-    'Regiões de risco',
+    'Carros mais antigos (de 2006 em diante)',
+    'Carros de leilão (80% da FIPE)',
+    'Carro financiado ou em nome de outra pessoa',
+    'Motos até 1.000 cc',
   ]
   return (
     <section className="px-6 py-14 sm:py-24">
@@ -295,11 +333,14 @@ export function SeguradoraDisseNao() {
 
 const FAQS = [
   ['Precisa de análise de perfil ou consulta ao SPC/Serasa?', 'Não. A 21Go não consulta crédito nem restringe por idade, estado civil, CEP ou por você trabalhar com aplicativo (Uber, 99). A proteção é para o veículo.'],
-  ['Quanto tempo leva para meu veículo ficar protegido?', 'Você envia os documentos pelo site e faz a vistoria do veículo no App Visto, pelo link que enviamos no WhatsApp. Com a vistoria aprovada, você paga a adesão por Pix e a proteção entra em vigor no mesmo dia.'],
+  ['Quanto tempo leva para meu veículo ficar protegido?', 'Você envia os documentos pelo site e faz a vistoria do veículo no App Visto, pelo link que enviamos no WhatsApp. Com a vistoria aprovada, você paga a adesão por Pix: roubo e furto ficam protegidos na hora, e reboque, assistência 24h, colisão e fenômenos da natureza liberam em 72 horas úteis. Não existe carência de 90 dias.'],
   ['Atendem em todo o Brasil?', 'Sim. A cotação, a adesão e a vistoria são 100% online, e a assistência 24h e o guincho funcionam em todo o território nacional.'],
   ['O que é o desconto do adesivo 21Go?', 'Se você colocar o adesivo discreto da 21Go no vidro traseiro, ganha até 15% de desconto em todas as mensalidades.'],
   ['Como funciona a assistência 24h e o guincho?', 'Uma central 0800 atende 24 horas por dia, 7 dias por semana, em todo o Brasil: guincho, socorro mecânico e elétrico, troca de pneus, chaveiro e hospedagem emergencial.'],
-  ['Como é feito o pagamento das mensalidades?', 'Por boleto ou Pix, todo mês. Pagando até o vencimento escolhido (dia 10 ou 20) você tem 5% de desconto por pontualidade.'],
+  ['Como é feito o pagamento das mensalidades?', 'Por boleto, Pix ou cartão cadastrado no aplicativo da 21Go. A primeira mensalidade vem no mês seguinte à ativação, com vencimento no dia 10 ou no dia 20. Pagando até 5 dias antes do vencimento, você tem 5% de desconto.'],
+  ['Se eu bater o carro, quanto eu pago?', 'Só a cota de participação, uma parte do valor da FIPE: 6% para carro, 10% para elétrico e híbrido e 15% para moto. A 21Go paga o resto direto à oficina. Roubo, furto e perda total não têm cota.'],
+  ['Quem pode dirigir o meu carro?', 'Qualquer pessoa: é livre condutor, sem restrição de idade. Se o seu filho, a sua esposa ou um amigo bater, o veículo fica protegido do mesmo jeito.'],
+  ['Posso cancelar quando quiser?', 'Pode. Não tem fidelidade nem multa: é só avisar 10 dias antes do vencimento do boleto.'],
 ]
 
 export function Faq() {
