@@ -32,6 +32,7 @@ import {
   CtaFinal,
   Faq,
   PlanosPreview,
+  QuemE21Go,
   SeguradoraDisseNao,
   Stats,
 } from '@/components/home/HomeSections'
@@ -242,6 +243,27 @@ export function HomeClient() {
   useEffect(() => {
     ufAtual.current = uf
   }, [uf])
+
+  // Atalho das páginas por cidade (CotarPelaPlaca): a placa vem só desta aba e a busca começa sozinha.
+  const buscaDoAtalho = useRef(false)
+  useEffect(() => {
+    try {
+      const p = sessionStorage.getItem('21go-placa')
+      if (p && /^[A-Z0-9]{7}$/.test(p)) {
+        sessionStorage.removeItem('21go-placa')
+        setPlaca(p)
+        buscaDoAtalho.current = true
+      }
+    } catch {
+      /* sem sessionStorage: segue sem a placa */
+    }
+  }, [])
+  useEffect(() => {
+    if (!buscaDoAtalho.current || !placa || !uf) return
+    buscaDoAtalho.current = false
+    handleSearchPlate()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [placa, uf])
   useEffect(() => {
     try {
       const salvo = localStorage.getItem('21go-uf')
@@ -593,7 +615,7 @@ export function HomeClient() {
     return nac.monthly
   }
 
-  // O desconto de pagamento em dia só vale até o vencimento (o do adesivo já inclui ele).
+  // O desconto de pagamento em dia vale até 5 dias antes do vencimento (manual da 21Go); o do adesivo já inclui ele.
   const notaEmDia = (plan: PlanPricing): string | null => {
     const price = priceFor(plan)
     if (price >= plan.monthly) return null
@@ -930,7 +952,7 @@ export function HomeClient() {
                   </span>
                 </label>
                 <p id="ajuda-pontualidade" className="m-0 pl-[34px] text-sm text-muted">
-                  Só para a mensalidade paga até o vencimento. Com atraso, vale o valor normal.
+                  Só para a mensalidade paga até 5 dias antes do vencimento. Depois disso, vale o valor normal.
                 </p>
               </fieldset>
             </div>
@@ -1099,6 +1121,7 @@ export function HomeClient() {
         <PlanosPreview />
         <ComoFunciona />
         <Comparativo />
+        <QuemE21Go />
         <SeguradoraDisseNao />
         <Faq />
         <CtaFinal />

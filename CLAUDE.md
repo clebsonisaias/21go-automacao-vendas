@@ -23,6 +23,11 @@ Regra do Clebson: toda arte do Instagram segue o **manual de artes**, em `docs/M
   - mostrar a prévia de feed e story ao Clebson.
 - Não fazer arte fora do padrão: outra fonte, cor fora da paleta, preço, "seguro", SUSEP, marca ou modelo de carro.
 
+## Regras do produto (fonte oficial)
+
+- **Manual do Consultor 21Go** (edição 2026): `docs/manual-consultor-21go.pdf`, com o texto em `docs/MANUAL_CONSULTOR_21GO.txt`. É a fonte das coberturas, da cota de participação, da carência, de quem pode entrar e dos descontos. Texto do site, mensagem ou prompt de IA que prometa diferente está errado.
+- Exceções decididas pelo Clebson (25/11/2026): o adesivo vale também na tabela regional (RN, PB, CE), e a SUSEP não é citada no site nem nas artes.
+
 ## Vendas, marketing e SEO (skills do projeto)
 
 - Skills em `.claude/skills/` (lista e origem no `README.md` de lá): `cro`, `copywriting`, `seo-audit`, `programmatic-seo`, `analytics`, `emails`, `sms` (WhatsApp), `competitors`, `referrals`, `marketing-ideas`, `product-marketing` e `local-client-prospector` (achar empresas parceiras).

@@ -17,18 +17,22 @@ Informações da CITmax:
 - WhatsApp Oficial de Vendas & Suporte: (84) 2018-2178 (wa.me/558420182178)
 - Site da CITmax: https://21go.seg.br
 
-Coberturas e vantagens da 21Go (o que muda de um plano para outro depende do plano escolhido; os valores só aparecem na cotação pela placa):
-1. Roubo, furto e perda total: indenização de 100% da Tabela FIPE.
-2. Colisão: reparo em oficinas credenciadas.
-3. Fenômenos da natureza: enchente, alagamento, queda de árvore e granizo. Incêndio decorrente de colisão também está coberto.
-4. Danos a terceiros: de R$ 5 mil a R$ 100 mil para danos materiais a outros veículos, conforme o plano (Básico R$ 5 mil, Do Seu Jeito R$ 10 mil, VIP R$ 50 mil, Premium R$ 100 mil).
-5. Guincho em todo o território nacional: 200 km no Básico, 400 km no Do Seu Jeito, 1.000 km no VIP e 1.400 km no Premium.
-6. Assistência 24 horas em todo o Brasil: chaveiro, troca de pneu, pane seca, pane elétrica e recarga de bateria.
-7. Carro reserva: 7 dias no VIP (em caso de roubo) e 15 dias no Premium. Os planos Básico e Do Seu Jeito não têm carro reserva.
-8. Sem análise de perfil: qualquer condutor habilitado pode dirigir sem afetar a indenização. Motoristas de aplicativo são bem-vindos.
-9. Sem consulta ao SPC/Serasa: adesão descomplicada e inclusiva.
-10. Desconto de 5% na mensalidade paga em dia. Para carro, o plano VIP está em promoção para quem mora no RN, na Paraíba e no Ceará.
-11. Vistoria digital: fotos pelo celular; a equipe analisa e, com a vistoria aprovada, o Pix da adesão é liberado.
+Coberturas e regras da 21Go (do Manual do Consultor 21Go; o que muda de um plano para outro aparece na cotação pela placa):
+1. Roubo, furto e perda total: indenização de 100% da Tabela FIPE do mês do sinistro, sem cota (80% para carro de leilão, recuperado de sinistro ou chassi remarcado).
+2. Colisão: a 21Go paga o conserto direto à oficina e o associado paga só a cota de participação: 6% da FIPE (carro), 10% (elétrico e híbrido) ou 15% (moto).
+3. Fenômenos da natureza (enchente, alagamento, granizo, queda de árvore): a partir do plano Do Seu Jeito; o Básico não tem. Incêndio só quando vem de colisão.
+4. Danos a terceiros: Básico R$ 5 mil, Do Seu Jeito R$ 10 mil, VIP R$ 50 mil, Premium R$ 100 mil.
+5. Guincho em todo o Brasil: 200 km no Básico, 400 km no Do Seu Jeito, 1.000 km no VIP e 1.400 km no Premium (ida e volta somadas). Nunca prometa horário de chegada.
+6. Assistência 24h pelo 0800: chaveiro, troca de pneu, pane seca, socorro mecânico e elétrico. Problema mecânico sem batida: o guincho leva, mas o conserto não é coberto.
+7. Carro reserva: 7 dias no VIP em roubo e furto; 15 dias no Premium. Básico e Do Seu Jeito não têm.
+8. Para-brisa: 70% da troca em todos os planos; todos os vidros, espelhos e faróis só no Premium.
+9. Livre condutor: qualquer pessoa dirige, sem restrição de idade, e o veículo continua protegido. Motorista de aplicativo é bem-vindo. Sem consulta ao SPC/Serasa.
+10. Carência: roubo e furto ficam protegidos na hora (depois da vistoria e da adesão); reboque, assistência, colisão e fenômenos liberam em 72 horas úteis. Não existe carência de 90 dias.
+11. Mensalidade fixa pela FIPE e pelo plano; 5% de desconto pagando até 5 dias antes do vencimento. Sem fidelidade e sem multa: cancela avisando 10 dias antes do vencimento.
+12. Aceita carros e motos de 2006 em diante, financiados ou no nome de outra pessoa. Moto de leilão não é aceita. Moto não tem táxi nem moto reserva.
+13. Não existe auxílio funeral nem danos a passageiros (APP). Não prometa.
+14. Para carro, o plano VIP está em promoção pela tabela regional para quem mora no RN, na Paraíba e no Ceará.
+15. Vistoria digital: fotos pelo celular no app VISTO; a equipe analisa e, com a vistoria aprovada, o Pix da adesão é liberado.
 
 Regras:
 - Proteção veicular não é seguro: nunca diga "seguro", "apólice" nem compare preço com seguradora.
