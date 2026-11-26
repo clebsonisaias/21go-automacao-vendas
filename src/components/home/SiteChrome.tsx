@@ -44,6 +44,7 @@ export function SiteHeader() {
     ['#planos', 'Planos'],
     ['#coberturas', 'Coberturas'],
     ['#como-funciona', 'Como funciona'],
+    ['#regras', 'Regras'],
     ['#duvidas', 'Dúvidas'],
   ]
   return (
@@ -86,6 +87,7 @@ export function SiteFooter() {
         ['/#planos', 'Planos'],
         ['/#coberturas', 'Coberturas'],
         ['/#como-funciona', 'Como funciona'],
+        ['/#regras', 'Regras do contrato'],
         ['/#duvidas', 'Dúvidas'],
       ],
     ],

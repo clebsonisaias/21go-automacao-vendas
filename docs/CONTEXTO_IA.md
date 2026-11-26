@@ -1037,3 +1037,28 @@ Padrão: landing com preço em destaque. A ordem das seções (em `HomeClient`) 
   - "Painel da Franquia" virou "Área da equipe";
   - o WhatsApp aparece formatado e com link;
   - os links têm 44 px de altura no celular (36 px no computador).
+
+### [Claude] — 2026-11-26 — "As regras, do começo ao fim" na home
+
+As regras do Manual do Consultor 21Go ficam agora abertas e num lugar só: o componente `Regras` (`#regras`), logo depois de "Como contratar". Têm link no menu ("Regras") e no rodapé ("Regras do contrato").
+- **Quando a proteção começa?** É uma faixa escura com linha do tempo:
+  - Na hora: roubo e furto, depois da vistoria e do Pix;
+  - 72 horas úteis: colisão, guincho, assistência 24h e fenômenos, nos planos que têm;
+  - não existe carência de 90 dias.
+- **Quem pode entrar?** Usa a lista `ACEITAMOS`, que saiu do comparativo.
+- **Se eu bater, quanto pago?** Cota de 6% para carro, 10% para elétrico e híbrido e 15% para moto. É paga só quando há conserto. Roubo, furto e perda total não têm cota.
+- **Como é a mensalidade?**
+  - não tem reajuste anual; pode haver rateio, e os 5% em dia cobrem essa diferença;
+  - a 1ª mensalidade vence no mês seguinte, **sem citar dia 10/20** (o manual pede para informar só a data);
+  - descontos: 5% em dia e até 15% com o adesivo, só para carro.
+  - O desconto de frota ficou de fora porque a cotação não o aplica.
+- **E se eu quiser sair?**
+  - sem fidelidade e sem multa de cancelamento: é avisar 10 dias antes, e o rastreador, se houver, precisa ser devolvido;
+  - o contrato chega por e-mail, com o prazo de 3 a 7 dias para cancelar com reembolso;
+  - vender o veículo não transfere o plano.
+
+Outras mudanças:
+- **Corrigido o que o manual não sustenta:** "48h para aprovar a adesão" (números do topo e lista do topo) virou "Na hora / Roubo e furto valem na hora, depois da vistoria e do Pix", e "desde 2004" virou só "de mercado".
+- **Coberturas:** "Vidros" (para-brisa 70% em todos os planos e todos os vidros no Premium) entrou no lugar de "Sem análise de perfil", que é regra de entrada.
+- **Títulos:** saíram os rótulos em caixa alta acima deles, e os títulos ficaram todos alinhados à esquerda. "Quem é a 21Go" virou título.
+- **Dúvidas:** viraram "Outras dúvidas", com 5 perguntas que as regras não respondem. Saíram as que agora estão nas regras.
