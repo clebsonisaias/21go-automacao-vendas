@@ -27,6 +27,7 @@ import {
 } from '@/components/home/SiteChrome'
 import {
   ComoFunciona,
+  Regras,
   Coberturas,
   Comparativo,
   CtaFinal,
@@ -879,7 +880,7 @@ export function HomeClient() {
                 {[
                   'Indenização de 100% da FIPE',
                   'Sem análise de perfil',
-                  'Aprovação em até 48h',
+                  'Roubo e furto valem na hora, depois da vistoria e do Pix',
                   'Sem fidelidade nem multa',
                 ].map((t) => (
                   <li key={t} className="flex items-center gap-2.5">
@@ -1115,13 +1116,15 @@ export function HomeClient() {
           </section>
         )}
 
-        {/* Ordem de página de planos: números → planos → o que cobre → como funciona → por que a 21Go
-            (comparativo e quem aceitamos) → quem é a 21Go → dúvidas → chamada final. Depois da cotação,
-            a vitrine dos planos sai: os preços reais já estão logo acima. */}
+        {/* Ordem de página de planos: números → planos → o que cobre → como contratar → as regras do
+            contrato (quem entra, quando começa, cota, mensalidade, saída) → comparativo → quem é a 21Go →
+            outras dúvidas → chamada final. Depois da cotação, a vitrine dos planos sai: os preços reais já
+            estão logo acima. */}
         <Stats />
         {!quoteResult && <PlanosPreview />}
         <Coberturas />
         <ComoFunciona />
+        <Regras />
         <Comparativo />
         <QuemE21Go />
         <Faq />
