@@ -41,8 +41,8 @@ export function TopBar() {
 
 export function SiteHeader() {
   const links = [
-    ['#coberturas', 'Coberturas'],
     ['#planos', 'Planos'],
+    ['#coberturas', 'Coberturas'],
     ['#como-funciona', 'Como funciona'],
     ['#duvidas', 'Dúvidas'],
   ]
@@ -79,17 +79,33 @@ export function SiteHeader() {
 }
 
 export function SiteFooter() {
-  const nav = [
-    ['/#coberturas', 'Coberturas'],
-    ['/#planos', 'Planos'],
-    ['/#como-funciona', 'Como funciona'],
-    ['/#duvidas', 'Dúvidas'],
-    ['/protecao-veicular', 'Cidades atendidas'],
-    ['/protecao-veicular/moto', 'Proteção para moto'],
-    ['/carteirinha', 'Carteirinha Digital'],
-    ['/privacidade', 'Privacidade'],
-    ['/admin', 'Painel da Franquia'],
+  const colunas: [string, [string, string][]][] = [
+    [
+      'Proteção',
+      [
+        ['/#planos', 'Planos'],
+        ['/#coberturas', 'Coberturas'],
+        ['/#como-funciona', 'Como funciona'],
+        ['/#duvidas', 'Dúvidas'],
+      ],
+    ],
+    [
+      'Onde atendemos',
+      [
+        ['/protecao-veicular', 'Cidades atendidas'],
+        ['/protecao-veicular/moto', 'Proteção para moto'],
+      ],
+    ],
+    [
+      'Para quem já é cliente',
+      [
+        ['/carteirinha', 'Carteirinha digital'],
+        ['/privacidade', 'Privacidade'],
+        ['/admin', 'Área da equipe'],
+      ],
+    ],
   ]
+  const fone = SITE.whatsapp.replace(/^55(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3')
   return (
     <footer className="bg-navy-deep px-6 pb-28 pt-14 text-muted-dark sm:pb-8">
       <div className="mx-auto flex max-w-[1200px] flex-col gap-8">
@@ -100,18 +116,24 @@ export function SiteFooter() {
               <span className="text-sm">CITmax · Consultor autorizado da 21Go</span>
             </div>
           </div>
-          <div className="flex flex-wrap gap-12 text-[15px]">
-            <div className="flex flex-col gap-2">
-              <span className="font-bold text-white">Navegação</span>
-              {nav.map(([href, label]) => (
-                <a key={href} href={href} className="text-muted-dark no-underline hover:text-white">
-                  {label}
-                </a>
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-x-12 gap-y-8 text-[15px]">
+            {colunas.map(([titulo, links]) => (
+              <nav key={titulo} aria-label={titulo} className="flex flex-col">
+                <span className="mb-1 font-bold text-white">{titulo}</span>
+                {links.map(([href, label]) => (
+                  <a key={href} href={href} className="flex min-h-[44px] items-center text-muted-dark no-underline hover:text-white sm:min-h-[36px]">
+                    {label}
+                  </a>
+                ))}
+              </nav>
+            ))}
             <div className="flex flex-col gap-2">
               <span className="font-bold text-white">Atendimento</span>
-              {SITE.whatsapp && <span>WhatsApp: {SITE.whatsapp}</span>}
+              {SITE.whatsapp && (
+                <a href={whatsappUrl()} className="-my-2.5 flex min-h-[44px] items-center text-muted-dark no-underline hover:text-white sm:-my-1.5 sm:min-h-[36px]">
+                  WhatsApp: {fone}
+                </a>
+              )}
               {SITE.email && <span>E-mail: {SITE.email}</span>}
               {SITE.horario && <span>{SITE.horario}</span>}
             </div>

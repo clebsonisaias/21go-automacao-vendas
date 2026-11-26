@@ -33,7 +33,6 @@ import {
   Faq,
   PlanosPreview,
   QuemE21Go,
-  SeguradoraDisseNao,
   Stats,
 } from '@/components/home/HomeSections'
 import { Economizometro } from '@/components/home/Economizometro'
@@ -1116,13 +1115,15 @@ export function HomeClient() {
           </section>
         )}
 
+        {/* Ordem de página de planos: números → planos → o que cobre → como funciona → por que a 21Go
+            (comparativo e quem aceitamos) → quem é a 21Go → dúvidas → chamada final. Depois da cotação,
+            a vitrine dos planos sai: os preços reais já estão logo acima. */}
         <Stats />
+        {!quoteResult && <PlanosPreview />}
         <Coberturas />
-        <PlanosPreview />
         <ComoFunciona />
         <Comparativo />
         <QuemE21Go />
-        <SeguradoraDisseNao />
         <Faq />
         <CtaFinal />
       </main>

@@ -1015,3 +1015,25 @@ Cada cidade tem texto próprio, perguntas tiradas do manual e vizinhas.
 - **Decisões do Clebson:**
   - o adesivo continua na tabela regional, embora o manual diga "só RJ";
   - a indicação oficial (R$ 50 no Pix + 10% no próximo boleto) entra no site na Frente 3.
+
+### [Claude] — 2026-11-26 — Home reorganizada com as informações novas do manual
+
+Padrão: landing com preço em destaque. A ordem das seções (em `HomeClient`) passou a seguir a pergunta de quem visita:
+1. números;
+2. planos (somem depois da cotação, que já mostra os planos);
+3. coberturas;
+4. como funciona;
+5. **Por que a 21Go** (`#por-que`);
+6. quem é a 21Go;
+7. dúvidas;
+8. chamada final.
+
+- **Por que a 21Go:** junta o comparativo do manual e o antigo bloco "Seguradora disse não" (`SeguradoraDisseNao` saiu). No celular, o comparativo vira cartões (critério, 21Go e seguro tradicional), sem rolagem lateral. A tabela fica só a partir de 640 px.
+- **Quem é a 21Go:** tirado o "sem fidelidade", que já está no comparativo. O item da indenização diz "em até 90 dias depois da documentação, como diz o contrato".
+- **Dúvidas** em três grupos (`FAQ_GRUPOS`): Para contratar, Na hora do aperto, Mensalidade e cancelamento. Cada grupo tem um título h3. As respostas continuam no HTML.
+- **Cabeçalho:** Planos, Coberturas, Como funciona, Dúvidas.
+- **Rodapé:**
+  - três colunas, cada uma um `nav`: Proteção, Onde atendemos, Para quem já é cliente;
+  - "Painel da Franquia" virou "Área da equipe";
+  - o WhatsApp aparece formatado e com link;
+  - os links têm 44 px de altura no celular (36 px no computador).

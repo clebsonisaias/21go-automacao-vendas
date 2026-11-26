@@ -215,6 +215,16 @@ export function ComoFunciona() {
   )
 }
 
+/** Quem a 21Go aceita (Manual do Consultor 21Go): mostrado junto do comparativo. */
+const ACEITAMOS = [
+  'Nome negativado, sem consulta ao SPC/Serasa',
+  'Motorista de aplicativo',
+  'Carros e motos de 2006 em diante',
+  'Carros de leilão (80% da FIPE)',
+  'Carro financiado ou em nome de outra pessoa',
+  'Motos até 1.000 cc',
+]
+
 export function Comparativo() {
   const rows = [
     ['Como funciona', 'Os associados dividem entre si o custo dos imprevistos', 'A seguradora vende uma apólice e assume o risco'],
@@ -224,13 +234,29 @@ export function Comparativo() {
     ['Indenização', '100% da Tabela FIPE', 'Varia conforme a apólice'],
   ]
   return (
-    <section className="border-y border-line bg-white px-6 py-14 sm:py-24">
+    <section id="por-que" className="scroll-mt-20 border-y border-line bg-white px-6 py-14 sm:py-24">
       <div className="mx-auto flex max-w-[960px] flex-col gap-10">
         <Revelar className="flex flex-col items-center gap-3 text-center">
-          <span className={eyebrow}>COMPARATIVO</span>
+          <span className={eyebrow}>POR QUE A 21GO</span>
           <h2 className={h2}>Proteção veicular x seguro tradicional</h2>
         </Revelar>
-        <Revelar atraso={60} className="overflow-x-auto rounded-2xl border border-line">
+        {/* Celular: um cartão por item, para as duas colunas caberem sem rolar para o lado. */}
+        <Revelar atraso={60} className="flex flex-col gap-3 sm:hidden">
+          {rows.map(([k, a, b]) => (
+            <dl key={k} className="m-0 flex flex-col gap-2 rounded-xl border border-line p-4">
+              <dt className="text-sm font-bold text-navy-600">{k}</dt>
+              <dd className="m-0 flex flex-col">
+                <span className="text-xs font-bold text-muted">21Go</span>
+                <span className="font-semibold text-navy-900">{a}</span>
+              </dd>
+              <dd className="m-0 flex flex-col">
+                <span className="text-xs font-bold text-muted">Seguro tradicional</span>
+                <span className="text-muted">{b}</span>
+              </dd>
+            </dl>
+          ))}
+        </Revelar>
+        <Revelar atraso={60} className="hidden overflow-x-auto rounded-2xl border border-line sm:block">
           <table className="w-full min-w-[560px] border-collapse text-base">
             <thead>
               <tr className="bg-surface-100 text-left">
@@ -251,6 +277,17 @@ export function Comparativo() {
               ))}
             </tbody>
           </table>
+        </Revelar>
+        <Revelar atraso={90} className="flex flex-col gap-4 rounded-2xl bg-surface-100 p-5 sm:p-7">
+          <h3 className="m-0 text-lg font-extrabold text-navy-900">A seguradora disse não? Na 21Go, aceitamos:</h3>
+          <ul className="m-0 grid list-none gap-2.5 p-0 [grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))]">
+            {ACEITAMOS.map((t) => (
+              <li key={t} className="flex items-start gap-2.5 text-[15px] font-semibold text-navy-800">
+                <Check aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-go-orange-dark" />
+                {t}
+              </li>
+            ))}
+          </ul>
         </Revelar>
         <p className="m-0 text-center text-sm leading-relaxed text-muted">
           A 21Go é uma associação de proteção patrimonial por rateio (mutualismo). Não é seguro.
@@ -281,7 +318,7 @@ export function QuemE21Go() {
         <ul className="m-0 flex list-none flex-col gap-3 p-0 text-[15px] text-navy-800">
           <li className="flex items-start gap-2.5">
             <Check aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-go-orange-dark" />
-            Sem fidelidade e sem multa de cancelamento
+            Indenização em até 90 dias depois da documentação, como diz o contrato
           </li>
           <li className="flex items-start gap-2.5">
             <Check aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-go-orange-dark" />
@@ -298,53 +335,37 @@ export function QuemE21Go() {
   )
 }
 
-export function SeguradoraDisseNao() {
-  const items = [
-    'Nome negativado',
-    'Motorista de aplicativo',
-    'Carros mais antigos (de 2006 em diante)',
-    'Carros de leilão (80% da FIPE)',
-    'Carro financiado ou em nome de outra pessoa',
-    'Motos até 1.000 cc',
-  ]
-  return (
-    <section className="px-6 py-14 sm:py-24">
-      <Revelar className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-10 rounded-3xl bg-navy-950 px-5 py-8 text-white sm:px-12 sm:py-14">
-        <div className="flex min-w-0 flex-[1_1_380px] flex-col gap-4">
-          <span className="text-xs font-bold tracking-[1.5px] text-go-orange">A SEGURADORA DISSE NÃO?</span>
-          <h2 className="m-0 text-[32px] font-extrabold leading-[1.1] tracking-[-1px] sm:text-[40px]">
-            Na 21Go, você tem proteção.
-          </h2>
-          <p className="m-0 text-lg leading-relaxed text-muted-soft">
-            Aceitamos quem as seguradoras costumam recusar — em qualquer estado do país.
-          </p>
-        </div>
-        <ul className="m-0 grid min-w-0 flex-[1_1_420px] list-none gap-3 p-0 [grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr))]">
-          {items.map((t) => (
-            <li key={t} className="rounded-xl border border-navy-line bg-navy-900 px-5 py-4 font-semibold">
-              {t}
-            </li>
-          ))}
-        </ul>
-      </Revelar>
-    </section>
-  )
-}
-
-const FAQS = [
-  ['Precisa de análise de perfil ou consulta ao SPC/Serasa?', 'Não. A 21Go não consulta crédito nem restringe por idade, estado civil, CEP ou por você trabalhar com aplicativo (Uber, 99). A proteção é para o veículo.'],
-  ['Quanto tempo leva para meu veículo ficar protegido?', 'Você envia os documentos pelo site e faz a vistoria do veículo no App Visto, pelo link que enviamos no WhatsApp. Com a vistoria aprovada, você paga a adesão por Pix: roubo e furto ficam protegidos na hora, e reboque, assistência 24h, colisão e fenômenos da natureza liberam em 72 horas úteis. Não existe carência de 90 dias.'],
-  ['Atendem em todo o Brasil?', 'Sim. A cotação, a adesão e a vistoria são 100% online, e a assistência 24h e o guincho funcionam em todo o território nacional.'],
-  ['O que é o desconto do adesivo 21Go?', 'Se você colocar o adesivo discreto da 21Go no vidro traseiro, ganha até 15% de desconto em todas as mensalidades.'],
-  ['Como funciona a assistência 24h e o guincho?', 'Uma central 0800 atende 24 horas por dia, 7 dias por semana, em todo o Brasil: guincho, socorro mecânico e elétrico, troca de pneus, chaveiro e hospedagem emergencial.'],
-  ['Como é feito o pagamento das mensalidades?', 'Por boleto, Pix ou cartão cadastrado no aplicativo da 21Go. A primeira mensalidade vem no mês seguinte à ativação, com vencimento no dia 10 ou no dia 20. Pagando até 5 dias antes do vencimento, você tem 5% de desconto.'],
-  ['Se eu bater o carro, quanto eu pago?', 'Só a cota de participação, uma parte do valor da FIPE: 6% para carro, 10% para elétrico e híbrido e 15% para moto. A 21Go paga o resto direto à oficina. Roubo, furto e perda total não têm cota.'],
-  ['Quem pode dirigir o meu carro?', 'Qualquer pessoa: é livre condutor, sem restrição de idade. Se o seu filho, a sua esposa ou um amigo bater, o veículo fica protegido do mesmo jeito.'],
-  ['Posso cancelar quando quiser?', 'Pode. Não tem fidelidade nem multa: é só avisar 10 dias antes do vencimento do boleto.'],
+/** Dúvidas em grupos (o que o cliente pergunta, na ordem da conversa). Respostas pelo Manual do Consultor 21Go. */
+const FAQ_GRUPOS: { titulo: string; itens: [string, string][] }[] = [
+  {
+    titulo: 'Para contratar',
+    itens: [
+      ['Precisa de análise de perfil ou consulta ao SPC/Serasa?', 'Não. A 21Go não consulta crédito nem restringe por idade, estado civil, CEP ou por você trabalhar com aplicativo (Uber, 99). A proteção é para o veículo.'],
+      ['Quanto tempo leva para meu veículo ficar protegido?', 'Você envia os documentos pelo site e faz a vistoria do veículo no App Visto, pelo link que enviamos no WhatsApp. Com a vistoria aprovada, você paga a adesão por Pix: roubo e furto ficam protegidos na hora, e reboque, assistência 24h, colisão e fenômenos da natureza liberam em 72 horas úteis. Não existe carência de 90 dias.'],
+      ['Quem pode dirigir o meu carro?', 'Qualquer pessoa: é livre condutor, sem restrição de idade. Se o seu filho, a sua esposa ou um amigo bater, o veículo fica protegido do mesmo jeito.'],
+      ['Atendem em todo o Brasil?', 'Sim. A cotação, a adesão e a vistoria são 100% online, e a assistência 24h e o guincho funcionam em todo o território nacional.'],
+    ],
+  },
+  {
+    titulo: 'Na hora do aperto',
+    itens: [
+      ['Se eu bater o carro, quanto eu pago?', 'Só a cota de participação, uma parte do valor da FIPE: 6% para carro, 10% para elétrico e híbrido e 15% para moto. A 21Go paga o resto direto à oficina. Roubo, furto e perda total não têm cota.'],
+      ['Como funciona a assistência 24h e o guincho?', 'Uma central 0800 atende 24 horas por dia, 7 dias por semana, em todo o Brasil: guincho, socorro mecânico e elétrico, troca de pneus, chaveiro e hospedagem emergencial.'],
+    ],
+  },
+  {
+    titulo: 'Mensalidade e cancelamento',
+    itens: [
+      ['Como é feito o pagamento das mensalidades?', 'Por boleto, Pix ou cartão cadastrado no aplicativo da 21Go. A primeira mensalidade vem no mês seguinte à ativação, com vencimento no dia 10 ou no dia 20. Pagando até 5 dias antes do vencimento, você tem 5% de desconto.'],
+      ['O que é o desconto do adesivo 21Go?', 'Se você colocar o adesivo discreto da 21Go no vidro traseiro, ganha até 15% de desconto em todas as mensalidades.'],
+      ['Posso cancelar quando quiser?', 'Pode. Não tem fidelidade nem multa: é só avisar 10 dias antes do vencimento do boleto.'],
+    ],
+  },
 ]
 
 export function Faq() {
-  const [open, setOpen] = useState<number | null>(0)
+  const [open, setOpen] = useState<string | null>(FAQ_GRUPOS[0].itens[0][0])
+  let n = 0
   return (
     <section id="duvidas" className="scroll-mt-20 px-6 py-14 sm:py-24">
       <div className="mx-auto flex max-w-[800px] flex-col gap-8">
@@ -352,32 +373,36 @@ export function Faq() {
           <span className={eyebrow}>DÚVIDAS FREQUENTES</span>
           <h2 className={h2}>Perguntas frequentes</h2>
         </Revelar>
-        <Revelar atraso={60} className="flex flex-col gap-3">
-          {FAQS.map(([q, a], i) => {
-            const isOpen = open === i
-            return (
-              <div key={q} className="rounded-xl border border-line bg-white">
-                <button
-                  type="button"
-                  aria-expanded={isOpen}
-                  aria-controls={`faq-${i}`}
-                  onClick={() => setOpen(isOpen ? null : i)}
-                  className="flex min-h-[60px] w-full items-center justify-between gap-4 px-5 py-4 text-left text-[17px] font-semibold text-navy-800"
-                >
-                  <span>{q}</span>
-                  <ChevronDown
-                    aria-hidden
-                    className={`h-5 w-5 shrink-0 text-navy-600 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                  />
-                </button>
-                {/* A resposta fica sempre no HTML (o Google e as IAs leem); fechada, só não aparece. */}
-                <p id={`faq-${i}`} hidden={!isOpen} className="m-0 px-5 pb-5 leading-relaxed text-muted">
-                  {a}
-                </p>
-              </div>
-            )
-          })}
-        </Revelar>
+        {FAQ_GRUPOS.map((g) => (
+          <Revelar key={g.titulo} atraso={60} className="flex flex-col gap-3">
+            <h3 className="m-0 text-sm font-bold tracking-[1px] text-navy-600">{g.titulo.toUpperCase()}</h3>
+            {g.itens.map(([q, a]) => {
+              const i = n++
+              const isOpen = open === q
+              return (
+                <div key={q} className="rounded-xl border border-line bg-white">
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    aria-controls={`faq-${i}`}
+                    onClick={() => setOpen(isOpen ? null : q)}
+                    className="flex min-h-[60px] w-full items-center justify-between gap-4 px-5 py-4 text-left text-[17px] font-semibold text-navy-800"
+                  >
+                    <span>{q}</span>
+                    <ChevronDown
+                      aria-hidden
+                      className={`h-5 w-5 shrink-0 text-navy-600 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+                  {/* A resposta fica sempre no HTML (o Google e as IAs leem); fechada, só não aparece. */}
+                  <p id={`faq-${i}`} hidden={!isOpen} className="m-0 px-5 pb-5 leading-relaxed text-muted">
+                    {a}
+                  </p>
+                </div>
+              )
+            })}
+          </Revelar>
+        ))}
       </div>
     </section>
   )
