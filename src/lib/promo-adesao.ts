@@ -46,6 +46,14 @@ export function prazoDaPromo(agora = new Date()): { prorrogada: boolean; ate: st
   }
 }
 
+/** A Black vale só no Plano VIP (decisão do Clebson, 27/11): os outros planos seguem a adesão normal. */
+export const PLANO_DA_PROMO = 'vip'
+
+/** A adesão por R$ 1 vale para este plano agora? Só no VIP e só nos dias da promoção. */
+export function promoNoPlano(planoId: string | undefined, agora = new Date()): boolean {
+  return planoId === PLANO_DA_PROMO && promoAdesaoAtiva(agora)
+}
+
 /** Adesão com a promo: R$ 1, ou a própria adesão se ela já for menor que isso. */
 export function adesaoPromo(ativacao: number): number {
   return Math.min(Math.max(0, ativacao), PROMO_ADESAO.valor)

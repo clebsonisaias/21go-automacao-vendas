@@ -37,7 +37,7 @@ import {
   Stats,
 } from '@/components/home/HomeSections'
 import { AvisoBlack } from '@/components/home/AvisoBlack'
-import { adesaoPromo, prazoDaPromo, promoAdesaoAtiva } from '@/lib/promo-adesao'
+import { PLANO_DA_PROMO, adesaoPromo, prazoDaPromo, promoAdesaoAtiva } from '@/lib/promo-adesao'
 import { Economizometro } from '@/components/home/Economizometro'
 import { ReceberCotacaoWhatsApp } from '@/components/home/ReceberCotacaoWhatsApp'
 import type { PedidoCotacao } from '@/lib/cotacao-whatsapp'
@@ -173,7 +173,8 @@ export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
     const t = setInterval(atualizar, 30_000)
     return () => clearInterval(t)
   }, [pixLigado])
-  const ativacaoComPromo = (v: number) => (promoHoje ? adesaoPromo(v) : v)
+  // Só o Plano VIP tem a adesão da Black; os outros planos seguem a adesão normal.
+  const ativacaoComPromo = (v: number, planoId: string | undefined) => (promoHoje && planoId === PLANO_DA_PROMO ? adesaoPromo(v) : v)
   useEffect(() => {
     guardarOrigem()
     const codigo = cupomDoLink()
@@ -1071,11 +1072,11 @@ export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
                           </span>
                         </>
                       )}
-                      {promoHoje ? (
+                      {promoHoje && plan.id === PLANO_DA_PROMO ? (
                         <span className={`text-sm ${muted}`}>
                           Ativação no Pix: <s>{brl(plan.ativacao)}</s>{' '}
                           <strong className={pop ? 'text-go-orange' : 'text-go-orange-dark'}>
-                            {brl(ativacaoComPromo(plan.ativacao))} na Black 21Go
+                            {brl(ativacaoComPromo(plan.ativacao, plan.id))} na Black 21Go
                           </strong>{' '}
                           (cadastro {prazoDaPromo().ate})
                         </span>
@@ -1136,7 +1137,10 @@ export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
             <Economizometro
               fipeValue={quoteResult.vehicle.fipeValue}
               mensalidade21Go={priceFor(quoteResult.plans.find((p) => p.popular) || quoteResult.plans[0])}
-              ativacao21Go={ativacaoComPromo((quoteResult.plans.find((p) => p.popular) || quoteResult.plans[0])?.ativacao || 399.99)}
+              ativacao21Go={(() => {
+                const destaque = quoteResult.plans.find((p) => p.popular) || quoteResult.plans[0]
+                return ativacaoComPromo(destaque?.ativacao || 399.99, destaque?.id)
+              })()}
               veiculoNome={`${quoteResult.vehicle.marca} ${quoteResult.vehicle.modelo}`}
             />
 
@@ -1325,7 +1329,7 @@ export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
                   <dd className="m-0 text-right">
                     {(() => {
                       const cheia = cupomInfo?.ativacaoOriginal ?? selectedPlan.ativacao
-                      const final = Math.min(cupomInfo ? cupomInfo.ativacaoFinal : cheia, ativacaoComPromo(cheia))
+                      const final = Math.min(cupomInfo ? cupomInfo.ativacaoFinal : cheia, ativacaoComPromo(cheia, selectedPlan.id))
                       if (final >= cheia) return brl(cheia)
                       const daBlack = !cupomInfo || cupomInfo.ativacaoFinal > final
                       return (
@@ -1418,9 +1422,11 @@ export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
                       </button>
                     </div>
                     {cupomInfo &&
-                      (promoHoje && cupomInfo.ativacaoFinal >= ativacaoComPromo(cupomInfo.ativacaoOriginal) ? (
+                      (promoHoje &&
+                      selectedPlan?.id === PLANO_DA_PROMO &&
+                      cupomInfo.ativacaoFinal >= ativacaoComPromo(cupomInfo.ativacaoOriginal, selectedPlan.id) ? (
                         <p id="lead-cupom-ok" role="status" className="m-0 text-sm font-semibold text-emerald-700">
-                          Hoje a Black 21Go já deixa a adesão em {brl(ativacaoComPromo(cupomInfo.ativacaoOriginal))}. O cupom{' '}
+                          Hoje a Black 21Go já deixa a adesão do VIP em {brl(ativacaoComPromo(cupomInfo.ativacaoOriginal, selectedPlan.id))}. O cupom{' '}
                           {cupomInfo.codigo} não baixa mais que isso, então vale a da Black.
                         </p>
                       ) : (

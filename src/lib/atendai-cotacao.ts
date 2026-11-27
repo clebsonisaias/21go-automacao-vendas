@@ -3,7 +3,7 @@ import { fetchOfficialPricing, identifyPlate } from './powercrm'
 import { createQuoteToken } from './quote-token'
 import { aplicarPrecoRegional } from './preco-regional'
 import { ESTADOS_DA_TABELA, normalizarUf, ufDoDdd, UFS } from './tabela-nordeste'
-import { adesaoPromo, prazoDaPromo, promoAdesaoAtiva } from './promo-adesao'
+import { PLANO_DA_PROMO, adesaoPromo, prazoDaPromo, promoAdesaoAtiva } from './promo-adesao'
 import { mpEnabled } from './mercadopago'
 
 export const PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/
@@ -124,8 +124,8 @@ export async function cotacaoDoChat(dados: {
         mensalidadePontualidade: p.mensalidadeComPontualidade,
         // Mesma regra do site: o adesivo só vale para o veículo elegível.
         mensalidadeAdesivo: r.regras?.elegivelAdesivo ? p.mensalidadeComAdesivo : null,
-        ativacao: promo ? adesaoPromo(p.ativacao) : p.ativacao,
-        ...(promo ? { ativacaoSemPromocao: p.ativacao } : {}),
+        ativacao: promo && p.id === PLANO_DA_PROMO ? adesaoPromo(p.ativacao) : p.ativacao,
+        ...(promo && p.id === PLANO_DA_PROMO ? { ativacaoSemPromocao: p.ativacao } : {}),
         coberturas: p.coberturas,
         popular: Boolean(p.popular),
         ...(p.regional ? { precoNacional: p.precoNacional ?? null, tabelaNordeste: p.regional.tabela } : {}),
@@ -142,7 +142,7 @@ export async function cotacaoDoChat(dados: {
 }
 
 const mensagemPromo = () =>
-  `A Black 21Go está valendo: a adesão de todos os planos, carro e moto, sai por R$ 1,00 no cadastro feito ${prazoDaPromo().ate} (horário de Brasília). É aplicada sozinha, sem cupom. Diga isso ao cliente com esse prazo e mostre a adesão de cada plano por R$ 1,00 (campo ativacao; a de antes está em ativacaoSemPromocao). A mensalidade não muda.`
+  `A Black 21Go está valendo, só no Plano VIP: a adesão do VIP sai por R$ 1,00 no cadastro feito ${prazoDaPromo().ate} (horário de Brasília), aplicada sozinha, sem cupom. Os outros planos têm a adesão normal. Diga isso ao cliente com esse prazo e ofereça o VIP primeiro (no campo ativacao do VIP já está R$ 1,00; a de antes está em ativacaoSemPromocao). A mensalidade não muda.`
 
 const brl = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
