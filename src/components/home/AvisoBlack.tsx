@@ -20,8 +20,8 @@ export function AvisoBlack({ pixLigado }: { pixLigado: boolean }) {
   return (
     <div role="status" className="bg-go-orange px-4 py-2.5 text-center text-sm font-semibold text-navy-950">
       {prazoDaPromo().prorrogada
-        ? 'Black 21Go prorrogada: adesão por R$ 1 até domingo (29/11). Faça a cotação pela placa e cadastre-se até 23h59 de domingo.'
-        : 'Black 21Go: adesão por R$ 1 só hoje. Faça a cotação pela placa e cadastre-se hoje, até 23h59.'}
+        ? 'Black 21Go prorrogada: adesão por R$ 1 no Plano VIP até domingo (29/11). Faça a cotação pela placa e cadastre-se até 23h59 de domingo.'
+        : 'Black 21Go: adesão por R$ 1 no Plano VIP, só hoje. Faça a cotação pela placa e cadastre-se até 23h59.'}
     </div>
   )
 }

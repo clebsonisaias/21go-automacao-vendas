@@ -25,7 +25,7 @@ function botFallbackReply(lastText: string): string {
   if (/(pix|adesao|pagar|pagamento|taxa|boleto|cupom)/.test(t)) {
     const black =
       promoAdesaoAtiva() && mpEnabled()
-        ? ` Na Black 21Go, a adesão sai por R$ 1,00 para quem fizer o cadastro ${prazoDaPromo().ate}.`
+        ? ` Na Black 21Go, a adesão do Plano VIP sai por R$ 1,00 para quem fizer o cadastro ${prazoDaPromo().ate}; nos outros planos, a adesão é a normal.`
         : ''
     return `A taxa de adesão só é paga no final, depois que a vistoria pelo celular for aprovada. Assim que aprovar, enviamos o Pix da adesão no seu WhatsApp e por aqui no site.${black}`
   }

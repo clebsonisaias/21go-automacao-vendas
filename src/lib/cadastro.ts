@@ -7,7 +7,7 @@ import { verifyQuoteToken } from '@/lib/quote-token'
 import { mpEnabled } from '@/lib/mercadopago'
 import { vistoriaPath } from '@/lib/links'
 import { LeadSubmissionPayload } from '@/lib/types'
-import { PROMO_ADESAO, adesaoPromo, promoAdesaoAtiva } from '@/lib/promo-adesao'
+import { PROMO_ADESAO, adesaoPromo, promoNoPlano } from '@/lib/promo-adesao'
 import { calcularDesconto, conferirCupom, liberarCupom, normalizarCodigo, reservarCupom } from '@/lib/cupons'
 import { linhaTabelaNordeste } from '@/lib/tabela-nordeste'
 import { descreverOrigem, limparOrigem } from '@/lib/origem'
@@ -130,7 +130,8 @@ export function aplicarCupom(
     const r = conferirCupom(codigo)
     return r.ok && calcularDesconto(payload.ativacao, r.cupom).ativacaoFinal < adesaoPromo(payload.ativacao)
   })
-  if (promoAdesaoAtiva() && mpEnabled() && !cupomMelhor()) {
+  // Só no Plano VIP (decisão do Clebson, 27/11): nos outros planos, a adesão normal e o cupom de sempre.
+  if (promoNoPlano(payload.planoEscolhidoId) && mpEnabled() && !cupomMelhor()) {
     const original = payload.ativacao
     const final = adesaoPromo(original)
     payload.ativacaoOriginal = original

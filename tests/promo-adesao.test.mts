@@ -37,3 +37,13 @@ test('em 27/11 o texto diz "só hoje"; de 28/11 a 29/11, "até domingo" (o desco
   assert.equal(sabado.ate, 'até 23h59 de domingo, 29/11')
   assert.equal(sabado.fimAnunciado, '2026-11-30T02:59:59.999Z')
 })
+
+test('a adesão por R$ 1 vale só no Plano VIP, e só nos dias da promoção', async () => {
+  const { promoNoPlano } = await import('../src/lib/promo-adesao.ts')
+  const naBlack = new Date('2026-11-27T20:00:00Z')
+  assert.equal(promoNoPlano('vip', naBlack), true)
+  for (const id of ['basico', 'do-seu-jeito', 'premium', 'suv', 'moto-400', 'moto-1000', 'especial', undefined]) {
+    assert.equal(promoNoPlano(id, naBlack), false, String(id))
+  }
+  assert.equal(promoNoPlano('vip', new Date('2026-11-30T12:00:00Z')), false)
+})

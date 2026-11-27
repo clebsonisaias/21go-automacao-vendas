@@ -1115,3 +1115,12 @@ O post das 18h (`27-11-capa-reels-30s`) continua.
 A arte "Como garantir a adesão por R$ 1" **não entrou**: ela diz que o VIP é "o plano mais completo da 21Go", e o mais completo é o Premium. Volta depois de corrigida.
 
 O preço na arte e na legenda é uma exceção só destes posts, anotada no manual (seção 06).
+
+### [Claude] — 2026-11-27 — Black 21Go só no Plano VIP
+
+Correção do Clebson (27/11, por volta das 14h): "A promoção é só na adesão e no plano VIP. O resto é valor normal."
+- `PLANO_DA_PROMO = 'vip'` e `promoNoPlano(planoId)` ficam em `promo-adesao.ts`.
+- **Cadastro:** `aplicarCupom` só aplica a `BLACK21GO` no VIP.
+- **Cotação:** só o cartão do VIP mostra o valor riscado e "R$ 1,00 na Black 21Go". O resumo, a mensagem do cupom e o Economizômetro seguem o plano.
+- **Textos:** a faixa, a Luna e o chat (`mensagemPromo` e `ativacao` só do VIP) dizem "no Plano VIP". O WhatsApp da cotação só leva o R$ 1 se o plano escolhido for o VIP.
+- **Cadastros já feitos:** de 11h40 até a correção, o site aplicava R$ 1 em todos os planos. Quem se cadastrou nesse intervalo em outro plano **mantém o R$ 1**, por decisão do Clebson, porque a oferta foi anunciada assim.
