@@ -28,6 +28,24 @@ export function diaDaPromo(): string {
   return `domingo, ${d}/${m}`
 }
 
+/**
+ * Como a promoção é anunciada em cada dia (decisão do Clebson, 27/11): no primeiro dia, "só hoje";
+ * a partir da divulgação (28/11), "prorrogada até domingo". O desconto vale nos três dias.
+ * `ate` e `dia` vão nos textos; `fimAnunciado` é o fim do prazo que o texto do dia promete.
+ */
+export function prazoDaPromo(agora = new Date()): { prorrogada: boolean; ate: string; dia: string; fimAnunciado: string } {
+  if (hojeBrasilia(agora) >= PROMO_ADESAO.divulgacao) {
+    return { prorrogada: true, ate: `até 23h59 de ${diaDaPromo()}`, dia: diaDaPromo(), fimAnunciado: fimDaPromo() }
+  }
+  const [, m, d] = PROMO_ADESAO.inicio.split('-')
+  return {
+    prorrogada: false,
+    ate: `até 23h59 de hoje, ${d}/${m}`,
+    dia: `hoje, ${d}/${m}`,
+    fimAnunciado: new Date(`${PROMO_ADESAO.inicio}T23:59:59.999-03:00`).toISOString(),
+  }
+}
+
 /** Adesão com a promo: R$ 1, ou a própria adesão se ela já for menor que isso. */
 export function adesaoPromo(ativacao: number): number {
   return Math.min(Math.max(0, ativacao), PROMO_ADESAO.valor)

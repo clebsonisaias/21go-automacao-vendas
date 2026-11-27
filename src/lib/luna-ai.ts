@@ -4,7 +4,7 @@
  */
 
 import { conversarOpenRouter, openRouterConfigurado } from './openrouter'
-import { promoAdesaoAtiva } from './promo-adesao'
+import { prazoDaPromo, promoAdesaoAtiva } from './promo-adesao'
 import { mpEnabled } from './mercadopago'
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ''
@@ -91,7 +91,7 @@ export async function chatWithLuna(messages: LunaChatMessage[]): Promise<string>
   // Black 21Go (promoção do dia, só com o Pix do site ligado, as mesmas condições do cadastro).
   const promo =
     promoAdesaoAtiva() && mpEnabled()
-      ? '\n\nA Black 21Go está valendo até domingo (29/11): a adesão (taxa de ativação) de todos os planos, carro e moto, sai por R$ 1,00 para quem fizer o cadastro pelo site ou pelo atendimento até 23h59 de domingo, 29/11 (horário de Brasília). É aplicada sozinha, sem cupom. A mensalidade não muda. Se perguntarem do preço da adesão, diga isso.'
+      ? `\n\nA Black 21Go está valendo: a adesão (taxa de ativação) de todos os planos, carro e moto, sai por R$ 1,00 para quem fizer o cadastro pelo site ou pelo atendimento ${prazoDaPromo().ate} (horário de Brasília). É aplicada sozinha, sem cupom. A mensalidade não muda. Se perguntarem do preço da adesão, diga isso.`
       : ''
   const conversa: LunaChatMessage[] = [{ role: 'system', content: LUNA_SYSTEM_PROMPT + promo }, ...historico]
 

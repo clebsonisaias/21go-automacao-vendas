@@ -25,3 +25,15 @@ test('faixa só é divulgada a partir de 28/11, mas o desconto vale desde 27/11'
   assert.equal(promoDivulgada(new Date('2026-11-28T03:00:00Z')), true)
   assert.equal(promoDivulgada(new Date('2026-11-30T03:00:00Z')), false)
 })
+
+test('em 27/11 o texto diz "só hoje"; de 28/11 a 29/11, "até domingo" (o desconto vale nos três dias)', async () => {
+  const { prazoDaPromo } = await import('../src/lib/promo-adesao.ts')
+  const hoje = prazoDaPromo(new Date('2026-11-27T20:00:00Z'))
+  assert.equal(hoje.prorrogada, false)
+  assert.equal(hoje.ate, 'até 23h59 de hoje, 27/11')
+  assert.equal(hoje.fimAnunciado, '2026-11-28T02:59:59.999Z')
+  const sabado = prazoDaPromo(new Date('2026-11-28T15:00:00Z'))
+  assert.equal(sabado.prorrogada, true)
+  assert.equal(sabado.ate, 'até 23h59 de domingo, 29/11')
+  assert.equal(sabado.fimAnunciado, '2026-11-30T02:59:59.999Z')
+})

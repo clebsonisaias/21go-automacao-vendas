@@ -5,7 +5,7 @@ import { ufDoDdd } from '@/lib/tabela-nordeste'
 import { chaveTelefone } from '@/lib/atendai'
 import { limparOrigem } from '@/lib/origem'
 import { codigoDoLink } from '@/lib/cupom-compartilhar'
-import { adesaoPromo, diaDaPromo, fimDaPromo, promoAdesaoAtiva } from '@/lib/promo-adesao'
+import { adesaoPromo, prazoDaPromo, promoAdesaoAtiva } from '@/lib/promo-adesao'
 import { mpEnabled } from '@/lib/mercadopago'
 import { cotacaoRepetida, excedeuNumero, normalizarCelular, normalizarPlaca, telefoneFinal, validarPedido } from '@/lib/cotacao-whatsapp'
 import { cotacaoEntregue, criarCotacaoWhatsApp, enviarCotacaoPedida, lerCotacoesWhatsApp } from '@/lib/cotacao-whatsapp-envio'
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
       regional: !!cotacao.plan.regional,
       // Black 21Go: o cadastro de hoje paga R$ 1 (cadastro.ts); a mensagem diz o valor e o prazo.
       ...(promoAdesaoAtiva() && mpEnabled()
-        ? { promoAdesao: adesaoPromo(cotacao.plan.ativacao), promoAte: fimDaPromo(), promoDia: diaDaPromo() }
+        ? { promoAdesao: adesaoPromo(cotacao.plan.ativacao), promoAte: prazoDaPromo().fimAnunciado, promoDia: prazoDaPromo().dia }
         : {}),
     },
     cupom: codigoDoLink(b.cupom) || undefined,
