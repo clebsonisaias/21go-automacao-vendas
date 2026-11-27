@@ -1091,3 +1091,13 @@ A promoção desliga sozinha à meia-noite de 28/11. O código pode sair depois,
 - `instagram.ts`: `publicarMidia` faz o envio e `publicarImagem` passou a usar essa função. `publishContent` publica o vídeo quando o post tem `video`.
 - `social-content.ts`: o campo `video` aponta para um arquivo em `public/`, por exemplo `/social/video/x.mp4` (H.264 + AAC, em pé). A Meta baixa o vídeo pelo endereço público.
 - Para postar um vídeo: arquivo em `public/social/video/`, post avulso com `video` e legenda, e uma entrada no `SOCIAL_SCHEDULE`. O agendador publica o Reel e o story.
+
+### [Claude] — 2026-11-27 — Black 21Go: "só hoje" em 27/11 e "prorrogada até domingo" a partir de 28/11
+
+Decisão do Clebson (27/11): "hoje mostra que é só hoje, amanhã diz que prorrogou".
+- **Desconto:** o R$ 1 vale de 27/11 a 29/11 (`promoAdesaoAtiva`, commit `fe46d12`).
+- **Textos:** `prazoDaPromo(agora)` muda conforme o dia.
+  - 27/11: "até 23h59 de hoje, 27/11".
+  - De 28/11 em diante: "até 23h59 de domingo, 29/11" (`prorrogada: true`).
+  - Vale para a faixa (`AvisoBlack`, que aparece nos três dias), o cartão e o resumo da cotação, a Luna, o chat (`mensagemPromo()`) e o WhatsApp da cotação (o `promoAte` é o fim do prazo anunciado no dia).
+- **Aviso registrado:** com a prorrogação já decidida, anunciar "só hoje" pode contar como propaganda enganosa (CDC). O Clebson decidiu manter assim.

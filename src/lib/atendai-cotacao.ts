@@ -3,7 +3,7 @@ import { fetchOfficialPricing, identifyPlate } from './powercrm'
 import { createQuoteToken } from './quote-token'
 import { aplicarPrecoRegional } from './preco-regional'
 import { ESTADOS_DA_TABELA, normalizarUf, ufDoDdd, UFS } from './tabela-nordeste'
-import { adesaoPromo, promoAdesaoAtiva } from './promo-adesao'
+import { adesaoPromo, prazoDaPromo, promoAdesaoAtiva } from './promo-adesao'
 import { mpEnabled } from './mercadopago'
 
 export const PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/
@@ -131,8 +131,8 @@ export async function cotacaoDoChat(dados: {
         ...(p.regional ? { precoNacional: p.precoNacional ?? null, tabelaNordeste: p.regional.tabela } : {}),
       })),
       regiao: r.regiao ? { ...r.regiao, origem: ufInformada ? 'informada' : 'ddd' } : null,
-      mensagemRegiao: `${promo ? `${MENSAGEM_PROMO} ` : ''}${mensagemRegiao(r.regiao, r.plans.find((p) => p.regional), !ufInformada)}`,
-      promocao: promo ? MENSAGEM_PROMO : null,
+      mensagemRegiao: `${promo ? `${mensagemPromo()} ` : ''}${mensagemRegiao(r.regiao, r.plans.find((p) => p.regional), !ufInformada)}`,
+      promocao: promo ? mensagemPromo() : null,
       observacao: r.regras?.exigeVistoriaPresencial ? 'Este veículo exige vistoria presencial.' : null,
     })
   } catch (err) {
@@ -141,8 +141,8 @@ export async function cotacaoDoChat(dados: {
   }
 }
 
-const MENSAGEM_PROMO =
-  'A Black 21Go está valendo até domingo (29/11): a adesão de todos os planos, carro e moto, sai por R$ 1,00 no cadastro feito até 23h59 de domingo, 29/11 (horário de Brasília). É aplicada sozinha, sem cupom. Diga isso ao cliente e mostre a adesão de cada plano por R$ 1,00 (campo ativacao; a de antes está em ativacaoSemPromocao). A mensalidade não muda.'
+const mensagemPromo = () =>
+  `A Black 21Go está valendo: a adesão de todos os planos, carro e moto, sai por R$ 1,00 no cadastro feito ${prazoDaPromo().ate} (horário de Brasília). É aplicada sozinha, sem cupom. Diga isso ao cliente com esse prazo e mostre a adesão de cada plano por R$ 1,00 (campo ativacao; a de antes está em ativacaoSemPromocao). A mensalidade não muda.`
 
 const brl = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 
