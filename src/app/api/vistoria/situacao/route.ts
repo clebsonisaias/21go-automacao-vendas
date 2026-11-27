@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { findLeadByRef } from '@/lib/db'
 import { cupomAindaCabe } from '@/lib/cupons'
+import { PROMO_ADESAO } from '@/lib/promo-adesao'
 import { mpEnabled } from '@/lib/mercadopago'
 import { pagamentoPath } from '@/lib/links'
 import { rateLimit } from '@/lib/rate-limit'
@@ -33,9 +34,13 @@ export async function GET(req: NextRequest) {
       // Cupom de desconto na adesão: pode ser aplicado até o Pix ser gerado.
       ativacao: lead.ativacao,
       ativacaoOriginal: lead.ativacaoOriginal ?? null,
-      cupom: lead.cupom ? lead.cupom.codigo : null,
+      // A Black 21Go (adesão por R$ 1, aplicada sozinha no cadastro) não é cupom: um cupom que
+      // deixe a adesão ainda menor pode ser aplicado por cima (api/vistoria/cupom).
+      cupom: lead.cupom && lead.cupom.codigo !== PROMO_ADESAO.codigo ? lead.cupom.codigo : null,
+      black: lead.cupom?.codigo === PROMO_ADESAO.codigo,
       // Sem o Pix do site os cupons ficam desligados (o checkout do PowerCRM não os conhece).
-      podeAplicarCupom: mpEnabled() && cupomAindaCabe(lead),
+      podeAplicarCupom:
+        mpEnabled() && cupomAindaCabe({ ...lead, cupom: lead.cupom?.codigo === PROMO_ADESAO.codigo ? undefined : lead.cupom }),
     },
     { headers: { 'Cache-Control': 'no-store' } }
   )

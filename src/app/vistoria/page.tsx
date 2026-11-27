@@ -119,6 +119,8 @@ type Situacao = {
   ativacao?: number
   ativacaoOriginal?: number | null
   cupom?: string | null
+  /** Cadastro feito na Black 21Go: adesão por R$ 1, sem cupom. */
+  black?: boolean
   podeAplicarCupom?: boolean
 }
 
@@ -178,6 +180,7 @@ function CupomAdesao({
       if (d?.ok) {
         onAplicado({
           cupom: d.codigo,
+          black: false,
           ativacao: d.ativacaoFinal,
           ativacaoOriginal: d.ativacaoOriginal,
           podeAplicarCupom: false,
@@ -202,7 +205,14 @@ function CupomAdesao({
         <TicketPercent aria-hidden className="mt-1 h-5 w-5 shrink-0 text-go-orange-dark" />
         <div>
           <h2 className="m-0 text-lg font-extrabold leading-snug">Tem cupom de desconto na adesão?</h2>
-          <p className="m-0 mt-0.5 text-sm text-muted">Opcional. Dá para aplicar até o Pix da adesão ser gerado.</p>
+          {situacao.black ? (
+            <p className="m-0 mt-0.5 text-sm text-muted">
+              Black 21Go aplicada: adesão de {brl(situacao.ativacaoOriginal ?? situacao.ativacao ?? 0)} por{' '}
+              {brl(situacao.ativacao ?? 0)}. Se o seu cupom deixar a adesão grátis, aplique aqui até o Pix ser gerado.
+            </p>
+          ) : (
+            <p className="m-0 mt-0.5 text-sm text-muted">Opcional. Dá para aplicar até o Pix da adesão ser gerado.</p>
+          )}
         </div>
       </div>
       <label htmlFor="cupom-adesao" className="text-sm font-semibold text-navy-800">

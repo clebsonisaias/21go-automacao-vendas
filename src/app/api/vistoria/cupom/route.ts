@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { findLeadByRef, updateLead } from '@/lib/db'
-import { calcularDesconto, cupomAindaCabe, descreverDesconto, liberarCupom, normalizarCodigo, reservarCupom } from '@/lib/cupons'
+import { calcularDesconto, conferirCupom, cupomAindaCabe, descreverDesconto, liberarCupom, normalizarCodigo, reservarCupom } from '@/lib/cupons'
+import { PROMO_ADESAO } from '@/lib/promo-adesao'
 import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
+
+/** Ainda aceita cupom? A Black 21Go (aplicada sozinha no cadastro) não conta como cupom aqui. */
+const cabeCupom = (l: Parameters<typeof cupomAindaCabe>[0] & { cupom?: { codigo?: string } }) =>
+  cupomAindaCabe({ ...l, cupom: l.cupom?.codigo === PROMO_ADESAO.codigo ? undefined : l.cupom })
 
 /**
  * POST { ref, codigo } → aplica o cupom de desconto na adesão de um cadastro que ainda
@@ -30,10 +35,24 @@ export async function POST(req: NextRequest) {
   if (lead.status === 'cancelado') {
     return NextResponse.json({ ok: false, erro: 'Este cadastro foi encerrado.' }, { status: 410 })
   }
-  if (lead.cupom) {
+  // Cadastro feito na Black 21Go (adesão por R$ 1, sem cupom): um cupom que deixa a adesão ainda
+  // menor (o de parceiro que dá adesão grátis) troca a Black; o desconto é sobre a adesão cheia.
+  const naBlack = lead.cupom?.codigo === PROMO_ADESAO.codigo
+  if (lead.cupom && !naBlack) {
     return NextResponse.json({ ok: false, erro: `Este cadastro já tem o cupom ${lead.cupom.codigo}.` }, { status: 409 })
   }
-  if (!cupomAindaCabe(lead)) {
+  const base = naBlack ? (lead.ativacaoOriginal ?? lead.ativacao) : lead.ativacao
+  if (naBlack) {
+    const c = conferirCupom(codigo)
+    if (!c.ok) return NextResponse.json({ ok: false, erro: c.motivo }, { status: 200 })
+    if (calcularDesconto(base, c.cupom).ativacaoFinal >= lead.ativacao) {
+      return NextResponse.json(
+        { ok: false, erro: `Na Black 21Go a sua adesão já está em R$ 1,00, menor que com o cupom ${c.cupom.codigo}.` },
+        { status: 200 }
+      )
+    }
+  }
+  if (!cabeCupom(lead)) {
     return NextResponse.json(
       { ok: false, erro: 'O cupom só pode ser aplicado antes da aprovação da vistoria.' },
       { status: 409 }
@@ -43,13 +62,14 @@ export async function POST(req: NextRequest) {
   const r = reservarCupom(codigo, lead.ref)
   if (!r.ok) return NextResponse.json({ ok: false, erro: r.motivo }, { status: 200 })
 
-  const { valorDesconto, ativacaoFinal } = calcularDesconto(lead.ativacao, r.cupom)
-  const original = lead.ativacao
+  const { valorDesconto, ativacaoFinal } = calcularDesconto(base, r.cupom)
+  const original = base
   let aplicado = false
   const atualizado = updateLead(lead.ref, (l) => {
     // Confere de novo dentro da gravação: dois cliques seguidos não aplicam duas vezes.
-    if (!cupomAindaCabe(l)) return
-    l.ativacaoOriginal = l.ativacao
+    if (!cabeCupom(l)) return
+    if (l.cupom && l.cupom.codigo !== PROMO_ADESAO.codigo) return
+    l.ativacaoOriginal = base
     l.ativacao = ativacaoFinal
     l.cupom = {
       codigo: r.cupom.codigo,
