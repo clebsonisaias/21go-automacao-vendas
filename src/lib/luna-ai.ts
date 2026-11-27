@@ -91,7 +91,7 @@ export async function chatWithLuna(messages: LunaChatMessage[]): Promise<string>
   // Black 21Go (promoção do dia, só com o Pix do site ligado, as mesmas condições do cadastro).
   const promo =
     promoAdesaoAtiva() && mpEnabled()
-      ? '\n\nHoje é a Black 21Go: a adesão (taxa de ativação) de todos os planos, carro e moto, sai por R$ 1,00 para quem fizer o cadastro pelo site ou pelo atendimento até 23h59 de hoje, 27/11 (horário de Brasília). É aplicada sozinha, sem cupom. A mensalidade não muda. Se perguntarem do preço da adesão, diga isso.'
+      ? '\n\nA Black 21Go está valendo até domingo (29/11): a adesão (taxa de ativação) de todos os planos, carro e moto, sai por R$ 1,00 para quem fizer o cadastro pelo site ou pelo atendimento até 23h59 de domingo, 29/11 (horário de Brasília). É aplicada sozinha, sem cupom. A mensalidade não muda. Se perguntarem do preço da adesão, diga isso.'
       : ''
   const conversa: LunaChatMessage[] = [{ role: 'system', content: LUNA_SYSTEM_PROMPT + promo }, ...historico]
 

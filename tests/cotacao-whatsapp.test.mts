@@ -123,11 +123,11 @@ test('mensagens: valores do servidor, sem "seguro", promoção só para carro re
   assert.deepEqual(paramsDoTemplate(c, url), ['Fiat Argo 1.0 2020', 'VIP', '167,68', '276,50', url])
   assert.equal(reais(1234.5), '1.234,50')
   // Black 21Go: a adesão da promoção, com o prazo e o valor de fora dela; os lembretes não falam de adesão.
-  const black = cot({ plano: { ...c.plano, promoAdesao: 1, promoAte: '2026-11-28T02:59:59.999Z', promoDia: '27/11' } })
+  const black = cot({ plano: { ...c.plano, promoAdesao: 1, promoAte: '2026-11-30T02:59:59.999Z', promoDia: 'domingo, 29/11' } })
   const naBlack = new Date('2026-11-27T20:00:00Z')
-  const depois = new Date('2026-11-28T12:00:00Z')
-  assert.match(textoDaMensagem(black, url, 'cotacao', naBlack), /Adesão \(Pix único\): R\$ 1,00 na Black 21Go, para cadastro feito até 23h59 de hoje, 27\/11 \(sem a promoção, R\$ 276,50\)/)
-  assert.equal(paramsDoTemplate(black, url, naBlack)[3], '1,00 na Black 21Go, para cadastro feito até 23h59 de hoje, 27/11 (sem a promoção, R$ 276,50)')
+  const depois = new Date('2026-11-30T12:00:00Z')
+  assert.match(textoDaMensagem(black, url, 'cotacao', naBlack), /Adesão \(Pix único\): R\$ 1,00 na Black 21Go, para cadastro feito até 23h59 de domingo, 29\/11 \(sem a promoção, R\$ 276,50\)/)
+  assert.equal(paramsDoTemplate(black, url, naBlack)[3], '1,00 na Black 21Go, para cadastro feito até 23h59 de domingo, 29/11 (sem a promoção, R$ 276,50)')
   // Depois do fim (lembrete pelo template de reserva, reenvio): volta à adesão cheia.
   assert.equal(paramsDoTemplate(black, url, depois)[3], '276,50')
   assert.doesNotMatch(textoDaMensagem(black, url, 'cotacao', depois), /Black/)

@@ -142,7 +142,7 @@ export async function cotacaoDoChat(dados: {
 }
 
 const MENSAGEM_PROMO =
-  'Hoje é a Black 21Go: a adesão de todos os planos, carro e moto, sai por R$ 1,00 no cadastro feito até 23h59 de hoje, 27/11 (horário de Brasília). É aplicada sozinha, sem cupom. Diga isso ao cliente e mostre a adesão de cada plano por R$ 1,00 (campo ativacao; a de antes está em ativacaoSemPromocao). A mensalidade não muda.'
+  'A Black 21Go está valendo até domingo (29/11): a adesão de todos os planos, carro e moto, sai por R$ 1,00 no cadastro feito até 23h59 de domingo, 29/11 (horário de Brasília). É aplicada sozinha, sem cupom. Diga isso ao cliente e mostre a adesão de cada plano por R$ 1,00 (campo ativacao; a de antes está em ativacaoSemPromocao). A mensalidade não muda.'
 
 const brl = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 

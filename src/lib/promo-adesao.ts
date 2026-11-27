@@ -1,24 +1,31 @@
 /**
  * Promoção automática de adesão por R$ 1 por data (sem cupom): vale para o cadastro feito
- * no dia (horário de Brasília), até 23:59:59. Passou o dia, a adesão volta ao normal sozinha.
+ * de 27/11 a 29/11/2026 (horário de Brasília), até 23:59:59 do último dia. Depois disso a adesão volta ao normal sozinha.
  */
-export const PROMO_ADESAO = { codigo: 'BLACK21GO', dia: '2026-11-27', valor: 1 } as const
+export const PROMO_ADESAO = { codigo: 'BLACK21GO', inicio: '2026-11-27', divulgacao: '2026-11-28', fim: '2026-11-29', valor: 1 } as const
 
 const hojeBrasilia = (agora: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(agora)
 
+/** A promo vale desde 27/11, mas só é divulgada (faixa no site) a partir de 28/11, como prorrogação. */
+export function promoDivulgada(agora = new Date()): boolean {
+  const hoje = hojeBrasilia(agora)
+  return hoje >= PROMO_ADESAO.divulgacao && hoje <= PROMO_ADESAO.fim
+}
+
 export function promoAdesaoAtiva(agora = new Date()): boolean {
-  return hojeBrasilia(agora) === PROMO_ADESAO.dia
+  const hoje = hojeBrasilia(agora) // AAAA-MM-DD: comparação de texto é cronológica
+  return hoje >= PROMO_ADESAO.inicio && hoje <= PROMO_ADESAO.fim
 }
 
-/** Fim da promoção (23:59:59 de Brasília do dia), em ISO: guardado em quem cotou durante ela. */
+/** Fim da promoção (23:59:59 de Brasília do último dia), em ISO: guardado em quem cotou durante ela. */
 export function fimDaPromo(): string {
-  return new Date(`${PROMO_ADESAO.dia}T23:59:59.999-03:00`).toISOString()
+  return new Date(`${PROMO_ADESAO.fim}T23:59:59.999-03:00`).toISOString()
 }
 
-/** Dia da promoção como vai nos textos: 27/11. */
+/** Último dia da promoção como vai nos textos: domingo, 29/11. */
 export function diaDaPromo(): string {
-  const [, m, d] = PROMO_ADESAO.dia.split('-')
-  return `${d}/${m}`
+  const [, m, d] = PROMO_ADESAO.fim.split('-')
+  return `domingo, ${d}/${m}`
 }
 
 /** Adesão com a promo: R$ 1, ou a própria adesão se ela já for menor que isso. */

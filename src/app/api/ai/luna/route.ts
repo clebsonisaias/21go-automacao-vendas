@@ -25,7 +25,7 @@ function botFallbackReply(lastText: string): string {
   if (/(pix|adesao|pagar|pagamento|taxa|boleto|cupom)/.test(t)) {
     const black =
       promoAdesaoAtiva() && mpEnabled()
-        ? ' Hoje, na Black 21Go, a adesão sai por R$ 1,00 para quem fizer o cadastro até 23h59 de hoje, 27/11.'
+        ? ' Na Black 21Go, a adesão sai por R$ 1,00 para quem fizer o cadastro até 23h59 de domingo, 29/11.'
         : ''
     return `A taxa de adesão só é paga no final, depois que a vistoria pelo celular for aprovada. Assim que aprovar, enviamos o Pix da adesão no seu WhatsApp e por aqui no site.${black}`
   }

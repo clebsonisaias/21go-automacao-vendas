@@ -1077,7 +1077,7 @@ export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
                           <strong className={pop ? 'text-go-orange' : 'text-go-orange-dark'}>
                             {brl(ativacaoComPromo(plan.ativacao))} na Black 21Go
                           </strong>{' '}
-                          (cadastro até 23h59 de hoje)
+                          (cadastro até 23h59 de domingo)
                         </span>
                       ) : (
                         <span className={`text-sm ${muted}`}>
@@ -1332,7 +1332,7 @@ export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
                         <>
                           <s className="mr-2 text-muted-soft">{brl(cheia)}</s>
                           <strong>{final <= 0 ? 'Grátis' : brl(final)}</strong>
-                          {daBlack && <span className="block text-sm text-go-orange">Black 21Go, cadastro até 23h59 de hoje</span>}
+                          {daBlack && <span className="block text-sm text-go-orange">Black 21Go, cadastro até 23h59 de domingo</span>}
                         </>
                       )
                     })()}

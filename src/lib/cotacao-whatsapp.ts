@@ -73,7 +73,7 @@ export interface CotacaoWhatsApp {
     emDia?: boolean
     /** Adesão na promoção do dia (Black 21Go), quando a cotação foi pedida durante ela. */
     promoAdesao?: number
-    /** Fim da promoção (ISO) e o dia, como vai no texto (27/11): depois do fim, a mensagem volta à adesão cheia. */
+    /** Fim da promoção (ISO) e o último dia, como vai no texto (domingo, 29/11): depois do fim, a mensagem volta à adesão cheia. */
     promoAte?: string
     promoDia?: string
   }
@@ -158,7 +158,7 @@ export function paramsDoTemplate(c: Pick<CotacaoWhatsApp, 'veiculo' | 'plano'>, 
 function adesaoDoTexto(plano: CotacaoWhatsApp['plano'], agora: Date): string {
   const fim = plano.promoAte ? Date.parse(plano.promoAte) : NaN
   if (plano.promoAdesao == null || !(agora.getTime() <= fim)) return reais(plano.ativacao)
-  const dia = plano.promoDia ? ` de hoje, ${plano.promoDia}` : ' de hoje'
+  const dia = plano.promoDia ? ` de ${plano.promoDia}` : ' de domingo'
   return `${reais(plano.promoAdesao)} na Black 21Go, para cadastro feito até 23h59${dia} (sem a promoção, R$ ${reais(plano.ativacao)})`
 }
 
