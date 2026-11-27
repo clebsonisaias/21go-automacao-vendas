@@ -3,6 +3,8 @@ import { fetchOfficialPricing, identifyPlate } from './powercrm'
 import { createQuoteToken } from './quote-token'
 import { aplicarPrecoRegional } from './preco-regional'
 import { ESTADOS_DA_TABELA, normalizarUf, ufDoDdd, UFS } from './tabela-nordeste'
+import { adesaoPromo, promoAdesaoAtiva } from './promo-adesao'
+import { mpEnabled } from './mercadopago'
 
 export const PLACA = /^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$/
 
@@ -93,6 +95,9 @@ export async function cotacaoDoChat(dados: {
       marca: achado.brandText || r.vehicle.marca,
     })
 
+    // Black 21Go (promoção do dia): a adesão sai por R$ 1 no cadastro de hoje, aplicada sozinha
+    // em aplicarCupom (cadastro.ts), só com o Pix do site ligado.
+    const promo = promoAdesaoAtiva() && mpEnabled()
     const token = createQuoteToken(r.vehicle, r.plans, r.powercrmMeta, r.regiao?.uf)
     if (!token) return json({ erro: 'Não foi possível concluir a cotação agora.' }, 502)
     const { id, expiraEm } = guardarCotacao({
@@ -119,13 +124,15 @@ export async function cotacaoDoChat(dados: {
         mensalidadePontualidade: p.mensalidadeComPontualidade,
         // Mesma regra do site: o adesivo só vale para o veículo elegível.
         mensalidadeAdesivo: r.regras?.elegivelAdesivo ? p.mensalidadeComAdesivo : null,
-        ativacao: p.ativacao,
+        ativacao: promo ? adesaoPromo(p.ativacao) : p.ativacao,
+        ...(promo ? { ativacaoSemPromocao: p.ativacao } : {}),
         coberturas: p.coberturas,
         popular: Boolean(p.popular),
         ...(p.regional ? { precoNacional: p.precoNacional ?? null, tabelaNordeste: p.regional.tabela } : {}),
       })),
       regiao: r.regiao ? { ...r.regiao, origem: ufInformada ? 'informada' : 'ddd' } : null,
-      mensagemRegiao: mensagemRegiao(r.regiao, r.plans.find((p) => p.regional), !ufInformada),
+      mensagemRegiao: `${promo ? `${MENSAGEM_PROMO} ` : ''}${mensagemRegiao(r.regiao, r.plans.find((p) => p.regional), !ufInformada)}`,
+      promocao: promo ? MENSAGEM_PROMO : null,
       observacao: r.regras?.exigeVistoriaPresencial ? 'Este veículo exige vistoria presencial.' : null,
     })
   } catch (err) {
@@ -133,6 +140,9 @@ export async function cotacaoDoChat(dados: {
     return json({ erro: 'Não foi possível calcular a cotação agora. Tente de novo em instantes.' }, 502)
   }
 }
+
+const MENSAGEM_PROMO =
+  'Hoje é a Black 21Go: a adesão de todos os planos, carro e moto, sai por R$ 1,00 no cadastro feito até 23h59 de hoje, 27/11 (horário de Brasília). É aplicada sozinha, sem cupom. Diga isso ao cliente e mostre a adesão de cada plano por R$ 1,00 (campo ativacao; a de antes está em ativacaoSemPromocao). A mensalidade não muda.'
 
 const brl = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
 

@@ -37,6 +37,7 @@ import {
   Stats,
 } from '@/components/home/HomeSections'
 import { AvisoBlack } from '@/components/home/AvisoBlack'
+import { adesaoPromo, promoAdesaoAtiva } from '@/lib/promo-adesao'
 import { Economizometro } from '@/components/home/Economizometro'
 import { ReceberCotacaoWhatsApp } from '@/components/home/ReceberCotacaoWhatsApp'
 import type { PedidoCotacao } from '@/lib/cotacao-whatsapp'
@@ -161,6 +162,18 @@ export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
   const ufAtual = useRef('')
   const cupomVeioDoLink = useRef(false)
   const cupomConferidoNoPlano = useRef('')
+  const [cupomAviso, setCupomAviso] = useState('')
+
+  // Black 21Go (promoção do dia): com o Pix do site ligado, o cadastro de hoje paga R$ 1 de adesão
+  // (cadastro.ts). Aqui só mostra o valor; quem aplica é o servidor. Confere a hora a cada 30 s.
+  const [promoHoje, setPromoHoje] = useState(false)
+  useEffect(() => {
+    const atualizar = () => setPromoHoje(pixLigado && promoAdesaoAtiva())
+    atualizar()
+    const t = setInterval(atualizar, 30_000)
+    return () => clearInterval(t)
+  }, [pixLigado])
+  const ativacaoComPromo = (v: number) => (promoHoje ? adesaoPromo(v) : v)
   useEffect(() => {
     guardarOrigem()
     const codigo = cupomDoLink()
@@ -483,16 +496,24 @@ export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
     if (!cupomVeioDoLink.current || !selectedPlan || !quoteResult || cupomInfo || cupomConferindo) return
     if (!cupomCodigo.trim() || cupomConferidoNoPlano.current === selectedPlan.id) return
     cupomConferidoNoPlano.current = selectedPlan.id
-    conferirCupom()
+    const codigo = cupomCodigo.trim()
+    conferirCupom().then((r) => {
+      if (r !== 'recusado' || !cupomVeioDoLink.current) return
+      esquecerCupomDoLink()
+      cupomVeioDoLink.current = false
+      setCupomCodigo('')
+      setCupomErro('')
+      setCupomAviso(`O cupom ${codigo}, guardado neste aparelho, não vale mais e foi retirado.`)
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPlan?.id, quoteResult, cupomInfo])
 
-  /** Confere o cupom digitado; devolve se ele vale (o desconto aparece no resumo). */
-  const conferirCupom = async (): Promise<boolean> => {
+  /** Confere o cupom digitado: 'ok' (o desconto aparece no resumo), 'recusado' pelo servidor ou 'falha'. */
+  const conferirCupom = async (): Promise<'ok' | 'recusado' | 'falha'> => {
     const codigo = cupomCodigo.trim()
     if (!codigo || !selectedPlan || !quoteResult) {
       setCupomErro('Digite o código do cupom.')
-      return false
+      return 'falha'
     }
     setCupomConferindo(true)
     setCupomErro('')
@@ -505,14 +526,14 @@ export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
       const d = await res.json().catch(() => ({}))
       if (d?.ok) {
         setCupomInfo({ codigo: d.codigo, ativacaoOriginal: d.ativacaoOriginal, ativacaoFinal: d.ativacaoFinal })
-        return true
+        return 'ok'
       }
       setCupomInfo(null)
       setCupomErro(d?.erro || 'Não foi possível conferir o cupom agora. Tente de novo.')
-      return false
+      return res.ok && d && d.ok === false ? 'recusado' : 'falha'
     } catch {
       setCupomErro('Sem conexão com o servidor. Tente de novo.')
-      return false
+      return 'falha'
     } finally {
       setCupomConferindo(false)
     }
@@ -532,7 +553,7 @@ export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
     // Cupom digitado e ainda não conferido: confere antes, para um código errado não
     // gastar tentativa de cadastro nem enviar o cadastro sem o desconto que o cliente espera.
     if (cupomCodigo.trim() && !cupomInfo) {
-      const vale = await conferirCupom()
+      const vale = (await conferirCupom()) === 'ok'
       if (!vale) {
         document.getElementById('lead-cupom')?.focus()
         return
@@ -1050,9 +1071,19 @@ export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
                           </span>
                         </>
                       )}
-                      <span className={`text-sm ${muted}`}>
-                        Ativação no Pix: <strong>{brl(plan.ativacao)}</strong>
-                      </span>
+                      {promoHoje ? (
+                        <span className={`text-sm ${muted}`}>
+                          Ativação no Pix: <s>{brl(plan.ativacao)}</s>{' '}
+                          <strong className={pop ? 'text-go-orange' : 'text-go-orange-dark'}>
+                            {brl(ativacaoComPromo(plan.ativacao))} na Black 21Go
+                          </strong>{' '}
+                          (cadastro até 23h59 de hoje)
+                        </span>
+                      ) : (
+                        <span className={`text-sm ${muted}`}>
+                          Ativação no Pix: <strong>{brl(plan.ativacao)}</strong>
+                        </span>
+                      )}
                     </div>
                     <ul
                       className={`m-0 flex flex-1 list-none flex-col gap-2.5 border-t p-0 pt-4 text-[15px] leading-snug ${
@@ -1105,7 +1136,7 @@ export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
             <Economizometro
               fipeValue={quoteResult.vehicle.fipeValue}
               mensalidade21Go={priceFor(quoteResult.plans.find((p) => p.popular) || quoteResult.plans[0])}
-              ativacao21Go={(quoteResult.plans.find((p) => p.popular) || quoteResult.plans[0])?.ativacao || 399.99}
+              ativacao21Go={ativacaoComPromo((quoteResult.plans.find((p) => p.popular) || quoteResult.plans[0])?.ativacao || 399.99)}
               veiculoNome={`${quoteResult.vehicle.marca} ${quoteResult.vehicle.modelo}`}
             />
 
@@ -1292,14 +1323,19 @@ export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
                   </dd>
                   <dt className="text-muted-soft">Ativação (uma vez, no Pix)</dt>
                   <dd className="m-0 text-right">
-                    {cupomInfo ? (
-                      <>
-                        <s className="mr-2 text-muted-soft">{brl(cupomInfo.ativacaoOriginal)}</s>
-                        <strong>{cupomInfo.ativacaoFinal <= 0 ? 'Grátis' : brl(cupomInfo.ativacaoFinal)}</strong>
-                      </>
-                    ) : (
-                      brl(selectedPlan.ativacao)
-                    )}
+                    {(() => {
+                      const cheia = cupomInfo?.ativacaoOriginal ?? selectedPlan.ativacao
+                      const final = Math.min(cupomInfo ? cupomInfo.ativacaoFinal : cheia, ativacaoComPromo(cheia))
+                      if (final >= cheia) return brl(cheia)
+                      const daBlack = !cupomInfo || cupomInfo.ativacaoFinal > final
+                      return (
+                        <>
+                          <s className="mr-2 text-muted-soft">{brl(cheia)}</s>
+                          <strong>{final <= 0 ? 'Grátis' : brl(final)}</strong>
+                          {daBlack && <span className="block text-sm text-go-orange">Black 21Go, cadastro até 23h59 de hoje</span>}
+                        </>
+                      )
+                    })()}
                   </dd>
                 </dl>
 
@@ -1349,9 +1385,16 @@ export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
                         autoCapitalize="characters"
                         value={cupomCodigo}
                         onChange={(e) => {
-                          setCupomCodigo(e.target.value.toUpperCase())
+                          const v = e.target.value.toUpperCase()
+                          setCupomCodigo(v)
                           setCupomInfo(null)
                           setCupomErro('')
+                          setCupomAviso('')
+                          // Apagou o código: o cupom guardado do link sai do aparelho também.
+                          if (!v.trim() && cupomVeioDoLink.current) {
+                            esquecerCupomDoLink()
+                            cupomVeioDoLink.current = false
+                          }
                         }}
                         onKeyDown={(e) => {
                           // Enter no cupom confere o cupom em vez de enviar o cadastro.
@@ -1374,12 +1417,23 @@ export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
                         {cupomConferindo ? 'Conferindo…' : 'Aplicar'}
                       </button>
                     </div>
-                    {cupomInfo && (
-                      <p id="lead-cupom-ok" role="status" className="m-0 text-sm font-semibold text-emerald-700">
-                        Cupom {cupomInfo.codigo} aplicado:{' '}
-                        {cupomInfo.ativacaoFinal <= 0
-                          ? 'adesão grátis.'
-                          : `adesão de ${brl(cupomInfo.ativacaoOriginal)} por ${brl(cupomInfo.ativacaoFinal)}.`}
+                    {cupomInfo &&
+                      (promoHoje && cupomInfo.ativacaoFinal >= ativacaoComPromo(cupomInfo.ativacaoOriginal) ? (
+                        <p id="lead-cupom-ok" role="status" className="m-0 text-sm font-semibold text-emerald-700">
+                          Hoje a Black 21Go já deixa a adesão em {brl(ativacaoComPromo(cupomInfo.ativacaoOriginal))}. O cupom{' '}
+                          {cupomInfo.codigo} não baixa mais que isso, então vale a da Black.
+                        </p>
+                      ) : (
+                        <p id="lead-cupom-ok" role="status" className="m-0 text-sm font-semibold text-emerald-700">
+                          Cupom {cupomInfo.codigo} aplicado:{' '}
+                          {cupomInfo.ativacaoFinal <= 0
+                            ? 'adesão grátis.'
+                            : `adesão de ${brl(cupomInfo.ativacaoOriginal)} por ${brl(cupomInfo.ativacaoFinal)}.`}
+                        </p>
+                      ))}
+                    {cupomAviso && !cupomInfo && !cupomErro && (
+                      <p role="status" className="m-0 text-sm text-muted">
+                        {cupomAviso}
                       </p>
                     )}
                     {cupomErro && (

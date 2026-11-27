@@ -120,9 +120,17 @@ export function aplicarCupom(
   codigoBruto: unknown,
   origem: 'cadastro' | 'chat'
 ): string | null {
+  const codigo = normalizarCodigo(codigoBruto)
   // Promoção do dia: adesão por R$ 1 automática (sem cupom e sem consumir uso de cupom).
   // Sem o Pix do site, a cobrança é a do PowerCRM, que não conhece o desconto: não aplica.
-  if (promoAdesaoAtiva() && mpEnabled()) {
+  // Cupom que deixa a adesão ainda menor (o de parceiro que dá adesão grátis) continua valendo;
+  // cupom pior ou vencido não trava o cadastro: vale a promoção.
+  const cupomMelhor = (() => {
+    if (!codigo) return false
+    const r = conferirCupom(codigo)
+    return r.ok && calcularDesconto(payload.ativacao, r.cupom).ativacaoFinal < adesaoPromo(payload.ativacao)
+  })
+  if (promoAdesaoAtiva() && mpEnabled() && !cupomMelhor()) {
     const original = payload.ativacao
     const final = adesaoPromo(original)
     payload.ativacaoOriginal = original
@@ -137,7 +145,6 @@ export function aplicarCupom(
     }
     return null
   }
-  const codigo = normalizarCodigo(codigoBruto)
   if (!codigo) return null
   const r = conferirCupom(codigo)
   if (!r.ok) return r.motivo
