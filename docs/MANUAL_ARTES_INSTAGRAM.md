@@ -101,6 +101,7 @@ Toda arte sai em **duas versões no mesmo dia (Feed + Story)** com o mesmo conte
 
 - **Sempre:** chamada para `21go.seg.br` em toda arte; reforçar cotação pela placa e tudo pelo celular; ao listar coberturas, incluir *"As coberturas variam conforme o plano"*; linguagem simples na segunda pessoa (*"seu veículo"*).
 - **Nunca:** preço, *"a partir de"*, porcentagem de desconto/economia; marca, modelo ou ano de veículo; chamar de *"seguro"* ou citar SUSEP; estatística sem fonte; endereço da loja como chamada principal; promessa fora do regulamento.
+  - **Exceção (decisão do Clebson, 27/11/2026):** os posts da Black Friday 21Go de 27 a 29/11 (`27-11-black-*`, `28-11-black-prorrogada`, `29-11-black-ultimo-dia`) mostram a adesão por R$ 1. Vale só para eles; a regra de preço continua para todo o resto.
 
 ### Temas que funcionam
 

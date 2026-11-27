@@ -1101,3 +1101,17 @@ Decisão do Clebson (27/11): "hoje mostra que é só hoje, amanhã diz que prorr
   - De 28/11 em diante: "até 23h59 de domingo, 29/11" (`prorrogada: true`).
   - Vale para a faixa (`AvisoBlack`, que aparece nos três dias), o cartão e o resumo da cotação, a Luna, o chat (`mensagemPromo()`) e o WhatsApp da cotação (o `promoAte` é o fim do prazo anunciado no dia).
 - **Aviso registrado:** com a prorrogação já decidida, anunciar "só hoje" pode contar como propaganda enganosa (CDC). O Clebson decidiu manter assim.
+
+### [Claude] — 2026-11-27 — Posts da Black Friday no Instagram (artes do Clebson)
+
+O Clebson fez as artes noutro chat e mandou o zip `21go-black-friday.zip`. Elas viraram JPEG em `public/social/<feed|story>/<id>.jpg`, e a rota da arte serve a arte pronta. O agendador publica cada post no feed e no story:
+- `27-11-black-oferta`: hoje, 13h50;
+- `27-11-black-ultimas-horas`: hoje, 20h;
+- `28-11-black-prorrogada`: sábado, 9h;
+- `29-11-black-ultimo-dia`: domingo, 9h.
+
+O post das 18h (`27-11-capa-reels-30s`) continua.
+
+A arte "Como garantir a adesão por R$ 1" **não entrou**: ela diz que o VIP é "o plano mais completo da 21Go", e o mais completo é o Premium. Volta depois de corrigida.
+
+O preço na arte e na legenda é uma exceção só destes posts, anotada no manual (seção 06).
