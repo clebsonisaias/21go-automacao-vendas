@@ -1080,3 +1080,14 @@ Publicado às 11h40 e completado neste PR:
 - **Cupom guardado no aparelho:** apagar o campo também esquece o cupom. Se o servidor recusar o cupom guardado (vencido), ele sai do aparelho com um aviso.
 
 A promoção desliga sozinha à meia-noite de 28/11. O código pode sair depois, num PR de limpeza.
+
+### [Claude] — 2026-11-27 — Instagram publica vídeo (Reel e story)
+
+- `src/lib/instagram-midia.ts` (puro, testado): `paramsDaMidia`.
+  - **Vídeo no feed** vira Reel: `REELS` + `video_url` + `caption` + `share_to_feed`.
+  - **Vídeo no story:** `STORIES` + `video_url`.
+  - **Imagem:** igual a antes.
+- `esperaDoProcessamento`: o vídeo espera até 36 × 10 s pelo `FINISHED`.
+- `instagram.ts`: `publicarMidia` faz o envio e `publicarImagem` passou a usar essa função. `publishContent` publica o vídeo quando o post tem `video`.
+- `social-content.ts`: o campo `video` aponta para um arquivo em `public/`, por exemplo `/social/video/x.mp4` (H.264 + AAC, em pé). A Meta baixa o vídeo pelo endereço público.
+- Para postar um vídeo: arquivo em `public/social/video/`, post avulso com `video` e legenda, e uma entrada no `SOCIAL_SCHEDULE`. O agendador publica o Reel e o story.

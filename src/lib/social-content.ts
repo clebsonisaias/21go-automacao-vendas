@@ -34,6 +34,11 @@ export interface SocialContent {
   observacao?: string
   /** Texto do botão, com verbo. Padrão: "Cote pela placa". */
   botao?: string
+  /**
+   * Vídeo próprio em public/ (ex.: '/social/video/x.mp4'): sai como Reel no feed e no story, no lugar
+   * da arte (src/lib/instagram.ts). H.264 + AAC, em pé (9:16).
+   */
+  video?: string
 }
 
 // Sem tempo em minutos: o manual não aceita estatística sem fonte.

@@ -4,6 +4,7 @@ import { DATA_DIR } from './db'
 import { APP_BASE_URL } from './links'
 import { SOCIAL_CONTENT, SOCIAL_SCHEDULE, SocialContent, contentById } from './social-content'
 import { esc, sendTelegramNotification } from './telegram'
+import { esperaDoProcessamento, paramsDaMidia, type Midia } from './instagram-midia'
 
 // Publicação automática no Instagram pela API oficial da Meta (mesmo desenho do portal Macaíba Gospel):
 //   POST {user}/media (image_url + caption) → aguarda status FINISHED → POST {user}/media_publish.
@@ -128,6 +129,16 @@ let publishing = false
 export async function publishContent(contentId: string, kind: 'feed' | 'story' = 'feed'): Promise<SocialPost> {
   const content = contentById(contentId)
   if (!content) throw new Error('Conteúdo não encontrado.')
+  // Post com vídeo (ex.: Reel de campanha): Reel no feed e o mesmo vídeo no story.
+  if (content.video) {
+    return publicarMidia({
+      contentId,
+      titulo: content.title,
+      midia: { tipo: 'video', url: `${APP_BASE_URL}${content.video}` },
+      caption: content.caption,
+      kind,
+    })
+  }
   return publicarImagem({ contentId, titulo: content.title, imageUrl: artUrl(contentId, kind), caption: content.caption, kind })
 }
 
@@ -142,7 +153,19 @@ export async function publicarImagem(p: {
   caption: string
   kind: 'feed' | 'story'
 }): Promise<SocialPost> {
+  return publicarMidia({ ...p, midia: { tipo: 'imagem', url: p.imageUrl } })
+}
+
+/** Publica imagem ou vídeo (URL pública que a Meta baixa) no feed (vídeo vira Reel) ou no story. */
+async function publicarMidia(p: {
+  contentId: string
+  titulo: string
+  midia: Midia
+  caption: string
+  kind: 'feed' | 'story'
+}): Promise<SocialPost> {
   const { contentId, kind } = p
+  const nome = p.midia.tipo === 'video' ? 'o vídeo' : 'a imagem'
   if (!igConfigured()) throw new Error('Instagram não configurado: defina IG_USER_ID e IG_ACCESS_TOKEN no Coolify.')
   if (publishing) throw new Error('Já existe uma publicação em andamento.')
   publishing = true
@@ -150,27 +173,24 @@ export async function publicarImagem(p: {
   const user = process.env.IG_USER_ID as string
   const record: SocialPost = { date: localNow().date, contentId, titulo: p.titulo, kind, status: 'erro', at: new Date().toISOString() }
   try {
-    const created = await ig(
-      'POST',
-      `${user}/media`,
-      kind === 'story' ? { image_url: p.imageUrl, media_type: 'STORIES' } : { image_url: p.imageUrl, caption: p.caption }
-    )
+    const created = await ig('POST', `${user}/media`, paramsDaMidia(p.midia, kind, p.caption))
     if (!created.ok || !created.data.id) {
-      throw Object.assign(new Error(created.data?.error?.message || 'A Meta recusou a imagem.'), {
+      throw Object.assign(new Error(created.data?.error?.message || `A Meta recusou ${nome}.`), {
         code: created.data?.error?.code,
       })
     }
 
-    // A Meta baixa e processa a imagem; só publica quando o status vira FINISHED.
+    // A Meta baixa e processa a mídia; só publica quando o status vira FINISHED (vídeo demora mais).
+    const { tentativas, intervaloMs } = esperaDoProcessamento(p.midia)
     let ready = false
-    for (let i = 0; i < 12 && !ready; i++) {
+    for (let i = 0; i < tentativas && !ready; i++) {
       const st = await ig('GET', created.data.id, { fields: 'status_code' })
       const code = String(st.data.status_code || '')
       if (code === 'FINISHED') ready = true
-      else if (code === 'ERROR' || code === 'EXPIRED') throw new Error(`A Meta não conseguiu processar a imagem (${code}).`)
-      else await sleep(5000)
+      else if (code === 'ERROR' || code === 'EXPIRED') throw new Error(`A Meta não conseguiu processar ${nome} (${code}).`)
+      else await sleep(intervaloMs)
     }
-    if (!ready) throw new Error('A Meta demorou demais para processar a imagem.')
+    if (!ready) throw new Error(`A Meta demorou demais para processar ${nome}.`)
 
     const pub = await ig('POST', `${user}/media_publish`, { creation_id: created.data.id })
     if (!pub.ok || !pub.data.id) {
