@@ -64,7 +64,19 @@ export interface CotacaoWhatsApp {
   pedido: PedidoCotacao
   veiculo: { marca: string; modelo: string; ano: string; fipeValue: number }
   /** `emDia`: a mensalidade é a de quem paga em dia (com o desconto de pontualidade). */
-  plano: { id: string; nome: string; mensalidade: number; ativacao: number; regional: boolean; emDia?: boolean }
+  plano: {
+    id: string
+    nome: string
+    mensalidade: number
+    ativacao: number
+    regional: boolean
+    emDia?: boolean
+    /** Adesão na promoção do dia (Black 21Go), quando a cotação foi pedida durante ela. */
+    promoAdesao?: number
+    /** Fim da promoção (ISO) e o dia, como vai no texto (27/11): depois do fim, a mensagem volta à adesão cheia. */
+    promoAte?: string
+    promoDia?: string
+  }
   cupom?: string
   origem?: OrigemLead
   consentimento: { versao: string; em: string }
@@ -135,14 +147,30 @@ export function nomeDoVeiculo(c: Pick<CotacaoWhatsApp, 'veiculo'>): string {
 }
 
 /** Variáveis do template `citmax_21go_cotacao`: veículo, plano, mensalidade, adesão e link. */
-export function paramsDoTemplate(c: Pick<CotacaoWhatsApp, 'veiculo' | 'plano'>, url: string): string[] {
-  return [nomeDoVeiculo(c), c.plano.nome, reais(c.plano.mensalidade), reais(c.plano.ativacao), url]
+export function paramsDoTemplate(c: Pick<CotacaoWhatsApp, 'veiculo' | 'plano'>, url: string, agora = new Date()): string[] {
+  return [nomeDoVeiculo(c), c.plano.nome, reais(c.plano.mensalidade), adesaoDoTexto(c.plano, agora), url]
+}
+
+/**
+ * Adesão como vai na mensagem. Na promoção do dia, com o prazo (o cadastro precisa ser feito nela);
+ * mensagem que sai depois do fim (lembrete, reenvio) volta à adesão cheia.
+ */
+function adesaoDoTexto(plano: CotacaoWhatsApp['plano'], agora: Date): string {
+  const fim = plano.promoAte ? Date.parse(plano.promoAte) : NaN
+  if (plano.promoAdesao == null || !(agora.getTime() <= fim)) return reais(plano.ativacao)
+  const dia = plano.promoDia ? ` de hoje, ${plano.promoDia}` : ' de hoje'
+  return `${reais(plano.promoAdesao)} na Black 21Go, para cadastro feito até 23h59${dia} (sem a promoção, R$ ${reais(plano.ativacao)})`
 }
 
 export type EtapaMensagem = 'cotacao' | 'lembrete1' | 'lembrete2'
 
 /** Texto livre (dentro da janela de 24 h, ou dentro do template de reserva). */
-export function textoDaMensagem(c: Pick<CotacaoWhatsApp, 'veiculo' | 'plano' | 'pedido'>, url: string, etapa: EtapaMensagem): string {
+export function textoDaMensagem(
+  c: Pick<CotacaoWhatsApp, 'veiculo' | 'plano' | 'pedido'>,
+  url: string,
+  etapa: EtapaMensagem,
+  agora = new Date()
+): string {
   const veiculo = nomeDoVeiculo(c)
   const preco = `R$ ${reais(c.plano.mensalidade)} por mês${c.plano.emDia === false ? '' : ' pagando em dia'}`
   const promo =
@@ -171,7 +199,7 @@ export function textoDaMensagem(c: Pick<CotacaoWhatsApp, 'veiculo' | 'plano' | '
     `Olá! Aqui está a cotação da proteção veicular 21Go que você pediu no site para o ${veiculo}:`,
     '',
     `• Plano ${c.plano.nome}: ${preco}`,
-    `• Adesão (Pix único): R$ ${reais(c.plano.ativacao)}`,
+    `• Adesão (Pix único): R$ ${adesaoDoTexto(c.plano, agora)}`,
     ...(promo ? ['', promo] : []),
     '',
     `Para ver todos os planos e continuar: ${url}`,

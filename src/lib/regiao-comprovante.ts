@@ -17,6 +17,7 @@ import {
   type RegiaoDoComprovante,
 } from '@/lib/tabela-nordeste'
 import type { DocumentAiResult, VehicleInfo } from '@/lib/types'
+import { PROMO_ADESAO, adesaoPromo } from '@/lib/promo-adesao'
 
 /**
  * O comprovante de residência confirma onde o cliente mora, e com isso o preço:
@@ -77,7 +78,14 @@ const precoAindaMuda = (l: StoredLead) => !l.pagamento && !STATUS_SEM_MUDANCA.ha
 /** Troca mensalidade e adesão, reaplicando o cupom do cadastro sobre a adesão nova. */
 function trocarValores(l: StoredLead, mensalidade: number, ativacaoBase: number): void {
   l.mensalidadeFinal = mensalidade
-  if (l.cupom) {
+  if (l.cupom?.codigo === PROMO_ADESAO.codigo) {
+    // Cadastro feito na promoção do dia: a adesão continua a da promoção, sobre a adesão nova.
+    const final = adesaoPromo(ativacaoBase)
+    const desconto = Math.round((ativacaoBase - final) * 100) / 100
+    l.ativacaoOriginal = ativacaoBase
+    l.ativacao = final
+    l.cupom = { ...l.cupom, desconto, valorDesconto: desconto }
+  } else if (l.cupom) {
     const { valorDesconto, ativacaoFinal } = calcularDesconto(ativacaoBase, l.cupom)
     l.ativacaoOriginal = ativacaoBase
     l.ativacao = ativacaoFinal

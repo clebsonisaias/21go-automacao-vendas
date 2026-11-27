@@ -14,6 +14,7 @@ import { absolute } from '@/lib/links'
 import { verifyQuoteToken } from '@/lib/quote-token'
 import { rateLimit } from '@/lib/rate-limit'
 import { LeadSubmissionPayload } from '@/lib/types'
+import { PROMO_ADESAO } from '@/lib/promo-adesao'
 
 export const dynamic = 'force-dynamic'
 
@@ -123,7 +124,9 @@ async function cadastrar(
       linkDocumentos: absolute(feito.vistoriaUrl),
       mensagem: `Cadastro feito!${
         payload.cupom
-          ? ` Cupom ${payload.cupom.codigo} aplicado: a adesão fica em ${brl(payload.ativacao)} (era ${brl(payload.ativacaoOriginal ?? payload.ativacao)}).`
+          ? payload.cupom.codigo === PROMO_ADESAO.codigo
+            ? ` Black 21Go aplicada: a adesão fica em ${brl(payload.ativacao)} (era ${brl(payload.ativacaoOriginal ?? payload.ativacao)}).`
+            : ` Cupom ${payload.cupom.codigo} aplicado: a adesão fica em ${brl(payload.ativacao)} (era ${brl(payload.ativacaoOriginal ?? payload.ativacao)}).`
           : ''
       } Agora é só enviar a CNH ou o RG, o documento do carro e um comprovante de residência. A adesão só é paga no fim, com a vistoria aprovada.`,
     }

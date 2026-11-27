@@ -10,6 +10,17 @@ export function promoAdesaoAtiva(agora = new Date()): boolean {
   return hojeBrasilia(agora) === PROMO_ADESAO.dia
 }
 
+/** Fim da promoção (23:59:59 de Brasília do dia), em ISO: guardado em quem cotou durante ela. */
+export function fimDaPromo(): string {
+  return new Date(`${PROMO_ADESAO.dia}T23:59:59.999-03:00`).toISOString()
+}
+
+/** Dia da promoção como vai nos textos: 27/11. */
+export function diaDaPromo(): string {
+  const [, m, d] = PROMO_ADESAO.dia.split('-')
+  return `${d}/${m}`
+}
+
 /** Adesão com a promo: R$ 1, ou a própria adesão se ela já for menor que isso. */
 export function adesaoPromo(ativacao: number): number {
   return Math.min(Math.max(0, ativacao), PROMO_ADESAO.valor)

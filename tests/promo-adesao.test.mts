@@ -16,3 +16,8 @@ test('promo baixa a adesão para R$ 1, sem subir adesão menor', async () => {
   assert.equal(adesaoPromo(0), 0)
   assert.equal(adesaoPromo(0.5), 0.5)
 })
+
+test('fora do dia da promoção, a adesão não muda (só o teste de hora decide)', () => {
+  assert.equal(promoAdesaoAtiva(new Date('2026-11-26T15:00:00Z')), false)
+  assert.equal(promoAdesaoAtiva(new Date('2026-11-27T15:00:00Z')), true)
+})

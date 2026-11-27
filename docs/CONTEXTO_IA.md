@@ -1062,3 +1062,21 @@ Outras mudanças:
 - **Coberturas:** "Vidros" (para-brisa 70% em todos os planos e todos os vidros no Premium) entrou no lugar de "Sem análise de perfil", que é regra de entrada.
 - **Títulos:** saíram os rótulos em caixa alta acima deles, e os títulos ficaram todos alinhados à esquerda. "Quem é a 21Go" virou título.
 - **Dúvidas:** viraram "Outras dúvidas", com 5 perguntas que as regras não respondem. Saíram as que agora estão nas regras.
+
+### [Claude] — 2026-11-27 — Black 21Go (adesão por R$ 1, só hoje)
+
+A base veio do commit `6a28c0a`, que entrou na `main` às 03:19 sem deploy:
+- `src/lib/promo-adesao.ts`;
+- `aplicarCupom` aplica `BLACK21GO` no cadastro de 27/11 (horário de Brasília), só com o Pix do site ligado;
+- a faixa `AvisoBlack`.
+
+Publicado às 11h40 e completado neste PR:
+- **Na cotação:** o cartão do plano e o resumo do cadastro mostram a adesão cheia riscada e "R$ 1,00 na Black 21Go".
+- **Cupom de parceiro:** se deixa a adesão menor (grátis), continua valendo. Cupom pior ou vencido não trava o cadastro: vale a Black.
+- **Troca de região pelo comprovante:** quem se cadastrou na Black continua com R$ 1 (`trocarValores`).
+- **Chat (AtendeHub):** a cotação devolve `ativacao` = 1,00, `ativacaoSemPromocao` e `promocao`, e a `mensagemRegiao` começa pela Black. A contratação responde "Black 21Go aplicada".
+- **Luna:** o prompt e a resposta de reserva falam da Black.
+- **WhatsApp da cotação:** a adesão vai com o prazo ("até 23h59 de hoje, 27/11"). Mensagem enviada depois do fim volta à adesão cheia (`promoAte`).
+- **Cupom guardado no aparelho:** apagar o campo também esquece o cupom. Se o servidor recusar o cupom guardado (vencido), ele sai do aparelho com um aviso.
+
+A promoção desliga sozinha à meia-noite de 28/11. O código pode sair depois, num PR de limpeza.
