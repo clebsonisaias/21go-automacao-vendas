@@ -406,6 +406,40 @@ export const SOCIAL_ONE_OFFS: SocialContent[] = [
     body: '1. Cotação pela placa · 2. Documentos · 3. Vistoria no celular · 4. Adesão via Pix.',
     caption: cap('Proteger seu carro ou sua moto é simples em 4 passos: cotação pela placa, envio dos documentos, vistoria pelo celular e adesão via Pix só depois da vistoria aprovada!'),
   },
+  // Black Friday 21Go (27 a 29/11): artes prontas feitas pelo Clebson (public/social/<feed|story>/<id>.jpg).
+  // Preço na arte e na legenda só nestes posts: exceção ao manual decidida pelo Clebson em 27/11.
+  {
+    id: '27-11-black-oferta',
+    oneOff: true,
+    kicker: '27/11 (sex) · Feed + Story · Black',
+    title: 'Black Friday: adesão por R$ 1 no Plano VIP',
+    body: 'Só hoje na 21Go.',
+    caption: 'Black Friday 21Go, só hoje! 🖤\n\nAdesão por R$ 1 no Plano VIP, que também está com desconto: o preço da tabela regional para carro de quem mora no RN, na Paraíba e no Ceará.\n\nCadastro até 23h59 de hoje (27/11). A mensalidade é a da sua cotação.\n\nCote pela placa no link da bio: 21go.seg.br\n\nCITmax, consultor autorizado da 21Go.\n#BlackFriday #ProtecaoVeicular #21Go',
+  },
+  {
+    id: '27-11-black-ultimas-horas',
+    oneOff: true,
+    kicker: '27/11 (sex) · Feed + Story · Black',
+    title: 'Black Friday: acaba hoje, à meia-noite',
+    body: 'Últimas horas da adesão por R$ 1 no Plano VIP.',
+    caption: 'Últimas horas da Black Friday 21Go! ⏰\n\nAdesão por R$ 1 no Plano VIP só até 23h59 de hoje (27/11). Leva poucos minutos e você resolve tudo pelo celular.\n\nCote pela placa no link da bio: 21go.seg.br\n\nCITmax, consultor autorizado da 21Go.\n#BlackFriday #ProtecaoVeicular #21Go',
+  },
+  {
+    id: '28-11-black-prorrogada',
+    oneOff: true,
+    kicker: '28/11 (sáb) · Feed + Story · Black',
+    title: 'Black Friday prorrogada até domingo',
+    body: 'Adesão por R$ 1 no Plano VIP até 29/11.',
+    caption: 'Black Friday 21Go PRORROGADA! 🙌\n\nA adesão por R$ 1 no Plano VIP vale até domingo (29/11), às 23h59. E o VIP continua com o preço da tabela regional para carro de quem mora no RN, na Paraíba e no Ceará.\n\nCote pela placa no link da bio: 21go.seg.br\n\nCITmax, consultor autorizado da 21Go.\n#BlackFriday #ProtecaoVeicular #21Go',
+  },
+  {
+    id: '29-11-black-ultimo-dia',
+    oneOff: true,
+    kicker: '29/11 (dom) · Feed + Story · Black',
+    title: 'Black Friday: último dia',
+    body: 'Adesão por R$ 1 no Plano VIP até 23h59 de hoje.',
+    caption: 'Último dia da Black Friday 21Go! ⏳\n\nAdesão por R$ 1 no Plano VIP só até 23h59 de hoje (domingo, 29/11). Amanhã volta ao valor normal.\n\nCote pela placa no link da bio: 21go.seg.br\n\nCITmax, consultor autorizado da 21Go.\n#BlackFriday #ProtecaoVeicular #21Go',
+  },
   {
     id: '30-12-ano-novo-protegido',
     oneOff: true,
@@ -419,7 +453,11 @@ export const SOCIAL_ONE_OFFS: SocialContent[] = [
 export const SOCIAL_SCHEDULE: { contentId: string; at: string }[] = [
   { contentId: 'inauguracao-rn', at: '2026-11-21T11:50:00-03:00' },
   { contentId: '25-11-quem-esta-por-tras', at: '2026-11-25T18:00:00-03:00' },
+  { contentId: '27-11-black-oferta', at: '2026-11-27T13:50:00-03:00' },
   { contentId: '27-11-capa-reels-30s', at: '2026-11-27T18:00:00-03:00' },
+  { contentId: '27-11-black-ultimas-horas', at: '2026-11-27T20:00:00-03:00' },
+  { contentId: '28-11-black-prorrogada', at: '2026-11-28T09:00:00-03:00' },
+  { contentId: '29-11-black-ultimo-dia', at: '2026-11-29T09:00:00-03:00' },
   { contentId: '30-11-seguradora-disse-nao', at: '2026-11-30T18:00:00-03:00' },
   { contentId: '02-12-como-funciona-pelo-celular', at: '2026-12-02T18:00:00-03:00' },
   { contentId: '04-12-cotacao-gratis-pela-placa', at: '2026-12-04T18:00:00-03:00' },
