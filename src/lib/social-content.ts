@@ -417,6 +417,14 @@ export const SOCIAL_ONE_OFFS: SocialContent[] = [
     caption: 'Black Friday 21Go, só hoje! 🖤\n\nAdesão por R$ 1 no Plano VIP, que também está com desconto: o preço da tabela regional para carro de quem mora no RN, na Paraíba e no Ceará.\n\nCadastro até 23h59 de hoje (27/11). A mensalidade é a da sua cotação.\n\nCote pela placa no link da bio: 21go.seg.br\n\nCITmax, consultor autorizado da 21Go.\n#BlackFriday #ProtecaoVeicular #21Go',
   },
   {
+    id: '27-11-black-como-garantir',
+    oneOff: true,
+    kicker: '27/11 (sex) · Feed + Story · Black',
+    title: 'Black Friday: como garantir a adesão por R$ 1',
+    body: 'Cotação pela placa, Plano VIP e adesão de R$ 1 até 23h59 de hoje.',
+    caption: 'Como garantir a adesão por R$ 1 na Black Friday 21Go 👇\n\n1) Entre em 21go.seg.br e faça a cotação pela placa.\n2) Escolha o Plano VIP.\n3) Pague R$ 1 de adesão. Só hoje (27/11), até 23h59.\n\nCITmax, consultor autorizado da 21Go.\n#BlackFriday #ProtecaoVeicular #21Go',
+  },
+  {
     id: '27-11-black-ultimas-horas',
     oneOff: true,
     kicker: '27/11 (sex) · Feed + Story · Black',
@@ -454,6 +462,7 @@ export const SOCIAL_SCHEDULE: { contentId: string; at: string }[] = [
   { contentId: 'inauguracao-rn', at: '2026-11-21T11:50:00-03:00' },
   { contentId: '25-11-quem-esta-por-tras', at: '2026-11-25T18:00:00-03:00' },
   { contentId: '27-11-black-oferta', at: '2026-11-27T13:50:00-03:00' },
+  { contentId: '27-11-black-como-garantir', at: '2026-11-27T16:00:00-03:00' },
   { contentId: '27-11-capa-reels-30s', at: '2026-11-27T18:00:00-03:00' },
   { contentId: '27-11-black-ultimas-horas', at: '2026-11-27T20:00:00-03:00' },
   { contentId: '28-11-black-prorrogada', at: '2026-11-28T09:00:00-03:00' },
