@@ -7,6 +7,7 @@ import { verifyQuoteToken } from '@/lib/quote-token'
 import { mpEnabled } from '@/lib/mercadopago'
 import { vistoriaPath } from '@/lib/links'
 import { LeadSubmissionPayload } from '@/lib/types'
+import { PROMO_ADESAO, adesaoPromo, promoAdesaoAtiva } from '@/lib/promo-adesao'
 import { calcularDesconto, conferirCupom, liberarCupom, normalizarCodigo, reservarCupom } from '@/lib/cupons'
 import { linhaTabelaNordeste } from '@/lib/tabela-nordeste'
 import { descreverOrigem, limparOrigem } from '@/lib/origem'
@@ -119,6 +120,23 @@ export function aplicarCupom(
   codigoBruto: unknown,
   origem: 'cadastro' | 'chat'
 ): string | null {
+  // Promoção do dia: adesão por R$ 1 automática (sem cupom e sem consumir uso de cupom).
+  // Sem o Pix do site, a cobrança é a do PowerCRM, que não conhece o desconto: não aplica.
+  if (promoAdesaoAtiva() && mpEnabled()) {
+    const original = payload.ativacao
+    const final = adesaoPromo(original)
+    payload.ativacaoOriginal = original
+    payload.ativacao = final
+    payload.cupom = {
+      codigo: PROMO_ADESAO.codigo,
+      tipo: 'valor',
+      desconto: Math.round((original - final) * 100) / 100,
+      valorDesconto: Math.round((original - final) * 100) / 100,
+      aplicadoEm: new Date().toISOString(),
+      origem,
+    }
+    return null
+  }
   const codigo = normalizarCodigo(codigoBruto)
   if (!codigo) return null
   const r = conferirCupom(codigo)
@@ -158,7 +176,7 @@ export async function registrarCadastro(
   const leadRef = `lead_${crypto.randomUUID()}`
 
   // Reserva o uso do cupom antes de gravar; se algo falhar depois, o uso é devolvido.
-  if (payload.cupom) {
+  if (payload.cupom && payload.cupom.codigo !== PROMO_ADESAO.codigo) {
     const r = reservarCupom(payload.cupom.codigo, leadRef)
     if (!r.ok) throw new CupomRecusado(r.motivo)
   }
@@ -166,7 +184,7 @@ export async function registrarCadastro(
     return await gravarCadastro(payload, leadRef, cobrarPix, opcoes)
   } catch (err) {
     // Só devolve o uso se o cadastro não chegou a ser gravado (gravado, o cupom é dele).
-    if (payload.cupom && !findLeadByRef(leadRef)) liberarCupom(payload.cupom.codigo, leadRef)
+    if (payload.cupom && payload.cupom.codigo !== PROMO_ADESAO.codigo && !findLeadByRef(leadRef)) liberarCupom(payload.cupom.codigo, leadRef)
     throw err
   }
 }

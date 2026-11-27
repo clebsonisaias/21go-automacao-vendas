@@ -36,6 +36,7 @@ import {
   QuemE21Go,
   Stats,
 } from '@/components/home/HomeSections'
+import { AvisoBlack } from '@/components/home/AvisoBlack'
 import { Economizometro } from '@/components/home/Economizometro'
 import { ReceberCotacaoWhatsApp } from '@/components/home/ReceberCotacaoWhatsApp'
 import type { PedidoCotacao } from '@/lib/cotacao-whatsapp'
@@ -93,7 +94,7 @@ const inputCls =
   'min-h-[48px] w-full rounded-lg border border-[#c9d1e6] bg-white px-3.5 text-base text-navy-800 placeholder:text-muted-2'
 const labelCls = 'text-sm font-semibold'
 
-export function HomeClient() {
+export function HomeClient({ pixLigado = false }: { pixLigado?: boolean }) {
   const router = useRouter()
 
   // Estados de busca
@@ -703,6 +704,7 @@ export function HomeClient() {
     <div className="flex min-h-screen flex-col bg-surface-50 font-sans text-navy-800">
       <TopBar />
       <SiteHeader />
+      <AvisoBlack pixLigado={pixLigado} />
 
       <main className="flex-1">
         {/* Hero */}
